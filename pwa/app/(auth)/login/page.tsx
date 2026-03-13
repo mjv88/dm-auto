@@ -3,7 +3,9 @@
 export const dynamic = 'force-dynamic';
 
 import { useState } from 'react';
-import { acquireTokenSilent } from '@/lib/auth';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { acquireTokenSilent, loginWithEmail } from '@/lib/auth';
 import { useRunnerStore } from '@/lib/store';
 
 // Error message shown when browser blocks the redirect/popup
@@ -21,9 +23,15 @@ function isPopupBlocked(err: unknown): boolean {
 }
 
 export default function LoginPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [popupBlocked, setPopupBlocked] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
   const setAuthStatus = useRunnerStore((s) => s.setAuthStatus);
+  const setSessionToken = useRunnerStore((s) => s.setSessionToken);
   const setError = useRunnerStore((s) => s.setError);
 
   const msLoginUrl =
@@ -112,6 +120,81 @@ export default function LoginPage() {
         <p className="text-xs text-center text-gray-400">
           Works with any Microsoft 365 organisation
         </p>
+
+        {/* Divider */}
+        <div className="w-full flex items-center gap-3">
+          <div className="flex-1 h-px bg-gray-200" />
+          <span className="text-xs text-gray-400">or</span>
+          <div className="flex-1 h-px bg-gray-200" />
+        </div>
+
+        {/* Email / password form */}
+        <form
+          className="w-full flex flex-col gap-4"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setEmailError('');
+            setEmailLoading(true);
+            try {
+              const result = await loginWithEmail(email, password);
+              setSessionToken(result.sessionToken);
+              setAuthStatus('authenticated');
+              router.push('/departments');
+            } catch (err) {
+              setEmailError(err instanceof Error ? err.message : 'Login failed');
+            } finally {
+              setEmailLoading(false);
+            }
+          }}
+        >
+          <input
+            type="email"
+            required
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full rounded-md border border-gray-300 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          <input
+            type="password"
+            required
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full rounded-md border border-gray-300 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+
+          {emailError && (
+            <p role="alert" className="text-sm text-red-600 text-center">
+              {emailError}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={emailLoading}
+            className="w-full flex items-center justify-center gap-3 rounded-md px-4 py-3 min-h-[44px] text-sm font-medium text-white transition-opacity disabled:opacity-60"
+            style={{ backgroundColor: '#0078D4' }}
+          >
+            {emailLoading ? (
+              <>
+                <Spinner />
+                Signing in…
+              </>
+            ) : (
+              'Sign in'
+            )}
+          </button>
+
+          <div className="flex items-center justify-between text-sm">
+            <Link href="/forgot-password" className="text-blue-600 hover:text-blue-800">
+              Forgot password?
+            </Link>
+            <Link href="/register" className="text-blue-600 hover:text-blue-800">
+              Create account
+            </Link>
+          </div>
+        </form>
       </div>
     </main>
   );
