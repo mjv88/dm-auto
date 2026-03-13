@@ -31,6 +31,12 @@ const envSchema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().default(10),
   RATE_LIMIT_WINDOW: z.coerce.number().default(3600000),
 
+  // Email/password auth
+  BCRYPT_ROUNDS: z.coerce.number().default(12),
+  EMAIL_WORKER_URL: z.string().url().default('https://email.tcx-hub.com'),
+  EMAIL_WORKER_SECRET: z.string().min(1).optional(),
+  APP_URL: z.string().url().default('https://runner.tcx-hub.com'),
+
   // CORS — only requests from the Runner PWA are allowed
   NEXT_PUBLIC_APP_URL: z.string().url(),
 });
