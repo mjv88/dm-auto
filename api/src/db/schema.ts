@@ -152,6 +152,7 @@ export const auditLog = pgTable(
     index('idx_audit_entra_email').on(t.entraEmail),
     index('idx_audit_pbx_fqdn').on(t.pbxFqdn),
     index('idx_audit_created_at').on(t.createdAt),
+    index('idx_audit_created_status').on(t.createdAt, t.status),
   ],
 );
 
