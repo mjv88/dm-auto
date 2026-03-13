@@ -35,6 +35,32 @@ export const tenants = pgTable(
 );
 
 // ============================================================
+// users
+// Email/password authenticated users (parallel to Entra SSO).
+// ============================================================
+export const users = pgTable(
+  'users',
+  {
+    id:                    uuid('id').primaryKey().defaultRandom(),
+    email:                 text('email').notNull().unique(),
+    passwordHash:          text('password_hash').notNull(),
+    emailVerified:         boolean('email_verified').notNull().default(false),
+    verifyToken:           text('verify_token'),
+    verifyTokenExpiresAt:  timestamp('verify_token_expires_at', { withTimezone: true }),
+    resetToken:            text('reset_token'),
+    resetTokenExpiresAt:   timestamp('reset_token_expires_at', { withTimezone: true }),
+    failedLoginAttempts:   integer('failed_login_attempts').notNull().default(0),
+    lockedUntil:           timestamp('locked_until', { withTimezone: true }),
+    createdAt:             timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt:             timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index('idx_users_reset_token').on(t.resetToken),
+    index('idx_users_verify_token').on(t.verifyToken),
+  ],
+);
+
+// ============================================================
 // pbx_credentials
 // xAPI / user credentials per PBX FQDN, scoped to a tenant.
 // Credential fields are AES-256-GCM encrypted at rest.
@@ -77,6 +103,7 @@ export const runners = pgTable(
     id:               uuid('id').primaryKey().defaultRandom(),
     tenantId:         uuid('tenant_id').notNull().references(() => tenants.id),
     pbxCredentialId:  uuid('pbx_credential_id').notNull().references(() => pbxCredentials.id),
+    userId:           uuid('user_id').references(() => users.id),
     entraEmail:       text('entra_email').notNull(),
     extensionNumber:  text('extension_number').notNull(),
     allowedDeptIds:   text('allowed_dept_ids').array().notNull().default([]),
@@ -161,9 +188,14 @@ export const pbxCredentialsRelations = relations(pbxCredentials, ({ one, many })
   deptCache: many(deptCache),
 }));
 
+export const usersRelations = relations(users, ({ many }) => ({
+  runners: many(runners),
+}));
+
 export const runnersRelations = relations(runners, ({ one, many }) => ({
   tenant:        one(tenants,        { fields: [runners.tenantId],        references: [tenants.id] }),
   pbxCredential: one(pbxCredentials, { fields: [runners.pbxCredentialId], references: [pbxCredentials.id] }),
+  user:          one(users,          { fields: [runners.userId],          references: [users.id] }),
   auditLogs:     many(auditLog),
 }));
 
