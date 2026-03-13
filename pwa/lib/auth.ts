@@ -96,3 +96,40 @@ export function getStoredAccount(): AccountInfo | null {
 }
 
 export { msalConfig, loginRequest };
+
+// ---------------------------------------------------------------------------
+// Email / password authentication
+// ---------------------------------------------------------------------------
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
+
+export interface EmailAuthResult {
+  sessionToken: string;
+  user: { id: string; email: string; emailVerified: boolean };
+}
+
+export async function loginWithEmail(email: string, password: string): Promise<EmailAuthResult> {
+  const resp = await fetch(`${API_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error((err as { message?: string }).message ?? 'Login failed');
+  }
+  return resp.json() as Promise<EmailAuthResult>;
+}
+
+export async function registerWithEmail(email: string, password: string): Promise<EmailAuthResult> {
+  const resp = await fetch(`${API_URL}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error((err as { message?: string }).message ?? 'Registration failed');
+  }
+  return resp.json() as Promise<EmailAuthResult>;
+}
