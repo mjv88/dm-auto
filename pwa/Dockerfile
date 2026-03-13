@@ -1,15 +1,15 @@
-# Multi-stage Dockerfile: node:20-alpine builder → runner
-
 # ── Stage 1: deps ──────────────────────────────────────────────────────────────
 FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
+ENV NODE_ENV=development
 COPY package*.json ./
 RUN npm ci
 
 # ── Stage 2: builder ───────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
 WORKDIR /app
+ENV NODE_ENV=development
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
