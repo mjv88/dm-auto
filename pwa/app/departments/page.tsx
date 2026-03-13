@@ -6,6 +6,8 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useRunnerStore, useAllowedDepts, useCurrentDept, useRunnerProfile } from '@/lib/store';
 import { getDepartments, switchDepartment } from '@/lib/api';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 import RunnerHeader from '@/components/RunnerHeader';
 import StatusBadge from '@/components/StatusBadge';
 import DeptCard from '@/components/DeptCard';
@@ -28,12 +30,44 @@ export default function DepartmentsPage() {
   const setCurrentDept = useRunnerStore((s) => s.setCurrentDept);
   const setAllowedDepts = useRunnerStore((s) => s.setAllowedDepts);
 
+  const sessionToken = useRunnerStore((s) => s.sessionToken);
+
   const [pendingDept, setPendingDept] = useState<Dept | null>(null);
   const [isSwitching, setIsSwitching] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [successDeptName, setSuccessDeptName] = useState('');
   const [isSlow, setIsSlow] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(true);
+
+  // Check email verification status for email-auth users
+  useEffect(() => {
+    if (!sessionToken) return;
+    // Decode JWT payload to check emailVerified (non-Microsoft sessions)
+    try {
+      const payload = JSON.parse(atob(sessionToken.split('.')[1]));
+      if (payload.emailVerified === false) {
+        setEmailVerified(false);
+      }
+    } catch {
+      // Not a JWT or no emailVerified claim — assume verified
+    }
+  }, [sessionToken]);
+
+  const handleResend = useCallback(async () => {
+    if (!sessionToken) return;
+    try {
+      await fetch(`${API_URL}/auth/resend-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${sessionToken}`,
+        },
+      });
+    } catch {
+      // silently ignore resend errors
+    }
+  }, [sessionToken]);
 
   // Pull-to-refresh touch tracking
   const touchStartY = useRef<number>(0);
@@ -116,6 +150,14 @@ export default function DepartmentsPage() {
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
+        {/* Email verification banner */}
+        {!emailVerified && (
+          <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-3 text-sm text-yellow-800">
+            Please verify your email. Check your inbox or{' '}
+            <button onClick={handleResend} className="underline font-medium">resend verification email</button>
+          </div>
+        )}
+
         {/* Header row with refresh button pinned top-right */}
         <div className="relative">
           <RunnerHeader
