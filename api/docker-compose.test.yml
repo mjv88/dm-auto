@@ -1,0 +1,21 @@
+version: '3.9'
+
+# Ephemeral PostgreSQL instance for integration tests.
+# Port 5433 avoids collision with any local dev instance on 5432.
+
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRES_USER: tcxtest
+      POSTGRES_PASSWORD: tcxtest
+      POSTGRES_DB: tcxtest
+    tmpfs:
+      - /var/lib/postgresql/data   # in-memory — fast and fully ephemeral
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tcxtest -d tcxtest']
+      interval: 3s
+      timeout: 3s
+      retries: 10
