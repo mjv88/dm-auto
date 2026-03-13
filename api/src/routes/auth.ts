@@ -129,6 +129,8 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         runnerId: match.id,
         tenantId: tenant.id,
         entraEmail: email,
+        email: email,
+        emailVerified: true, // Entra users are always verified
         pbxFqdn: match.pbxFqdn,
         extensionNumber: match.extensionNumber,
       });
@@ -166,6 +168,8 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       runnerId: single.id,
       tenantId: tenant.id,
       entraEmail: email,
+      email: email,
+      emailVerified: true, // Entra users are always verified
       pbxFqdn: single.pbxFqdn,
       extensionNumber: single.extensionNumber,
     });

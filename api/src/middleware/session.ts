@@ -16,6 +16,8 @@ export interface RunnerSession {
   runnerId: string;    // UUID from runners table
   tenantId: string;    // UUID from tenants table
   entraEmail: string;
+  email: string;             // normalized email (entraEmail or local email)
+  emailVerified: boolean;    // false for unverified local users, true for Entra
   pbxFqdn: string;
   extensionNumber: string;
 }
