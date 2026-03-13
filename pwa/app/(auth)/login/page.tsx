@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from 'react';
 import { acquireTokenSilent } from '@/lib/auth';
 import { useRunnerStore } from '@/lib/store';
