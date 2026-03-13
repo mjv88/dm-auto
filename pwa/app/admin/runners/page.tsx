@@ -1,0 +1,181 @@
+'use client';
+
+export const dynamic = 'force-dynamic';
+
+import { useEffect, useState, useCallback } from 'react';
+import { adminGet, adminPost, adminPut, adminDelete } from '@/lib/adminApi';
+import DataTable, { type Column } from '@/components/admin/DataTable';
+import RunnerModal from '@/components/admin/RunnerModal';
+import type { PBXCredential } from '@/types/auth';
+
+interface Runner {
+  id: string;
+  email: string;
+  extension: string;
+  pbx_fqdn: string;
+  allowed_dept_ids: number[];
+  is_active: boolean;
+}
+
+interface Department {
+  id: number;
+  name: string;
+}
+
+interface PaginatedRunners {
+  data: Runner[];
+  total: number;
+  page: number;
+  per_page: number;
+}
+
+export default function RunnersPage() {
+  const [runners, setRunners] = useState<Runner[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState('');
+  const [pbxFilter, setPbxFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [pbxList, setPbxList] = useState<PBXCredential[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [modalRunner, setModalRunner] = useState<Runner | null | undefined>(undefined);
+
+  const load = useCallback(() => {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('per_page', '25');
+    if (search) params.set('email', search);
+    if (pbxFilter) params.set('pbx_fqdn', pbxFilter);
+    if (statusFilter) params.set('is_active', statusFilter);
+
+    adminGet<PaginatedRunners>(`/admin/runners?${params}`)
+      .then((res) => {
+        setRunners(res.data);
+        setTotalPages(Math.ceil(res.total / res.per_page) || 1);
+      })
+      .catch(console.error);
+  }, [page, search, pbxFilter, statusFilter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    adminGet<PBXCredential[]>('/admin/pbx').then(setPbxList).catch(console.error);
+    adminGet<Department[]>('/admin/departments').then(setDepartments).catch(console.error);
+  }, []);
+
+  async function handleSave(data: {
+    email: string;
+    extension: string;
+    pbx_fqdn: string;
+    allowed_dept_ids: number[];
+  }) {
+    if (modalRunner) {
+      await adminPut(`/admin/runners/${modalRunner.id}`, data);
+    } else {
+      await adminPost('/admin/runners', data);
+    }
+    setModalRunner(undefined);
+    load();
+  }
+
+  async function handleDelete(runner: Runner) {
+    if (!confirm(`Remove runner "${runner.email}"?`)) return;
+    await adminDelete(`/admin/runners/${runner.id}`);
+    load();
+  }
+
+  const columns: Column<Runner>[] = [
+    { key: 'email', header: 'Email' },
+    { key: 'extension', header: 'Ext' },
+    { key: 'pbx_fqdn', header: 'PBX' },
+    {
+      key: 'is_active',
+      header: 'Status',
+      render: (row) => (
+        <span
+          className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+            row.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+          }`}
+        >
+          {row.is_active ? 'Active' : 'Inactive'}
+        </span>
+      ),
+    },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-gray-900">Runners</h2>
+        <button
+          onClick={() => setModalRunner(null)}
+          className="rounded-md px-4 py-2 text-sm font-medium text-white"
+          style={{ backgroundColor: '#0078D4' }}
+        >
+          + Add Runner
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2">
+        <input
+          type="text"
+          placeholder="Search by email..."
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-56"
+        />
+        <select
+          value={pbxFilter}
+          onChange={(e) => { setPbxFilter(e.target.value); setPage(1); }}
+          className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+        >
+          <option value="">All PBX</option>
+          {pbxList.map((p) => (
+            <option key={p.id} value={p.pbx_fqdn}>
+              {p.pbx_name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+          className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+        >
+          <option value="">All Status</option>
+          <option value="true">Active</option>
+          <option value="false">Inactive</option>
+        </select>
+      </div>
+
+      <DataTable
+        columns={columns}
+        data={runners}
+        rowKey={(row) => row.id}
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        actions={(row) => (
+          <div className="flex gap-2 text-xs">
+            <button onClick={() => setModalRunner(row)} className="text-blue-600 hover:underline">
+              Edit
+            </button>
+            <button onClick={() => handleDelete(row)} className="text-red-500 hover:underline">
+              Remove
+            </button>
+          </div>
+        )}
+      />
+
+      {modalRunner !== undefined && (
+        <RunnerModal
+          runner={modalRunner}
+          pbxList={pbxList}
+          departments={departments}
+          onSave={handleSave}
+          onClose={() => setModalRunner(undefined)}
+        />
+      )}
+    </div>
+  );
+}
