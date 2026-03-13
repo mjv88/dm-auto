@@ -56,6 +56,8 @@ function makeToken(overrides: Partial<{
     runnerId:        overrides.runnerId        ?? RUNNER_ID,
     tenantId:        overrides.tenantId        ?? TENANT_ID,
     entraEmail:      EMAIL,
+    email:           EMAIL,
+    emailVerified:   true,
     pbxFqdn:         overrides.pbxFqdn         ?? PBX_FQDN,
     extensionNumber: overrides.extensionNumber ?? EXT,
   });
@@ -194,7 +196,8 @@ describe('POST /runner/switch', () => {
     // Create a token that already expired
     const expiredToken = createSessionToken({
       type: 'runner', runnerId: RUNNER_ID, tenantId: TENANT_ID,
-      entraEmail: EMAIL, pbxFqdn: PBX_FQDN, extensionNumber: EXT,
+      entraEmail: EMAIL, email: EMAIL, emailVerified: true,
+      pbxFqdn: PBX_FQDN, extensionNumber: EXT,
     });
 
     // Patch JWT_EXPIRES_IN to '-1s' temporarily to generate an expired token

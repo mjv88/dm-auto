@@ -24,6 +24,8 @@ const runnerSession: RunnerSession = {
   runnerId: 'uuid-runner-0000',
   tenantId: 'uuid-tenant-0000',
   entraEmail: 'runner@example.com',
+  email: 'runner@example.com',
+  emailVerified: true,
   pbxFqdn: 'pbx.example.com',
   extensionNumber: '101',
 };
