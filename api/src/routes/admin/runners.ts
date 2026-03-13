@@ -54,6 +54,8 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
       pbxId?: string;
       active?: string;
       email?: string;
+      page?: string;
+      limit?: string;
     };
 
     const db = getDb();
@@ -62,6 +64,17 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
     if (query.pbxId) conditions.push(eq(runners.pbxCredentialId, query.pbxId));
     if (query.active !== undefined) conditions.push(eq(runners.isActive, query.active === 'true'));
     if (query.email) conditions.push(eq(runners.entraEmail, query.email));
+
+    const page = Math.max(1, parseInt(query.page ?? '1', 10));
+    const limit = Math.min(100, Math.max(1, parseInt(query.limit ?? '25', 10)));
+    const offset = (page - 1) * limit;
+
+    const countResult = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(runners)
+      .innerJoin(pbxCredentials, eq(runners.pbxCredentialId, pbxCredentials.id))
+      .where(and(...conditions));
+    const total = countResult[0]?.count ?? 0;
 
     const rows = await db
       .select({
@@ -77,9 +90,11 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
       })
       .from(runners)
       .innerJoin(pbxCredentials, eq(runners.pbxCredentialId, pbxCredentials.id))
-      .where(and(...conditions));
+      .where(and(...conditions))
+      .limit(limit)
+      .offset(offset);
 
-    return reply.send({ runners: rows });
+    return reply.send({ runners: rows, total, page, pages: Math.ceil(total / limit) });
   });
 
   // ── POST /admin/runners ────────────────────────────────────────────────────
