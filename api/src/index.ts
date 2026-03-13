@@ -10,6 +10,7 @@ import { departmentRoutes } from './routes/departments.js';
 import { adminTenantRoutes } from './routes/admin/tenants.js';
 import { adminPbxRoutes } from './routes/admin/pbx.js';
 import { adminRunnerRoutes } from './routes/admin/runners.js';
+import { emailAuthRoutes } from './routes/emailAuth.js';
 import { registerRateLimit } from './middleware/rateLimit.js';
 import { registerSecurity } from './middleware/security.js';
 import { RunnerError } from './utils/errors.js';
@@ -35,6 +36,7 @@ async function buildServer() {
   // Register routes
   await fastify.register(healthRoutes);
   await fastify.register(authRoutes);
+  await fastify.register(emailAuthRoutes);
   await fastify.register(switchRoutes);
   await fastify.register(departmentRoutes);
   await fastify.register(adminTenantRoutes);
