@@ -1,0 +1,6 @@
+name = "runner-email-worker"
+main = "src/index.ts"
+compatibility_date = "2024-04-01"
+
+[vars]
+SENDER_EMAIL = "noreply@tcx-hub.com"
