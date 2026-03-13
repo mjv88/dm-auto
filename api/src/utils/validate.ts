@@ -93,6 +93,7 @@ export const updatePbxSchema = z.object({
       }),
     ])
     .optional(),
+  isActive: z.boolean().optional(),
 });
 
 // ── Admin runner schemas ───────────────────────────────────────────────────────

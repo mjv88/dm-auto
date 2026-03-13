@@ -200,7 +200,7 @@ export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
     if (!parseResult.success) {
       return reply.code(400).send({ error: 'VALIDATION_ERROR', message: parseResult.error.message });
     }
-    const { name, credentials } = parseResult.data;
+    const { name, credentials, isActive } = parseResult.data;
 
     const db = getDb();
     // Ensure the PBX belongs to this tenant
@@ -218,6 +218,7 @@ export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
       updatedAt: new Date(),
     };
     if (name !== undefined) updates.pbxName = name;
+    if (isActive !== undefined) updates.isActive = isActive;
     if (credentials) {
       if (credentials.mode === 'xapi') {
         updates.xapiClientId = encrypt(credentials.clientId);
