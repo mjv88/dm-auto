@@ -11,6 +11,7 @@ import { adminTenantRoutes } from './routes/admin/tenants.js';
 import { adminPbxRoutes } from './routes/admin/pbx.js';
 import { adminRunnerRoutes } from './routes/admin/runners.js';
 import { adminStatsRoutes } from './routes/admin/stats.js';
+import { adminAuditRoutes } from './routes/admin/audit.js';
 import { emailAuthRoutes } from './routes/emailAuth.js';
 import { registerRateLimit } from './middleware/rateLimit.js';
 import { registerSecurity } from './middleware/security.js';
@@ -44,6 +45,7 @@ async function buildServer() {
   await fastify.register(adminPbxRoutes);
   await fastify.register(adminRunnerRoutes);
   await fastify.register(adminStatsRoutes);
+  await fastify.register(adminAuditRoutes);
 
   // Global error handler — maps RunnerError codes → HTTP responses
   fastify.setErrorHandler((error, _request, reply) => {
