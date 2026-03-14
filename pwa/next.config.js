@@ -51,7 +51,7 @@ module.exports = withPWA({
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
               "connect-src 'self' https://login.microsoftonline.com https://graph.microsoft.com",
               "img-src 'self' data:",
               "style-src 'self' 'unsafe-inline'",

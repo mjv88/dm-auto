@@ -86,6 +86,12 @@ export default function CallbackPage() {
     function handleApiError(code: string) {
       setAuthStatus('error');
       setError({ code, message: errorMessage(code) });
+      // Terminal errors (no retry possible) go to the dedicated error page
+      const terminalCodes = ['NOT_A_RUNNER', 'RUNNER_NOT_CONFIGURED'];
+      if (terminalCodes.includes(code)) {
+        router.replace(`/error?code=${encodeURIComponent(code)}`);
+        return;
+      }
       setApiError(code);
     }
 

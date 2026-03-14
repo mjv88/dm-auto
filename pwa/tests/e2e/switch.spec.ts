@@ -30,8 +30,8 @@ async function gotoDeparts(page: Parameters<typeof setupAuth>[0], switchScenario
   await page.goto('/');
   await page.waitForURL('**/departments', { timeout: 15_000 });
 
-  // Inject selectedPbxFqdn so the confirm handler doesn't early-return.
-  await setStoreState(page, { selectedPbxFqdn: 'kunde-gmbh.3cx.eu' });
+  // Inject selectedPbxFqdn and sessionToken so the confirm handler and API calls work.
+  await setStoreState(page, { selectedPbxFqdn: 'kunde-gmbh.3cx.eu', sessionToken: 'fake-session-token' });
 }
 
 // ---------------------------------------------------------------------------
@@ -77,7 +77,7 @@ test.describe('Happy path department switch', () => {
 
     await page.goto('/');
     await page.waitForURL('**/departments', { timeout: 15_000 });
-    await setStoreState(page, { selectedPbxFqdn: 'kunde-gmbh.3cx.eu' });
+    await setStoreState(page, { selectedPbxFqdn: 'kunde-gmbh.3cx.eu', sessionToken: 'fake-session-token' });
 
     await page.locator('button[aria-label="Zu Support wechseln"]').click();
     await expect(page.locator('[role="dialog"]')).toBeVisible();
@@ -92,8 +92,11 @@ test.describe('Happy path department switch', () => {
 
     // Loading spinner / text should appear on button
     await expect(
-      page.locator('[aria-label="Wird gewechselt…"], text=Wird gewechselt'),
+      page.getByRole('button', { name: 'Wird gewechselt…' }),
     ).toBeVisible({ timeout: 3_000 });
+
+    // Wait for the delayed route handler to complete before test teardown
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
   });
 
   test('closes sheet and shows success toast after confirm', async ({ page }) => {

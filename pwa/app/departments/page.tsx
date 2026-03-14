@@ -126,8 +126,11 @@ export default function DepartmentsPage() {
       setShowToast(true);
     } catch (err: unknown) {
       setPendingDept(null);
+      // AppError carries a typed .code; plain Errors fall back to 'UNKNOWN'.
       const code =
-        err instanceof Error && err.message ? err.message : 'UNKNOWN';
+        err != null && typeof (err as { code?: string }).code === 'string'
+          ? (err as { code: string }).code
+          : 'UNKNOWN';
       router.push(`/error?code=${encodeURIComponent(code)}`);
     } finally {
       setIsSwitching(false);

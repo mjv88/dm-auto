@@ -98,6 +98,7 @@ export default function ErrorScreen({ errorCode, onRetry }: ErrorScreenProps) {
 
   return (
     <main
+      role="main"
       aria-live="assertive"
       aria-atomic="true"
       className="flex flex-col items-center justify-center min-h-screen bg-brand-bg px-8 py-12 text-center"

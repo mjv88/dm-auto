@@ -143,13 +143,35 @@ export async function injectMSALCache(page: Page): Promise<void> {
       sessionStorage.setItem(accessTokenKey, accessTokenValue);
 
       // ── MSAL meta-index keys ──────────────────────────────────────────────
-      // msal.{clientId}.account.keys stores an array of all account cache keys
+      // MSAL v3.30+ changed the meta-index key format:
+      //   Account keys: "msal.account.keys" (no clientId prefix)
+      //   Token keys:   "msal.token.keys.{homeAccountId}" (keyed by account, not tenant)
+      // We set all plausible key variations to ensure cache hits.
       sessionStorage.setItem(
-        `msal.${clientId}.account.keys`,
+        'msal.account.keys',
         JSON.stringify([accountKey]),
       );
+      // Token keys indexed by homeAccountId (current MSAL v3.30+)
       sessionStorage.setItem(
-        `msal.${clientId}.token.keys.${tenantId}`,
+        `msal.token.keys.${homeAccountId}`,
+        JSON.stringify({
+          idToken: [idTokenKey],
+          accessToken: [accessTokenKey],
+          refreshToken: [],
+        }),
+      );
+      // Token keys indexed by clientId (legacy / fallback)
+      sessionStorage.setItem(
+        `msal.token.keys.${clientId}`,
+        JSON.stringify({
+          idToken: [idTokenKey],
+          accessToken: [accessTokenKey],
+          refreshToken: [],
+        }),
+      );
+      // Token keys indexed by tenantId (another possible lookup)
+      sessionStorage.setItem(
+        `msal.token.keys.${tenantId}`,
         JSON.stringify({
           idToken: [idTokenKey],
           accessToken: [accessTokenKey],
@@ -396,34 +418,65 @@ export async function setStoreState(
   updates: Record<string, unknown>,
 ): Promise<boolean> {
   return page.evaluate((u) => {
-    // Next.js webpack module cache — key is either __webpack_modules__ (build)
-    // or accessible via __webpack_require__.c (runtime).
+    // Strategy 1: Classic __webpack_require__ (Next.js pages-router / older builds)
     const req = (window as unknown as Record<string, unknown>).__webpack_require__;
-    if (!req) return false;
-
-    const cache =
-      (req as unknown as Record<string, unknown>).c as Record<
-        string,
-        { exports?: Record<string, unknown> }
-      > | undefined;
-    if (!cache) return false;
-
-    for (const id of Object.keys(cache)) {
-      try {
-        const mod = cache[id];
-        const ex = mod?.exports as Record<string, unknown> | undefined;
-        if (ex?.useRunnerStore) {
-          const store = ex.useRunnerStore as {
-            setState: (p: Record<string, unknown>) => void;
-          };
-          store.setState(u);
-          return true;
+    if (req) {
+      const cache =
+        (req as unknown as Record<string, unknown>).c as Record<
+          string,
+          { exports?: Record<string, unknown> }
+        > | undefined;
+      if (cache) {
+        for (const id of Object.keys(cache)) {
+          try {
+            const mod = cache[id];
+            const ex = mod?.exports as Record<string, unknown> | undefined;
+            if (ex?.useRunnerStore) {
+              const store = ex.useRunnerStore as {
+                setState: (p: Record<string, unknown>) => void;
+              };
+              store.setState(u);
+              return true;
+            }
+          } catch {
+            // skip modules that throw on property access
+          }
         }
-      } catch {
-        // skip modules that throw on property access
       }
     }
-    return false;
+
+    // Strategy 2: webpackChunk_N_E (Next.js app-router with RSC)
+    // Push a synthetic chunk to obtain __webpack_require__ and walk the module cache.
+    const chunks = (window as unknown as Record<string, unknown[][]>).webpackChunk_N_E;
+    if (!chunks) return false;
+
+    let found = false;
+    chunks.push([
+      ['__test_set_store__'],
+      {},
+      ((requireFn: {
+        c?: Record<string, { exports?: Record<string, unknown> }>;
+      }) => {
+        const cache = requireFn.c;
+        if (!cache) return;
+        for (const id of Object.keys(cache)) {
+          try {
+            const ex = cache[id]?.exports as Record<string, unknown> | undefined;
+            if (ex?.useRunnerStore) {
+              const store = ex.useRunnerStore as {
+                setState: (p: Record<string, unknown>) => void;
+              };
+              store.setState(u);
+              found = true;
+              break;
+            }
+          } catch {
+            // skip modules that throw on property access
+          }
+        }
+      }) as unknown as (() => void),
+    ]);
+    return found;
   }, updates);
 }
 
