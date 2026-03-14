@@ -2,13 +2,25 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={
+      <main className="flex min-h-screen items-center justify-center bg-gray-50">
+        <p className="text-sm text-gray-400">Verifying…</p>
+      </main>
+    }>
+      <VerifyEmailContent />
+    </Suspense>
+  );
+}
+
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token') ?? '';
 
