@@ -17,9 +17,10 @@ export default function ExtensionTable({
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return extensions;
+    const exts = extensions ?? [];
+    if (!search.trim()) return exts;
     const q = search.toLowerCase();
-    return extensions.filter(
+    return exts.filter(
       (ext) =>
         ext.extensionNumber.includes(q) ||
         (ext.displayName?.toLowerCase().includes(q) ?? false) ||
@@ -80,6 +81,7 @@ export default function ExtensionTable({
               <th className="px-3 py-2 text-left text-gray-600 font-medium">Ext</th>
               <th className="px-3 py-2 text-left text-gray-600 font-medium">Name</th>
               <th className="px-3 py-2 text-left text-gray-600 font-medium hidden sm:table-cell">Email</th>
+              <th className="px-3 py-2 text-left text-gray-600 font-medium hidden md:table-cell">Department</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -103,11 +105,12 @@ export default function ExtensionTable({
                 <td className="px-3 py-2 font-mono text-gray-900">{ext.extensionNumber}</td>
                 <td className="px-3 py-2 text-gray-700">{ext.displayName ?? '-'}</td>
                 <td className="px-3 py-2 text-gray-500 hidden sm:table-cell">{ext.email ?? '-'}</td>
+                <td className="px-3 py-2 text-gray-500 hidden md:table-cell">{ext.currentGroupName ?? '-'}</td>
               </tr>
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-3 py-6 text-center text-gray-400">
+                <td colSpan={5} className="px-3 py-6 text-center text-gray-400">
                   No extensions found
                 </td>
               </tr>
