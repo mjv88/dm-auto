@@ -7,6 +7,7 @@ const links = [
   { href: '/admin', label: 'Dashboard', exact: true },
   { href: '/admin/pbx', label: 'PBX' },
   { href: '/admin/runners', label: 'Runners' },
+  { href: '/admin/users', label: 'Users' },
   { href: '/admin/audit', label: 'Audit Log' },
   { href: '/admin/settings', label: 'Settings' },
 ];
