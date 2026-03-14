@@ -48,15 +48,15 @@ export default function SelectPBXPage() {
 
         {pbxOptions.map((pbx) => (
           <button
-            key={pbx.pbx_fqdn}
-            onClick={() => handleSelect(pbx.pbx_fqdn)}
+            key={pbx.pbxFqdn}
+            onClick={() => handleSelect(pbx.pbxFqdn)}
             disabled={loadingFqdn !== null}
-            aria-label={`Select ${pbx.pbx_name}`}
+            aria-label={`Select ${pbx.pbxName}`}
             className="w-full rounded-card bg-white shadow-card px-4 py-4 text-left flex items-center justify-between hover:shadow-md transition-shadow active:scale-[0.98] disabled:opacity-60"
           >
             <div className="min-w-0">
-              <p className="font-bold text-brand-text truncate">{pbx.pbx_name}</p>
-              <p className="text-xs text-brand-secondary mt-0.5 truncate">{pbx.pbx_fqdn}</p>
+              <p className="font-bold text-brand-text truncate">{pbx.pbxName}</p>
+              <p className="text-xs text-brand-secondary mt-0.5 truncate">{pbx.pbxFqdn}</p>
             </div>
             <svg
               className="h-5 w-5 text-brand-secondary/50 flex-shrink-0 ml-3"

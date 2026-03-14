@@ -280,8 +280,8 @@ export const SELECT_AUTH_RESPONSE = {
     currentDept: null,
   },
   pbxOptions: [
-    { pbx_fqdn: 'kunde-gmbh.3cx.eu', pbx_name: 'Kunde GmbH' },
-    { pbx_fqdn: 'andere-ag.3cx.eu', pbx_name: 'Andere AG' },
+    { pbxFqdn: 'kunde-gmbh.3cx.eu', pbxName: 'Kunde GmbH' },
+    { pbxFqdn: 'andere-ag.3cx.eu', pbxName: 'Andere AG' },
   ],
 };
 

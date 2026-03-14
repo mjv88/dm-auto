@@ -6,17 +6,18 @@ import type { PBXCredential } from '@/types/auth';
 interface RunnerForm {
   email: string;
   extension: string;
-  pbx_fqdn: string;
-  allowed_dept_ids: number[];
+  pbxId: string;
+  allowedDeptIds: number[];
 }
 
 interface RunnerData {
   id: string;
-  email: string;
-  extension: string;
-  pbx_fqdn: string;
-  allowed_dept_ids: number[];
-  is_active: boolean;
+  entraEmail: string;
+  extensionNumber: string;
+  pbxFqdn: string;
+  pbxCredentialId?: string;
+  allowedDeptIds: number[];
+  isActive: boolean;
 }
 
 interface Department {
@@ -36,8 +37,8 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
   const [form, setForm] = useState<RunnerForm>({
     email: '',
     extension: '',
-    pbx_fqdn: pbxList[0]?.pbx_fqdn ?? '',
-    allowed_dept_ids: [],
+    pbxId: pbxList[0]?.id ?? '',
+    allowedDeptIds: [],
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,20 +46,20 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
   useEffect(() => {
     if (runner) {
       setForm({
-        email: runner.email,
-        extension: runner.extension,
-        pbx_fqdn: runner.pbx_fqdn,
-        allowed_dept_ids: runner.allowed_dept_ids,
+        email: runner.entraEmail,
+        extension: runner.extensionNumber,
+        pbxId: runner.pbxCredentialId ?? pbxList.find((p) => p.pbxFqdn === runner.pbxFqdn)?.id ?? '',
+        allowedDeptIds: runner.allowedDeptIds,
       });
     }
-  }, [runner]);
+  }, [runner, pbxList]);
 
   function toggleDept(id: number) {
     setForm((prev) => ({
       ...prev,
-      allowed_dept_ids: prev.allowed_dept_ids.includes(id)
-        ? prev.allowed_dept_ids.filter((d) => d !== id)
-        : [...prev.allowed_dept_ids, id],
+      allowedDeptIds: prev.allowedDeptIds.includes(id)
+        ? prev.allowedDeptIds.filter((d) => d !== id)
+        : [...prev.allowedDeptIds, id],
     }));
   }
 
@@ -108,13 +109,13 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">PBX</label>
             <select
-              value={form.pbx_fqdn}
-              onChange={(e) => setForm({ ...form, pbx_fqdn: e.target.value })}
+              value={form.pbxId}
+              onChange={(e) => setForm({ ...form, pbxId: e.target.value })}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
             >
               {pbxList.map((p) => (
-                <option key={p.id} value={p.pbx_fqdn}>
-                  {p.pbx_name} ({p.pbx_fqdn})
+                <option key={p.id} value={p.id}>
+                  {p.pbxName} ({p.pbxFqdn})
                 </option>
               ))}
             </select>
@@ -129,7 +130,7 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
                 <label key={dept.id} className="flex items-center gap-2 text-sm text-gray-700">
                   <input
                     type="checkbox"
-                    checked={form.allowed_dept_ids.includes(dept.id)}
+                    checked={form.allowedDeptIds.includes(dept.id)}
                     onChange={() => toggleDept(dept.id)}
                     className="rounded border-gray-300"
                   />

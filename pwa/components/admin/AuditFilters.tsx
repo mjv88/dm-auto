@@ -7,7 +7,7 @@ import type { PBXCredential } from '@/types/auth';
 export interface AuditFilterValues {
   from: string;
   to: string;
-  pbx_fqdn: string;
+  pbx: string;
   status: string;
   email: string;
 }
@@ -38,7 +38,9 @@ export default function AuditFilters({ initial, onChange }: AuditFiltersProps) {
   const [pbxList, setPbxList] = useState<PBXCredential[]>([]);
 
   useEffect(() => {
-    adminGet<PBXCredential[]>('/admin/pbx').then(setPbxList).catch(console.error);
+    adminGet<{ pbxList: PBXCredential[] }>('/admin/pbx')
+      .then((data) => setPbxList(data.pbxList ?? []))
+      .catch(console.error);
   }, []);
 
   function update(patch: Partial<AuditFilterValues>) {
@@ -76,14 +78,14 @@ export default function AuditFilters({ initial, onChange }: AuditFiltersProps) {
       />
 
       <select
-        value={filters.pbx_fqdn}
-        onChange={(e) => update({ pbx_fqdn: e.target.value })}
+        value={filters.pbx}
+        onChange={(e) => update({ pbx: e.target.value })}
         className="rounded-md border border-gray-300 px-3 py-1.5 text-sm"
       >
         <option value="">All PBX</option>
         {pbxList.map((p) => (
-          <option key={p.id} value={p.pbx_fqdn}>
-            {p.pbx_name}
+          <option key={p.id} value={p.pbxFqdn}>
+            {p.pbxName}
           </option>
         ))}
       </select>

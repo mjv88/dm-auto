@@ -137,8 +137,8 @@ describe('apiClient.auth()', () => {
 
     const state = useRunnerStore.getState();
     expect(state.pbxOptions).toHaveLength(2);
-    expect(state.pbxOptions[0].pbx_fqdn).toBe('kunde-gmbh.3cx.eu');
-    expect(state.pbxOptions[1].pbx_name).toBe('Andere AG');
+    expect(state.pbxOptions[0].pbxFqdn).toBe('kunde-gmbh.3cx.eu');
+    expect(state.pbxOptions[1].pbxName).toBe('Andere AG');
     expect(state.authStatus).toBe('authenticated');
     expect(navigate).toHaveBeenCalledWith('/select-pbx');
   });

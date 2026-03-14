@@ -17,8 +17,8 @@ jest.mock('../../lib/api', () => ({
 
 import type { PBXOption } from '@/types/auth';
 
-const PBX_A: PBXOption = { pbx_fqdn: 'kunde-gmbh.3cx.eu', pbx_name: 'Kunde GmbH' };
-const PBX_B: PBXOption = { pbx_fqdn: 'andere-ag.3cx.eu', pbx_name: 'Andere AG' };
+const PBX_A: PBXOption = { pbxFqdn: 'kunde-gmbh.3cx.eu', pbxName: 'Kunde GmbH' };
+const PBX_B: PBXOption = { pbxFqdn: 'andere-ag.3cx.eu', pbxName: 'Andere AG' };
 
 const mockSetSelectedPbxFqdn = jest.fn();
 const mockSetAllowedDepts = jest.fn();

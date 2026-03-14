@@ -10,11 +10,12 @@ import type { PBXCredential } from '@/types/auth';
 
 interface Runner {
   id: string;
-  email: string;
-  extension: string;
-  pbx_fqdn: string;
-  allowed_dept_ids: number[];
-  is_active: boolean;
+  entraEmail: string;
+  extensionNumber: string;
+  pbxFqdn: string;
+  pbxName: string;
+  allowedDeptIds: number[];
+  isActive: boolean;
 }
 
 interface Department {
@@ -23,10 +24,10 @@ interface Department {
 }
 
 interface PaginatedRunners {
-  data: Runner[];
+  runners: Runner[];
   total: number;
   page: number;
-  per_page: number;
+  pages: number;
 }
 
 export default function RunnersPage() {
@@ -43,15 +44,15 @@ export default function RunnersPage() {
   const load = useCallback(() => {
     const params = new URLSearchParams();
     params.set('page', String(page));
-    params.set('per_page', '25');
+    params.set('limit', '25');
     if (search) params.set('email', search);
-    if (pbxFilter) params.set('pbx_fqdn', pbxFilter);
-    if (statusFilter) params.set('is_active', statusFilter);
+    if (pbxFilter) params.set('pbxId', pbxFilter);
+    if (statusFilter) params.set('active', statusFilter);
 
     adminGet<PaginatedRunners>(`/admin/runners?${params}`)
       .then((res) => {
-        setRunners(res.data);
-        setTotalPages(Math.ceil(res.total / res.per_page) || 1);
+        setRunners(res.runners);
+        setTotalPages(res.pages || 1);
       })
       .catch(console.error);
   }, [page, search, pbxFilter, statusFilter]);
@@ -70,8 +71,8 @@ export default function RunnersPage() {
   async function handleSave(data: {
     email: string;
     extension: string;
-    pbx_fqdn: string;
-    allowed_dept_ids: number[];
+    pbxId: string;
+    allowedDeptIds: number[];
   }) {
     if (modalRunner) {
       await adminPut(`/admin/runners/${modalRunner.id}`, data);
@@ -83,25 +84,25 @@ export default function RunnersPage() {
   }
 
   async function handleDelete(runner: Runner) {
-    if (!confirm(`Remove runner "${runner.email}"?`)) return;
+    if (!confirm(`Remove runner "${runner.entraEmail}"?`)) return;
     await adminDelete(`/admin/runners/${runner.id}`);
     load();
   }
 
   const columns: Column<Runner>[] = [
-    { key: 'email', header: 'Email' },
-    { key: 'extension', header: 'Ext' },
-    { key: 'pbx_fqdn', header: 'PBX' },
+    { key: 'entraEmail', header: 'Email' },
+    { key: 'extensionNumber', header: 'Ext' },
+    { key: 'pbxFqdn', header: 'PBX' },
     {
-      key: 'is_active',
+      key: 'isActive',
       header: 'Status',
       render: (row) => (
         <span
           className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-            row.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+            row.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
           }`}
         >
-          {row.is_active ? 'Active' : 'Inactive'}
+          {row.isActive ? 'Active' : 'Inactive'}
         </span>
       ),
     },
@@ -136,8 +137,8 @@ export default function RunnersPage() {
         >
           <option value="">All PBX</option>
           {pbxList.map((p) => (
-            <option key={p.id} value={p.pbx_fqdn}>
-              {p.pbx_name}
+            <option key={p.id} value={p.id}>
+              {p.pbxName}
             </option>
           ))}
         </select>

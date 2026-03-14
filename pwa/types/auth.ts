@@ -11,8 +11,8 @@ export interface Dept {
 }
 
 export interface PBXOption {
-  pbx_fqdn: string;
-  pbx_name: string;
+  pbxFqdn: string;
+  pbxName: string;
 }
 
 export interface RunnerProfile {
@@ -33,16 +33,20 @@ export interface AppError {
 export interface Tenant {
   id: string;
   name: string;
-  entra_group_id: string;
-  admin_emails: string[];
+  entraTenantId?: string;
+  entraGroupId: string;
+  adminEmails: string[];
+  isActive?: boolean;
 }
 
 export interface PBXCredential {
   id: string;
-  pbx_fqdn: string;
-  pbx_name: string;
-  auth_mode: 'xapi' | 'user_credentials';
-  is_active: boolean;
+  pbxFqdn: string;
+  pbxName: string;
+  authMode: 'xapi' | 'user_credentials';
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type AuthStatus = 'idle' | 'loading' | 'authenticated' | 'error';

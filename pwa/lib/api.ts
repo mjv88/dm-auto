@@ -250,8 +250,8 @@ export class RunnerAPIClient {
       } else {
         const { options } = data as AuthSelectResponse;
         const pbxOptions: PBXOption[] = options.map((o) => ({
-          pbx_fqdn: o.pbxFqdn,
-          pbx_name: o.pbxName,
+          pbxFqdn: o.pbxFqdn,
+          pbxName: o.pbxName,
         }));
         store.setPbxOptions(pbxOptions);
         store.setAuthStatus('authenticated');

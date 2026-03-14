@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react';
 import type { PBXCredential } from '@/types/auth';
 
 interface PbxForm {
-  pbx_fqdn: string;
-  pbx_name: string;
-  auth_mode: 'xapi' | 'user_credentials';
-  api_key?: string;
+  pbxFqdn: string;
+  pbxName: string;
+  authMode: 'xapi' | 'user_credentials';
+  apiKey?: string;
   username?: string;
   password?: string;
 }
@@ -20,10 +20,10 @@ interface PbxModalProps {
 
 export default function PbxModal({ pbx, onSave, onClose }: PbxModalProps) {
   const [form, setForm] = useState<PbxForm>({
-    pbx_fqdn: '',
-    pbx_name: '',
-    auth_mode: 'xapi',
-    api_key: '',
+    pbxFqdn: '',
+    pbxName: '',
+    authMode: 'xapi',
+    apiKey: '',
     username: '',
     password: '',
   });
@@ -33,10 +33,10 @@ export default function PbxModal({ pbx, onSave, onClose }: PbxModalProps) {
   useEffect(() => {
     if (pbx) {
       setForm({
-        pbx_fqdn: pbx.pbx_fqdn,
-        pbx_name: pbx.pbx_name,
-        auth_mode: pbx.auth_mode,
-        api_key: '',
+        pbxFqdn: pbx.pbxFqdn,
+        pbxName: pbx.pbxName,
+        authMode: pbx.authMode,
+        apiKey: '',
         username: '',
         password: '',
       });
@@ -68,8 +68,8 @@ export default function PbxModal({ pbx, onSave, onClose }: PbxModalProps) {
             <label className="block text-sm font-medium text-gray-700 mb-1">FQDN</label>
             <input
               type="text"
-              value={form.pbx_fqdn}
-              onChange={(e) => setForm({ ...form, pbx_fqdn: e.target.value })}
+              value={form.pbxFqdn}
+              onChange={(e) => setForm({ ...form, pbxFqdn: e.target.value })}
               placeholder="pbx.example.com"
               required
               disabled={!!pbx}
@@ -80,8 +80,8 @@ export default function PbxModal({ pbx, onSave, onClose }: PbxModalProps) {
             <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
             <input
               type="text"
-              value={form.pbx_name}
-              onChange={(e) => setForm({ ...form, pbx_name: e.target.value })}
+              value={form.pbxName}
+              onChange={(e) => setForm({ ...form, pbxName: e.target.value })}
               placeholder="Main PBX"
               required
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -90,9 +90,9 @@ export default function PbxModal({ pbx, onSave, onClose }: PbxModalProps) {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Auth Mode</label>
             <select
-              value={form.auth_mode}
+              value={form.authMode}
               onChange={(e) =>
-                setForm({ ...form, auth_mode: e.target.value as 'xapi' | 'user_credentials' })
+                setForm({ ...form, authMode: e.target.value as 'xapi' | 'user_credentials' })
               }
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
             >
@@ -101,20 +101,20 @@ export default function PbxModal({ pbx, onSave, onClose }: PbxModalProps) {
             </select>
           </div>
 
-          {form.auth_mode === 'xapi' && (
+          {form.authMode === 'xapi' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">API Key</label>
               <input
                 type="password"
-                value={form.api_key ?? ''}
-                onChange={(e) => setForm({ ...form, api_key: e.target.value })}
+                value={form.apiKey ?? ''}
+                onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
                 placeholder={pbx ? '(unchanged)' : 'Enter API key'}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           )}
 
-          {form.auth_mode === 'user_credentials' && (
+          {form.authMode === 'user_credentials' && (
             <>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>

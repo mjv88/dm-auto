@@ -20,7 +20,7 @@ export default function SettingsPage() {
         const t = 'tenant' in data ? data.tenant : data;
         setTenant(t);
         setName(t.name ?? '');
-        setEntraGroupId(t.entra_group_id ?? t.entraGroupId ?? '');
+        setEntraGroupId(t.entraGroupId ?? '');
       })
       .catch((err) => setError(err.message));
   }, []);
@@ -30,7 +30,7 @@ export default function SettingsPage() {
     setSaving(true);
     setError(null);
     try {
-      await adminPut('/admin/tenants/me', { name, entra_group_id: entraGroupId });
+      await adminPut('/admin/tenants/me', { name, entraGroupId });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
@@ -92,7 +92,7 @@ export default function SettingsPage() {
           <label className="block text-sm font-medium text-gray-700 mb-1">Admin Emails</label>
           <input
             type="text"
-            value={(tenant.admin_emails ?? tenant.adminEmails ?? []).join(', ')}
+            value={(tenant.adminEmails ?? []).join(', ')}
             readOnly
             className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500"
           />

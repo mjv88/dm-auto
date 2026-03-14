@@ -11,22 +11,22 @@ import AuditRowDetail from '@/components/admin/AuditRowDetail';
 
 interface AuditEntry {
   id: string;
-  timestamp: string;
-  email: string;
+  createdAt: string;
+  entraEmail: string;
   action: string;
   status: string;
-  pbx_fqdn?: string;
-  error_message?: string;
-  ip_address?: string;
-  user_agent?: string;
-  device_id?: string;
+  pbxFqdn?: string;
+  errorMessage?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  deviceId?: string;
 }
 
 interface PaginatedAudit {
-  data: AuditEntry[];
+  logs: AuditEntry[];
   total: number;
   page: number;
-  per_page: number;
+  pages: number;
 }
 
 function daysAgo(days: number): string {
@@ -48,7 +48,7 @@ export default function AuditPage() {
   const [filters, setFilters] = useState<AuditFilterValues>({
     from: searchParams.get('from') ?? daysAgo(7),
     to: searchParams.get('to') ?? today(),
-    pbx_fqdn: searchParams.get('pbx_fqdn') ?? '',
+    pbx: searchParams.get('pbx') ?? '',
     status: searchParams.get('status') ?? '',
     email: searchParams.get('email') ?? '',
   });
@@ -57,17 +57,17 @@ export default function AuditPage() {
   const load = useCallback(() => {
     const params = new URLSearchParams();
     params.set('page', String(page));
-    params.set('per_page', '50');
+    params.set('limit', '50');
     if (filters.from) params.set('from', filters.from);
     if (filters.to) params.set('to', filters.to);
-    if (filters.pbx_fqdn) params.set('pbx_fqdn', filters.pbx_fqdn);
+    if (filters.pbx) params.set('pbx', filters.pbx);
     if (filters.status) params.set('status', filters.status);
     if (filters.email) params.set('email', filters.email);
 
     adminGet<PaginatedAudit>(`/admin/audit?${params}`)
       .then((res) => {
-        setEntries(res.data);
-        setTotalPages(Math.ceil(res.total / res.per_page) || 1);
+        setEntries(res.logs);
+        setTotalPages(res.pages || 1);
       })
       .catch(console.error);
   }, [page, filters]);
@@ -85,7 +85,7 @@ export default function AuditPage() {
       const params = new URLSearchParams();
       if (filters.from) params.set('from', filters.from);
       if (filters.to) params.set('to', filters.to);
-      if (filters.pbx_fqdn) params.set('pbx_fqdn', filters.pbx_fqdn);
+      if (filters.pbx) params.set('pbx', filters.pbx);
       if (filters.status) params.set('status', filters.status);
       if (filters.email) params.set('email', filters.email);
 
@@ -107,15 +107,15 @@ export default function AuditPage() {
 
   const columns: Column<AuditEntry>[] = [
     {
-      key: 'timestamp',
+      key: 'createdAt',
       header: 'Time',
       render: (row) => (
         <span className="text-xs whitespace-nowrap">
-          {new Date(row.timestamp).toLocaleString()}
+          {new Date(row.createdAt).toLocaleString()}
         </span>
       ),
     },
-    { key: 'email', header: 'Email' },
+    { key: 'entraEmail', header: 'Email' },
     { key: 'action', header: 'Action' },
     {
       key: 'status',
@@ -132,7 +132,7 @@ export default function AuditPage() {
         </span>
       ),
     },
-    { key: 'pbx_fqdn', header: 'PBX' },
+    { key: 'pbxFqdn', header: 'PBX' },
   ];
 
   return (

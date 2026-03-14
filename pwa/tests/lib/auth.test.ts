@@ -196,14 +196,14 @@ test('store correctly stores multiple PBX options', async () => {
   const { useRunnerStore } = await import('@/lib/store');
 
   const pbxOptions = [
-    { pbx_fqdn: 'pbx1.example.com', pbx_name: 'Main PBX' },
-    { pbx_fqdn: 'pbx2.example.com', pbx_name: 'Branch PBX' },
+    { pbxFqdn: 'pbx1.example.com', pbxName: 'Main PBX' },
+    { pbxFqdn: 'pbx2.example.com', pbxName: 'Branch PBX' },
   ];
 
   useRunnerStore.getState().setPbxOptions(pbxOptions);
 
   expect(useRunnerStore.getState().pbxOptions).toHaveLength(2);
-  expect(useRunnerStore.getState().pbxOptions[0].pbx_fqdn).toBe('pbx1.example.com');
+  expect(useRunnerStore.getState().pbxOptions[0].pbxFqdn).toBe('pbx1.example.com');
 });
 
 test('setSelectedPbxFqdn stores chosen PBX fqdn', async () => {

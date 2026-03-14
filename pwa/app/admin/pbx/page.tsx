@@ -24,18 +24,18 @@ export default function PbxPage() {
 
   const filtered = (pbxList ?? []).filter(
     (p) => {
-      const name = (p.pbx_name ?? p.pbxName ?? '').toLowerCase();
-      const fqdn = (p.pbx_fqdn ?? p.pbxFqdn ?? '').toLowerCase();
+      const name = (p.pbxName ?? '').toLowerCase();
+      const fqdn = (p.pbxFqdn ?? '').toLowerCase();
       const q = search.toLowerCase();
       return name.includes(q) || fqdn.includes(q);
     },
   );
 
   async function handleSave(data: {
-    pbx_fqdn: string;
-    pbx_name: string;
-    auth_mode: 'xapi' | 'user_credentials';
-    api_key?: string;
+    pbxFqdn: string;
+    pbxName: string;
+    authMode: 'xapi' | 'user_credentials';
+    apiKey?: string;
     username?: string;
     password?: string;
   }) {
@@ -49,30 +49,30 @@ export default function PbxPage() {
   }
 
   async function handleToggle(pbx: PBXCredential) {
-    await adminPut(`/admin/pbx/${pbx.id}`, { is_active: !pbx.is_active });
+    await adminPut(`/admin/pbx/${pbx.id}`, { isActive: !pbx.isActive });
     load();
   }
 
   async function handleDelete(pbx: PBXCredential) {
-    if (!confirm(`Delete PBX "${pbx.pbx_name}"?`)) return;
+    if (!confirm(`Delete PBX "${pbx.pbxName}"?`)) return;
     await adminDelete(`/admin/pbx/${pbx.id}`);
     load();
   }
 
   const columns: Column<PBXCredential>[] = [
-    { key: 'pbx_name', header: 'Name' },
-    { key: 'pbx_fqdn', header: 'FQDN' },
-    { key: 'auth_mode', header: 'Auth Mode' },
+    { key: 'pbxName', header: 'Name' },
+    { key: 'pbxFqdn', header: 'FQDN' },
+    { key: 'authMode', header: 'Auth Mode' },
     {
-      key: 'is_active',
+      key: 'isActive',
       header: 'Status',
       render: (row) => (
         <span
           className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-            row.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+            row.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
           }`}
         >
-          {row.is_active ? 'Active' : 'Inactive'}
+          {row.isActive ? 'Active' : 'Inactive'}
         </span>
       ),
     },
@@ -117,7 +117,7 @@ export default function PbxPage() {
               onClick={() => handleToggle(row)}
               className="text-blue-600 hover:underline"
             >
-              {row.is_active ? 'Disable' : 'Enable'}
+              {row.isActive ? 'Disable' : 'Enable'}
             </button>
             <button onClick={() => setModalPbx(row)} className="text-blue-600 hover:underline">
               Edit
