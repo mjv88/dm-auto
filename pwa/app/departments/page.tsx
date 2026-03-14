@@ -40,10 +40,12 @@ export default function DepartmentsPage() {
   const [isSlow, setIsSlow] = useState(false);
   const [emailVerified, setEmailVerified] = useState(true);
 
+  const setRunnerProfile = useRunnerStore((s) => s.setRunnerProfile);
+  const setSelectedPbxFqdn = useRunnerStore((s) => s.setSelectedPbxFqdn);
+
   // Check email verification status for email-auth users
   useEffect(() => {
     if (!sessionToken) return;
-    // Decode JWT payload to check emailVerified (non-Microsoft sessions)
     try {
       const payload = JSON.parse(atob(sessionToken.split('.')[1]));
       if (payload.emailVerified === false) {
@@ -52,6 +54,60 @@ export default function DepartmentsPage() {
     } catch {
       // Not a JWT or no emailVerified claim — assume verified
     }
+  }, [sessionToken]);
+
+  // Auto-fetch departments if store is empty (email/password login doesn't populate store)
+  useEffect(() => {
+    if (!sessionToken || allowedDepts.length > 0) return;
+
+    try {
+      const payload = JSON.parse(atob(sessionToken.split('.')[1]));
+      const pbxFqdn = payload.pbxFqdn;
+      const extNum = payload.extensionNumber;
+
+      if (!pbxFqdn) return; // no PBX assigned
+
+      // Set runner profile from JWT if not already set
+      if (!runnerProfile) {
+        setRunnerProfile({
+          id: payload.runnerId ?? '',
+          name: payload.email ?? 'Runner',
+          email: payload.email ?? '',
+          extension: extNum ?? '',
+          pbxFqdn,
+          allowedDepts: [],
+          currentDept: null,
+        });
+      }
+
+      // Set selected PBX
+      if (!selectedPbxFqdn) {
+        setSelectedPbxFqdn(pbxFqdn);
+      }
+
+      // Fetch departments from API
+      getDepartments(pbxFqdn).then((depts) => {
+        setAllowedDepts(depts);
+        // Set current dept from the first one or find it
+        if (depts.length > 0 && !currentDept) {
+          // Try to get current dept from API response
+          fetch(`${API_URL}/runner/departments`, {
+            headers: { Authorization: `Bearer ${sessionToken}` },
+          })
+            .then(r => r.json())
+            .then((data: { currentDeptId?: number; currentDeptName?: string }) => {
+              if (data.currentDeptId) {
+                const found = depts.find(d => d.id === data.currentDeptId);
+                if (found) setCurrentDept(found);
+              }
+            })
+            .catch(() => {});
+        }
+      }).catch(() => {});
+    } catch {
+      // JWT decode failed
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionToken]);
 
   const handleResend = useCallback(async () => {
