@@ -53,6 +53,7 @@ export const users = pgTable(
     lockedUntil:           timestamp('locked_until', { withTimezone: true }),
     tenantId:              uuid('tenant_id').references(() => tenants.id),
     createdAt:             timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    role:                  text('role').notNull().default('runner'),
     updatedAt:             timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
@@ -201,6 +202,26 @@ export const pbxExtensions = pgTable(
 );
 
 // ============================================================
+// manager_tenants
+// Maps manager-role users to the tenants they can manage.
+// ============================================================
+export const managerTenants = pgTable(
+  'manager_tenants',
+  {
+    id:         uuid('id').primaryKey().defaultRandom(),
+    userId:     uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    tenantId:   uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+    assignedBy: uuid('assigned_by').notNull().references(() => users.id),
+    createdAt:  timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('idx_manager_tenants_unique').on(t.userId, t.tenantId),
+    index('idx_manager_tenants_user_id').on(t.userId),
+    index('idx_manager_tenants_tenant_id').on(t.tenantId),
+  ],
+);
+
+// ============================================================
 // Relations
 // ============================================================
 export const tenantsRelations = relations(tenants, ({ many }) => ({
@@ -217,6 +238,7 @@ export const pbxCredentialsRelations = relations(pbxCredentials, ({ one, many })
 
 export const usersRelations = relations(users, ({ many }) => ({
   runners: many(runners),
+  managedTenants: many(managerTenants),
 }));
 
 export const runnersRelations = relations(runners, ({ one, many }) => ({
@@ -236,4 +258,10 @@ export const deptCacheRelations = relations(deptCache, ({ one }) => ({
 
 export const pbxExtensionsRelations = relations(pbxExtensions, ({ one }) => ({
   pbxCredential: one(pbxCredentials, { fields: [pbxExtensions.pbxCredentialId], references: [pbxCredentials.id] }),
+}));
+
+export const managerTenantsRelations = relations(managerTenants, ({ one }) => ({
+  user:       one(users,   { fields: [managerTenants.userId],   references: [users.id] }),
+  tenant:     one(tenants,  { fields: [managerTenants.tenantId], references: [tenants.id] }),
+  assignedByUser: one(users, { fields: [managerTenants.assignedBy], references: [users.id] }),
 }));

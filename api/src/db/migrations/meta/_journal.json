@@ -36,6 +36,13 @@
       "when": 1773485938124,
       "tag": "0005_unknown_shinobi_shaw",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1773505158161,
+      "tag": "0006_luxuriant_shiva",
+      "breakpoints": true
     }
   ]
 }
