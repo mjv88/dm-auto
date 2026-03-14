@@ -142,7 +142,9 @@ describe('DepartmentsPage', () => {
   });
 
   it('API failure navigates to error screen', async () => {
-    mockSwitchDepartment.mockRejectedValue(new Error('PBX_UNAVAILABLE'));
+    const appErr = new Error('PBX_UNAVAILABLE');
+    (appErr as unknown as { code: string }).code = 'PBX_UNAVAILABLE';
+    mockSwitchDepartment.mockRejectedValue(appErr);
     renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: /Zu Support wechseln/i }));
