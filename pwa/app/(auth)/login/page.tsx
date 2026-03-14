@@ -32,6 +32,7 @@ export default function LoginPage() {
   const [emailError, setEmailError] = useState('');
   const setAuthStatus = useRunnerStore((s) => s.setAuthStatus);
   const setSessionToken = useRunnerStore((s) => s.setSessionToken);
+  const setRole = useRunnerStore((s) => s.setRole);
   const setError = useRunnerStore((s) => s.setError);
 
   const msLoginUrl =
@@ -138,6 +139,11 @@ export default function LoginPage() {
             try {
               const result = await loginWithEmail(email, password);
               setSessionToken(result.sessionToken);
+              // Decode JWT to extract role
+              try {
+                const payload = JSON.parse(atob(result.sessionToken.split('.')[1]));
+                setRole(payload.role ?? 'runner');
+              } catch { /* fallback to runner */ }
               setAuthStatus('authenticated');
               router.push('/departments');
             } catch (err) {
