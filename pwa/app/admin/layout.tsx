@@ -9,15 +9,15 @@ import AdminNav from '@/components/admin/AdminNav';
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const authStatus = useRunnerStore((s) => s.authStatus);
-  const isAdmin = useRunnerStore((s) => s.isAdmin);
+  const role = useRunnerStore((s) => s.role);
 
   useEffect(() => {
-    if (authStatus === 'authenticated' && !isAdmin) {
+    if (authStatus === 'authenticated' && role === 'runner') {
       router.replace('/departments');
     }
-  }, [authStatus, isAdmin, router]);
+  }, [authStatus, role, router]);
 
-  if (authStatus !== 'authenticated' || !isAdmin) {
+  if (authStatus !== 'authenticated' || role === 'runner') {
     return (
       <main className="flex min-h-screen items-center justify-center bg-gray-50">
         <svg

@@ -228,23 +228,29 @@ test('store error is set correctly for TENANT_NOT_REGISTERED', async () => {
   expect(state.error?.code).toBe('TENANT_NOT_REGISTERED');
 });
 
-// ─── 8. Admin panel visible only when isAdmin=true ───────────────────────────
+// ─── 8. Role defaults to runner and can be changed ──────────────────────────
 
-test('isAdmin defaults to false in initial store state', async () => {
+test('role defaults to runner in initial store state', async () => {
   const { useRunnerStore } = await import('@/lib/store');
   useRunnerStore.getState().reset();
-  expect(useRunnerStore.getState().isAdmin).toBe(false);
+  expect(useRunnerStore.getState().role).toBe('runner');
 });
 
-test('setIsAdmin(true) grants admin access', async () => {
+test('setRole(admin) grants admin access', async () => {
   const { useRunnerStore } = await import('@/lib/store');
-  useRunnerStore.getState().setIsAdmin(true);
-  expect(useRunnerStore.getState().isAdmin).toBe(true);
+  useRunnerStore.getState().setRole('admin');
+  expect(useRunnerStore.getState().role).toBe('admin');
 });
 
-test('reset() clears isAdmin back to false', async () => {
+test('setRole(manager) grants manager access', async () => {
   const { useRunnerStore } = await import('@/lib/store');
-  useRunnerStore.getState().setIsAdmin(true);
+  useRunnerStore.getState().setRole('manager');
+  expect(useRunnerStore.getState().role).toBe('manager');
+});
+
+test('reset() clears role back to runner', async () => {
+  const { useRunnerStore } = await import('@/lib/store');
+  useRunnerStore.getState().setRole('admin');
   useRunnerStore.getState().reset();
-  expect(useRunnerStore.getState().isAdmin).toBe(false);
+  expect(useRunnerStore.getState().role).toBe('runner');
 });

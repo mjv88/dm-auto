@@ -14,7 +14,7 @@ interface AuthApiResponse {
   currentDept?: Dept;
   allowedDepts?: Dept[];
   pbxOptions?: PBXOption[];
-  isAdmin?: boolean;
+  role?: 'admin' | 'manager' | 'runner';
   error?: string;
 }
 
@@ -28,7 +28,7 @@ export default function CallbackPage() {
   const setCurrentDept = useRunnerStore((s) => s.setCurrentDept);
   const setAllowedDepts = useRunnerStore((s) => s.setAllowedDepts);
   const setPbxOptions = useRunnerStore((s) => s.setPbxOptions);
-  const setIsAdmin = useRunnerStore((s) => s.setIsAdmin);
+  const setRole = useRunnerStore((s) => s.setRole);
   const setError = useRunnerStore((s) => s.setError);
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export default function CallbackPage() {
         if (data.currentDept) setCurrentDept(data.currentDept);
         if (data.allowedDepts) setAllowedDepts(data.allowedDepts);
         if (data.pbxOptions) setPbxOptions(data.pbxOptions);
-        setIsAdmin(data.isAdmin ?? false);
+        setRole(data.role ?? 'runner');
         setAuthStatus('authenticated');
 
         // Route based on mode

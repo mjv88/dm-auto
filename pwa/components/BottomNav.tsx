@@ -8,7 +8,7 @@ export function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
   const authStatus = useRunnerStore((s) => s.authStatus);
-  const isAdmin = useRunnerStore((s) => s.isAdmin);
+  const role = useRunnerStore((s) => s.role);
   const reset = useRunnerStore((s) => s.reset);
 
   const isAuthenticated = authStatus === 'authenticated';
@@ -19,11 +19,12 @@ export function BottomNav() {
   }
 
   // Build tabs based on auth state and role
+  const isAdminOrManager = role === 'admin' || role === 'manager';
   const tabs: Array<{ href: string; label: string; icon: React.FC<{ active: boolean }>; show: boolean; exact: boolean }> = isAuthenticated
     ? [
         { href: '/departments', label: 'Home', icon: HomeIcon, show: true, exact: true },
-        { href: '/admin', label: 'Admin', icon: AdminIcon, show: isAdmin, exact: false },
-        { href: '/setup', label: 'Setup', icon: SetupIcon, show: isAdmin, exact: false },
+        { href: '/admin', label: 'Admin', icon: AdminIcon, show: isAdminOrManager, exact: false },
+        { href: '/setup', label: 'Setup', icon: SetupIcon, show: role === 'admin', exact: false },
       ]
     : [
         { href: '/login', label: 'Login', icon: LoginIcon, show: true, exact: false },

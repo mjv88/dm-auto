@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import type { AuthStatus, RunnerProfile, Dept, PBXOption, AppError } from '@/types/auth';
 
+type UserRole = 'admin' | 'manager' | 'runner';
+
 interface RunnerStore {
   // Auth state
   authStatus: AuthStatus;
@@ -10,7 +12,8 @@ interface RunnerStore {
   allowedDepts: Dept[];
   pbxOptions: PBXOption[];
   selectedPbxFqdn: string | null;
-  isAdmin: boolean;
+  role: UserRole;
+  selectedAdminTenantId: string | null;
   error: AppError | null;
   // Session token — memory only, never persisted to localStorage/sessionStorage
   sessionToken: string | null;
@@ -22,7 +25,8 @@ interface RunnerStore {
   setAllowedDepts: (depts: Dept[]) => void;
   setPbxOptions: (options: PBXOption[]) => void;
   setSelectedPbxFqdn: (fqdn: string | null) => void;
-  setIsAdmin: (isAdmin: boolean) => void;
+  setRole: (role: UserRole) => void;
+  setSelectedAdminTenantId: (id: string | null) => void;
   setError: (error: AppError | null) => void;
   setSessionToken: (token: string | null) => void;
   reset: () => void;
@@ -35,7 +39,8 @@ const initialState = {
   allowedDepts: [],
   pbxOptions: [],
   selectedPbxFqdn: null,
-  isAdmin: false,
+  role: 'runner' as UserRole,
+  selectedAdminTenantId: null,
   error: null,
   sessionToken: null,
 };
@@ -70,7 +75,8 @@ export const useRunnerStore = create<RunnerStore>((set) => ({
   setAllowedDepts: (depts) => set({ allowedDepts: depts }),
   setPbxOptions: (options) => set({ pbxOptions: options }),
   setSelectedPbxFqdn: (fqdn) => set({ selectedPbxFqdn: fqdn }),
-  setIsAdmin: (isAdmin) => set({ isAdmin }),
+  setRole: (role) => set({ role }),
+  setSelectedAdminTenantId: (id) => set({ selectedAdminTenantId: id }),
   setError: (error) => set({ error }),
   setSessionToken: (token) => set({ sessionToken: token }),
   reset: () => set(initialState),
