@@ -126,25 +126,21 @@ describe('POST /runner/auth', () => {
     });
     (checkEntraGroup as jest.Mock).mockResolvedValue(true);
 
-    // Build DB mock with a complex query chain for the runner join query
-    const runnerQuery = {
-      select: jest.fn().mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          where: jest.fn().mockReturnValue(Promise.resolve([mockRunner])),
-          innerJoin: jest.fn().mockReturnValue({
-            where: jest.fn().mockReturnValue(Promise.resolve([mockRunner])),
-          }),
-        }),
-        innerJoin: jest.fn().mockReturnValue({
-          where: jest.fn().mockReturnValue(Promise.resolve([mockRunner])),
-        }),
-      }),
-    };
     let selectCall = 0;
     (getDb as jest.Mock).mockReturnValue({
       select: jest.fn().mockImplementation(() => {
         selectCall++;
         if (selectCall === 1) {
+          // User role lookup
+          return {
+            from: jest.fn().mockReturnValue({
+              where: jest.fn().mockReturnValue({
+                limit: jest.fn().mockResolvedValue([{ id: 'user-uuid-0001', role: 'runner' }]),
+              }),
+            }),
+          };
+        }
+        if (selectCall === 2) {
           // Tenant lookup
           return {
             from: jest.fn().mockReturnValue({
@@ -195,6 +191,16 @@ describe('POST /runner/auth', () => {
       select: jest.fn().mockImplementation(() => {
         selectCall++;
         if (selectCall === 1) {
+          // User role lookup
+          return {
+            from: jest.fn().mockReturnValue({
+              where: jest.fn().mockReturnValue({
+                limit: jest.fn().mockResolvedValue([]),
+              }),
+            }),
+          };
+        }
+        if (selectCall === 2) {
           return {
             from: jest.fn().mockReturnValue({
               where: jest.fn().mockReturnValue({
@@ -233,13 +239,18 @@ describe('POST /runner/auth', () => {
       oid: TEST_OID,
       name: 'Test Runner',
     });
+    let selectCall = 0;
     (getDb as jest.Mock).mockReturnValue({
-      select: jest.fn().mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          where: jest.fn().mockReturnValue({
-            limit: jest.fn().mockResolvedValue([]), // empty — tenant not found
+      select: jest.fn().mockImplementation(() => {
+        selectCall++;
+        // Both user lookup and tenant lookup return empty
+        return {
+          from: jest.fn().mockReturnValue({
+            where: jest.fn().mockReturnValue({
+              limit: jest.fn().mockResolvedValue([]),
+            }),
           }),
-        }),
+        };
       }),
     });
 
@@ -261,13 +272,28 @@ describe('POST /runner/auth', () => {
       oid: TEST_OID,
       name: 'Test Runner',
     });
+    let selectCall = 0;
     (getDb as jest.Mock).mockReturnValue({
-      select: jest.fn().mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          where: jest.fn().mockReturnValue({
-            limit: jest.fn().mockResolvedValue([mockTenant]),
+      select: jest.fn().mockImplementation(() => {
+        selectCall++;
+        if (selectCall === 1) {
+          // User role lookup
+          return {
+            from: jest.fn().mockReturnValue({
+              where: jest.fn().mockReturnValue({
+                limit: jest.fn().mockResolvedValue([]),
+              }),
+            }),
+          };
+        }
+        // Tenant lookup
+        return {
+          from: jest.fn().mockReturnValue({
+            where: jest.fn().mockReturnValue({
+              limit: jest.fn().mockResolvedValue([mockTenant]),
+            }),
           }),
-        }),
+        };
       }),
     });
     (checkEntraGroup as jest.Mock).mockResolvedValue(false);
@@ -297,6 +323,16 @@ describe('POST /runner/auth', () => {
       select: jest.fn().mockImplementation(() => {
         selectCall++;
         if (selectCall === 1) {
+          // User role lookup
+          return {
+            from: jest.fn().mockReturnValue({
+              where: jest.fn().mockReturnValue({
+                limit: jest.fn().mockResolvedValue([]),
+              }),
+            }),
+          };
+        }
+        if (selectCall === 2) {
           return {
             from: jest.fn().mockReturnValue({
               where: jest.fn().mockReturnValue({
@@ -358,6 +394,16 @@ describe('POST /runner/auth', () => {
       select: jest.fn().mockImplementation(() => {
         selectCall++;
         if (selectCall === 1) {
+          // User role lookup
+          return {
+            from: jest.fn().mockReturnValue({
+              where: jest.fn().mockReturnValue({
+                limit: jest.fn().mockResolvedValue([]),
+              }),
+            }),
+          };
+        }
+        if (selectCall === 2) {
           return {
             from: jest.fn().mockReturnValue({
               where: jest.fn().mockReturnValue({

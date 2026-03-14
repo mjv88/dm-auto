@@ -2,7 +2,7 @@
  * tests/auth/admin.test.ts
  *
  * Tests for admin route authorization:
- *   - Admin routes require admin_emails membership
+ *   - Admin routes require manager or admin role
  *   - PBX credential add validates connectivity before saving
  *   - PBX credentials are encrypted in DB
  */
@@ -12,13 +12,13 @@ import nock from 'nock';
 import { adminTenantRoutes } from '../../src/routes/admin/tenants';
 import { adminPbxRoutes } from '../../src/routes/admin/pbx';
 import { createSessionToken } from '../../src/middleware/session';
-import type { AdminSession } from '../../src/middleware/session';
+import type { UnifiedSession } from '../../src/middleware/session';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const TEST_TENANT_ID = 'tenant-uuid-admin-0001';
 const ADMIN_EMAIL = 'admin@customer.com';
-const NON_ADMIN_EMAIL = 'notadmin@customer.com';
+const RUNNER_EMAIL = 'runner@customer.com';
 const TEST_PBX_FQDN = 'pbx.customer.com';
 const JWT_SECRET = 'c'.repeat(64);
 
@@ -28,21 +28,32 @@ jest.mock('../../src/db/index', () => ({
   getDb: jest.fn(),
 }));
 
-// Mock adminAuthenticate to inject admin session directly
-jest.mock('../../src/middleware/authenticate', () => ({
-  adminAuthenticate: jest.fn(async (request: { adminSession?: AdminSession }) => {
-    // adminSession injected by individual tests via request headers parsing
-    // We'll set it up by decoding the Authorization header in the mock
-    const header = (request as { headers?: { authorization?: string } }).headers?.authorization ?? '';
-    if (!header.startsWith('Bearer ')) return;
+// Mock requireAuth to inject session from token
+jest.mock('../../src/middleware/requireAuth', () => ({
+  requireAuth: jest.fn(async (request: { session?: UnifiedSession; headers?: { authorization?: string } }, reply: { code: (n: number) => { send: (body: unknown) => void } }) => {
+    const header = request.headers?.authorization ?? '';
+    if (!header.startsWith('Bearer ')) {
+      return reply.code(401).send({ error: 'UNAUTHORIZED' });
+    }
     const token = header.slice(7);
     try {
       const { validateSessionToken } = jest.requireActual('../../src/middleware/session');
-      const session = validateSessionToken(token) as AdminSession;
-      request.adminSession = session;
+      request.session = validateSessionToken(token) as UnifiedSession;
     } catch {
-      // leave adminSession undefined — route will return 401
+      return reply.code(401).send({ error: 'UNAUTHORIZED' });
     }
+  }),
+  requireRole: jest.fn((...roles: string[]) => {
+    return async (request: { session?: UnifiedSession }, reply: { code: (n: number) => { send: (body: unknown) => void } }) => {
+      const session = request.session;
+      if (!session) return reply.code(401).send({ error: 'UNAUTHORIZED' });
+      const hierarchy: Record<string, number> = { admin: 3, manager: 2, runner: 1 };
+      const userLevel = hierarchy[session.role] ?? 0;
+      const minLevel = Math.min(...roles.map(r => hierarchy[r] ?? 0));
+      if (userLevel < minLevel) {
+        return reply.code(403).send({ error: 'FORBIDDEN' });
+      }
+    };
   }),
 }));
 
@@ -50,12 +61,12 @@ import { getDb } from '../../src/db/index';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function makeAdminSession(email: string): AdminSession {
+function makeSession(email: string, role: 'admin' | 'manager' | 'runner'): UnifiedSession {
   return {
     type: 'session',
     userId: '',
     email: email,
-    role: 'admin',
+    role,
     tenantId: TEST_TENANT_ID,
     runnerId: null,
     emailVerified: true,
@@ -67,10 +78,10 @@ function makeAdminSession(email: string): AdminSession {
   };
 }
 
-function makeToken(email: string): string {
+function makeToken(email: string, role: 'admin' | 'manager' | 'runner' = 'admin'): string {
   process.env.JWT_SECRET = JWT_SECRET;
   process.env.JWT_EXPIRES_IN = '1h';
-  return createSessionToken(makeAdminSession(email));
+  return createSessionToken(makeSession(email, role));
 }
 
 async function buildTenantApp() {
@@ -104,10 +115,10 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-// ── Tests: admin_emails authorization ─────────────────────────────────────────
+// ── Tests: role-based authorization ──────────────────────────────────────────
 
-describe('Admin routes — admin_emails check', () => {
-  it('allows access when email is in admin_emails', async () => {
+describe('Admin routes — role check', () => {
+  it('allows access for admin role', async () => {
     const mockTenantRow = {
       id: TEST_TENANT_ID,
       entraTenantId: 'tid-0000',
@@ -131,7 +142,7 @@ describe('Admin routes — admin_emails check', () => {
     const resp = await app.inject({
       method: 'GET',
       url: '/admin/tenants/me',
-      headers: { Authorization: `Bearer ${makeToken(ADMIN_EMAIL)}` },
+      headers: { Authorization: `Bearer ${makeToken(ADMIN_EMAIL, 'admin')}` },
     });
 
     expect(resp.statusCode).toBe(200);
@@ -139,31 +150,12 @@ describe('Admin routes — admin_emails check', () => {
     expect(body.tenant).toBeDefined();
   });
 
-  it('returns 403 FORBIDDEN when email is NOT in admin_emails', async () => {
-    const mockTenantRow = {
-      id: TEST_TENANT_ID,
-      entraTenantId: 'tid-0000',
-      name: 'Test Tenant',
-      entraGroupId: 'grp-0000',
-      adminEmails: [ADMIN_EMAIL], // NON_ADMIN_EMAIL is not here
-      isActive: true,
-    };
-
-    (getDb as jest.Mock).mockReturnValue({
-      select: jest.fn().mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          where: jest.fn().mockReturnValue({
-            limit: jest.fn().mockResolvedValue([mockTenantRow]),
-          }),
-        }),
-      }),
-    });
-
+  it('returns 403 FORBIDDEN when role is runner', async () => {
     const app = await buildTenantApp();
     const resp = await app.inject({
       method: 'GET',
       url: '/admin/tenants/me',
-      headers: { Authorization: `Bearer ${makeToken(NON_ADMIN_EMAIL)}` },
+      headers: { Authorization: `Bearer ${makeToken(RUNNER_EMAIL, 'runner')}` },
     });
 
     expect(resp.statusCode).toBe(403);
@@ -177,7 +169,6 @@ describe('POST /admin/pbx — connectivity validation', () => {
   const adminToken = () => makeToken(ADMIN_EMAIL);
 
   function setupAdminDb() {
-    let insertMock: jest.Mock;
     const db = {
       select: jest.fn().mockReturnValue({
         from: jest.fn().mockReturnValue({
