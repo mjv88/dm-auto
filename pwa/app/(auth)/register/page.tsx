@@ -2,17 +2,31 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { registerWithEmail } from '@/lib/auth';
+import { getCompanyName } from '@/lib/setupApi';
 
 export default function RegisterPage() {
+  const searchParams = useSearchParams();
+  const company = searchParams.get('company');
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [companyName, setCompanyName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (company) {
+      getCompanyName(company).then((name) => {
+        if (name) setCompanyName(name);
+      });
+    }
+  }, [company]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,7 +39,7 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      await registerWithEmail(email, password);
+      await registerWithEmail(email, password, company ?? undefined);
       setSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
@@ -38,9 +52,13 @@ export default function RegisterPage() {
     <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm rounded-2xl bg-white shadow-lg p-8 flex flex-col items-center gap-6">
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-gray-900">Create account</h1>
+          <h1 className="text-xl font-semibold text-gray-900">
+            {companyName ? `Join ${companyName}` : 'Create account'}
+          </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Sign up for Runner Hub
+            {companyName
+              ? `Create your account to join ${companyName} on Runner Hub`
+              : 'Sign up for Runner Hub'}
           </p>
         </div>
 
@@ -102,7 +120,7 @@ export default function RegisterPage() {
               className="w-full flex items-center justify-center gap-3 rounded-md px-4 py-3 min-h-[44px] text-sm font-medium text-white transition-opacity disabled:opacity-60"
               style={{ backgroundColor: '#0078D4' }}
             >
-              {loading ? 'Creating account…' : 'Create account'}
+              {loading ? 'Creating account...' : companyName ? `Join ${companyName}` : 'Create account'}
             </button>
 
             <p className="text-sm text-center text-gray-500">

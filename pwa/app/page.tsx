@@ -6,19 +6,22 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { acquireTokenSilent } from '@/lib/auth';
 import { useRunnerStore } from '@/lib/store';
+import { getSetupStatus } from '@/lib/setupApi';
 
 /**
  * Root page: attempt silent SSO on every load.
- * - Intune-managed devices → zero-tap (MSAL finds cached token automatically).
- * - Unauthenticated → redirect to /login.
- * - Authenticated, multi-PBX → redirect to /select-pbx.
- * - Authenticated, single-PBX → redirect to /departments.
+ * - Intune-managed devices: zero-tap (MSAL finds cached token automatically).
+ * - Unauthenticated: redirect to /login.
+ * - Authenticated with session but no tenant: redirect to /setup.
+ * - Authenticated, multi-PBX: redirect to /select-pbx.
+ * - Authenticated, single-PBX: redirect to /departments.
  *
- * Never renders blank — always shows a spinner.
+ * Never renders blank -- always shows a spinner.
  */
 export default function Home() {
   const router = useRouter();
   const authStatus = useRunnerStore((s) => s.authStatus);
+  const sessionToken = useRunnerStore((s) => s.sessionToken);
   const pbxOptions = useRunnerStore((s) => s.pbxOptions);
   const setAuthStatus = useRunnerStore((s) => s.setAuthStatus);
   const setError = useRunnerStore((s) => s.setError);
@@ -34,6 +37,24 @@ export default function Home() {
       return;
     }
 
+    // If user has a session token (from email/password auth) but may not
+    // have completed setup, check setup status before routing
+    if (sessionToken) {
+      getSetupStatus()
+        .then((status) => {
+          if (!status.hasCompany) {
+            router.replace('/setup');
+          } else {
+            router.replace('/departments');
+          }
+        })
+        .catch(() => {
+          // If setup status check fails, fall through to normal routing
+          router.replace('/departments');
+        });
+      return;
+    }
+
     // Attempt silent SSO (handles Intune zero-tap and cached sessions)
     setAuthStatus('loading');
     acquireTokenSilent()
@@ -44,7 +65,7 @@ export default function Home() {
         router.replace('/callback');
       })
       .catch(() => {
-        // No cached session and no redirect triggered (unusual) → login page
+        // No cached session and no redirect triggered (unusual) -> login page
         setAuthStatus('idle');
         setError(null);
         router.replace('/login');

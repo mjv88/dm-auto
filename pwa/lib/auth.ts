@@ -121,11 +121,11 @@ export async function loginWithEmail(email: string, password: string): Promise<E
   return resp.json() as Promise<EmailAuthResult>;
 }
 
-export async function registerWithEmail(email: string, password: string): Promise<EmailAuthResult> {
+export async function registerWithEmail(email: string, password: string, company?: string): Promise<EmailAuthResult> {
   const resp = await fetch(`${API_URL}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, ...(company ? { company } : {}) }),
   });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({}));
