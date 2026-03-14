@@ -173,10 +173,8 @@ export class XAPIClient {
     while (hasMore) {
       const path =
         `/Users?$top=${PAGE_SIZE}&$skip=${skip}` +
-        `&$filter=not AIAgent and not startsWith(Number,'HD')` +
-        `&$orderby=Number` +
-        `&$select=Id,Number,DisplayName,EmailAddress` +
-        `&$expand=Groups($select=GroupId,Name;$filter=not startsWith(Name,'___FAVORITES___'))`;
+        `&$select=DisplayName,EmailAddress,PrimaryGroupId` +
+        `&$expand=Groups($select=GroupId,Name)`;
 
       const data = (await this.get(path)) as {
         value: Array<{
@@ -184,18 +182,21 @@ export class XAPIClient {
           Number: string;
           DisplayName: string;
           EmailAddress: string;
+          PrimaryGroupId: number;
           Groups: Array<{ GroupId: number; Name: string }>;
         }>;
       };
 
       for (const u of data.value) {
+        // Find the primary group name from the Groups array
+        const primaryGroup = u.Groups?.find(g => g.GroupId === u.PrimaryGroupId);
         allUsers.push({
           userId: u.Id,
-          number: u.Number,
+          number: u.Number ?? '',
           email: u.EmailAddress ?? '',
           displayName: u.DisplayName ?? '',
-          currentGroupId: u.Groups[0]?.GroupId ?? 0,
-          currentGroupName: u.Groups[0]?.Name ?? '',
+          currentGroupId: u.PrimaryGroupId ?? 0,
+          currentGroupName: primaryGroup?.Name ?? '',
         });
       }
       hasMore = data.value.length === PAGE_SIZE;
