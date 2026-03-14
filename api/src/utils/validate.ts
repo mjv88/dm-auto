@@ -122,6 +122,12 @@ export const updateTenantSchema = z.object({
   entraGroupId: z.string().uuid().optional(),
 });
 
+// ── Setup wizard schemas ─────────────────────────────────────────────────────
+
+export const setupCompanySchema = z.object({ name: z.string().min(1).max(255) });
+export const setupRunnersSchema = z.object({ extensionNumbers: z.array(z.string().min(1)).min(1).max(500) });
+export const setupInviteSchema = z.object({ mode: z.enum(['email', 'link']) });
+
 // ── Email/password auth schemas ──────────────────────────────────────────────
 
 const passwordSchema = z
@@ -133,6 +139,7 @@ const passwordSchema = z
 export const registerSchema = z.object({
   email: z.string().email(),
   password: passwordSchema,
+  company: z.string().uuid().optional(),
 });
 
 export const loginSchema = z.object({
