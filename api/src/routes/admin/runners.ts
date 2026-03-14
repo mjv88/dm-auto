@@ -13,7 +13,7 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, and, sql } from 'drizzle-orm';
 import { getDb } from '../../db/index.js';
-import { runners, pbxCredentials } from '../../db/schema.js';
+import { runners, pbxCredentials, deptCache } from '../../db/schema.js';
 import { requireAuth, requireRole } from '../../middleware/requireAuth.js';
 import { XAPIClient } from '../../xapi/client.js';
 import { createRunnerSchema, updateRunnerSchema } from '../../utils/validate.js';
@@ -226,5 +226,50 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
       .where(eq(runners.id, id));
 
     return reply.code(204).send();
+  });
+
+  // ── GET /admin/departments ──────────────────────────────────────────────────
+
+  fastify.get('/admin/departments', {
+    preHandler: [requireRole('manager')],
+  }, async (request, reply) => {
+    const session = request.session!;
+    const tenantId = (request.query as { tenantId?: string }).tenantId ?? session.tenantId;
+
+    const db = getDb();
+
+    // Find PBXs for this tenant (or all if admin with no filter)
+    let pbxIds: string[];
+    if (session.role === 'admin' && !tenantId) {
+      const rows = await db.select({ id: pbxCredentials.id }).from(pbxCredentials).where(eq(pbxCredentials.isActive, true));
+      pbxIds = rows.map(r => r.id);
+    } else if (tenantId) {
+      const rows = await db.select({ id: pbxCredentials.id }).from(pbxCredentials).where(and(eq(pbxCredentials.tenantId, tenantId), eq(pbxCredentials.isActive, true)));
+      pbxIds = rows.map(r => r.id);
+    } else {
+      return reply.send([]);
+    }
+
+    if (pbxIds.length === 0) return reply.send([]);
+
+    // Get unique departments from dept_cache
+    const allDepts = [];
+    for (const pbxId of pbxIds) {
+      const rows = await db
+        .select({ id: deptCache.deptId, name: deptCache.deptName })
+        .from(deptCache)
+        .where(eq(deptCache.pbxCredentialId, pbxId));
+      allDepts.push(...rows);
+    }
+
+    // Deduplicate by name
+    const seen = new Set<string>();
+    const unique = allDepts.filter(d => {
+      if (seen.has(d.name)) return false;
+      seen.add(d.name);
+      return true;
+    });
+
+    return reply.send(unique);
   });
 }
