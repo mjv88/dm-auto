@@ -12,6 +12,7 @@ import { adminPbxRoutes } from './routes/admin/pbx.js';
 import { adminRunnerRoutes } from './routes/admin/runners.js';
 import { adminStatsRoutes } from './routes/admin/stats.js';
 import { adminAuditRoutes } from './routes/admin/audit.js';
+import { adminUserRoutes } from './routes/admin/users.js';
 import { emailAuthRoutes } from './routes/emailAuth.js';
 import { setupRoutes } from './routes/setup.js';
 import { companyRoutes } from './routes/company.js';
@@ -49,6 +50,7 @@ async function buildServer() {
   await fastify.register(adminRunnerRoutes);
   await fastify.register(adminStatsRoutes);
   await fastify.register(adminAuditRoutes);
+  await fastify.register(adminUserRoutes);
   await fastify.register(setupRoutes);
   await fastify.register(companyRoutes);
 
