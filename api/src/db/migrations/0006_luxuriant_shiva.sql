@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS "manager_tenants" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "users" ADD COLUMN "role" text DEFAULT 'runner' NOT NULL;--> statement-breakpoint
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "role" text DEFAULT 'runner' NOT NULL;--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "manager_tenants" ADD CONSTRAINT "manager_tenants_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
