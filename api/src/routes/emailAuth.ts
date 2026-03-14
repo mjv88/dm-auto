@@ -16,7 +16,7 @@ import type { FastifyInstance } from 'fastify';
 import bcrypt from 'bcrypt';
 import { eq, and } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { users, tenants, runners } from '../db/schema.js';
+import { users, tenants, runners, pbxCredentials } from '../db/schema.js';
 import { config } from '../config.js';
 import { createSessionToken } from '../middleware/session.js';
 import { authenticate } from '../middleware/authenticate.js';
@@ -195,16 +195,39 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
           .where(eq(users.id, user.id));
       }
 
+      // Look up linked runner (if any) to populate session fields
+      let runnerId: string | null = null;
+      let pbxFqdn: string | null = null;
+      let extensionNumber: string | null = null;
+      if (user.id) {
+        const runnerRows = await db
+          .select({
+            id: runners.id,
+            pbxFqdn: pbxCredentials.pbxFqdn,
+            extensionNumber: runners.extensionNumber,
+          })
+          .from(runners)
+          .innerJoin(pbxCredentials, eq(runners.pbxCredentialId, pbxCredentials.id))
+          .where(and(eq(runners.userId, user.id), eq(runners.isActive, true)))
+          .limit(1);
+        const linkedRunner = runnerRows[0];
+        if (linkedRunner) {
+          runnerId = linkedRunner.id;
+          pbxFqdn = linkedRunner.pbxFqdn;
+          extensionNumber = linkedRunner.extensionNumber;
+        }
+      }
+
       const sessionToken = createSessionToken({
         type: 'session',
         userId: user.id,
-        email: user.email,
-        role: 'runner',
+        email: normalizedEmail,
+        role: (user.role as 'admin' | 'manager' | 'runner') ?? 'runner',
         tenantId: user.tenantId ?? null,
-        runnerId: null,
+        runnerId,
         emailVerified: user.emailVerified,
-        pbxFqdn: null,
-        extensionNumber: null,
+        pbxFqdn,
+        extensionNumber,
         entraEmail: null,
         tid: null,
         oid: null,
@@ -216,6 +239,7 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
           id: user.id,
           email: user.email,
           emailVerified: user.emailVerified,
+          role: user.role ?? 'runner',
         },
       });
     },

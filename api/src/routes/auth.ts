@@ -19,7 +19,7 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, and } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { tenants, runners, pbxCredentials } from '../db/schema.js';
+import { tenants, runners, pbxCredentials, users } from '../db/schema.js';
 import { validateMicrosoftToken } from '../middleware/authenticate.js';
 import { checkEntraGroup } from '../entra/groupCheck.js';
 import { createSessionToken } from '../middleware/session.js';
@@ -53,8 +53,23 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
     const { email, tid, oid, name: displayName } = tokenPayload;
 
-    // 3. Look up tenant in DB by tid
+    // Look up user role from users table (if registered)
     const db = getDb();
+    let userRole: 'admin' | 'manager' | 'runner' = 'runner';
+    let userId: string | null = null;
+    {
+      const userRows = await db
+        .select({ id: users.id, role: users.role })
+        .from(users)
+        .where(eq(users.email, email.toLowerCase()))
+        .limit(1);
+      if (userRows[0]) {
+        userId = userRows[0].id;
+        userRole = (userRows[0].role as 'admin' | 'manager' | 'runner') ?? 'runner';
+      }
+    }
+
+    // 3. Look up tenant in DB by tid
     const tenantRows = await db
       .select()
       .from(tenants)
@@ -126,9 +141,9 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       }
       const sessionToken = createSessionToken({
         type: 'session',
-        userId: match.id,
+        userId: userId ?? match.id,
         email: email,
-        role: 'runner',
+        role: userRole,
         tenantId: tenant.id,
         runnerId: match.id,
         emailVerified: true, // Entra users are always verified
@@ -169,9 +184,9 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     const single = runnerRows[0];
     const sessionToken = createSessionToken({
       type: 'session',
-      userId: single.id,
+      userId: userId ?? single.id,
       email: email,
-      role: 'runner',
+      role: userRole,
       tenantId: tenant.id,
       runnerId: single.id,
       emailVerified: true, // Entra users are always verified
