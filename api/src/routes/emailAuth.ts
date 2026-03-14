@@ -196,14 +196,18 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
       }
 
       const sessionToken = createSessionToken({
-        type: 'runner',
-        runnerId: user.id,
-        tenantId: '',
-        entraEmail: '',
+        type: 'session',
+        userId: user.id,
         email: user.email,
+        role: 'runner',
+        tenantId: user.tenantId ?? null,
+        runnerId: null,
         emailVerified: user.emailVerified,
-        pbxFqdn: '',
-        extensionNumber: '',
+        pbxFqdn: null,
+        extensionNumber: null,
+        entraEmail: null,
+        tid: null,
+        oid: null,
       });
 
       return reply.send({

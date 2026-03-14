@@ -125,14 +125,18 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         return reply.code(403).send({ error: 'PBX_NOT_AUTHORIZED' });
       }
       const sessionToken = createSessionToken({
-        type: 'runner',
-        runnerId: match.id,
-        tenantId: tenant.id,
-        entraEmail: email,
+        type: 'session',
+        userId: match.id,
         email: email,
+        role: 'runner',
+        tenantId: tenant.id,
+        runnerId: match.id,
         emailVerified: true, // Entra users are always verified
         pbxFqdn: match.pbxFqdn,
         extensionNumber: match.extensionNumber,
+        entraEmail: email,
+        tid: tid,
+        oid: oid,
       });
       return reply.send({
         mode: 'direct',
@@ -164,14 +168,18 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     // 8. Single PBX → issue session token
     const single = runnerRows[0];
     const sessionToken = createSessionToken({
-      type: 'runner',
-      runnerId: single.id,
-      tenantId: tenant.id,
-      entraEmail: email,
+      type: 'session',
+      userId: single.id,
       email: email,
+      role: 'runner',
+      tenantId: tenant.id,
+      runnerId: single.id,
       emailVerified: true, // Entra users are always verified
       pbxFqdn: single.pbxFqdn,
       extensionNumber: single.extensionNumber,
+      entraEmail: email,
+      tid: tid,
+      oid: oid,
     });
 
     return reply.send({

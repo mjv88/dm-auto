@@ -48,9 +48,8 @@ export async function setupAuthenticate(
   let email: string;
   try {
     const session = validateSessionToken(token);
-    // Extract email: RunnerSession has both .email and .entraEmail;
-    // AdminSession has .entraEmail only.
-    email = ('email' in session && session.email) ? session.email : session.entraEmail;
+    // UnifiedSession always has .email
+    email = session.email || session.entraEmail || '';
   } catch (err: unknown) {
     const code = (err as { code?: string }).code;
     if (code === 'TOKEN_EXPIRED') {

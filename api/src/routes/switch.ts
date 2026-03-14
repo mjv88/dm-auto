@@ -49,8 +49,8 @@ export async function switchRoutes(fastify: FastifyInstance): Promise<void> {
         .from(runners)
         .where(
           and(
-            eq(runners.id, session.runnerId),
-            eq(runners.tenantId, session.tenantId),
+            eq(runners.id, session.runnerId!),
+            eq(runners.tenantId, session.tenantId!),
             eq(runners.isActive, true),
           ),
         )
@@ -65,9 +65,9 @@ export async function switchRoutes(fastify: FastifyInstance): Promise<void> {
       if (!runner.allowedDeptIds.includes(String(targetDeptId))) {
         await writeAuditLog(request, {
           runnerId:        runner.id,
-          entraEmail:      session.entraEmail,
-          pbxFqdn:         session.pbxFqdn,
-          extensionNumber: session.extensionNumber,
+          entraEmail:      session.entraEmail ?? '',
+          pbxFqdn:         session.pbxFqdn ?? '',
+          extensionNumber: session.extensionNumber ?? '',
           fromDeptId:      null,
           fromDeptName:    null,
           toDeptId:        String(targetDeptId),
@@ -82,7 +82,7 @@ export async function switchRoutes(fastify: FastifyInstance): Promise<void> {
       // 4. Create xAPI client (validates FQDN against whitelist)
       let xapiClient: XAPIClient;
       try {
-        xapiClient = await XAPIClient.create(session.pbxFqdn);
+        xapiClient = await XAPIClient.create(session.pbxFqdn!);
       } catch {
         return reply.code(503).send({ error: 'PBX_UNAVAILABLE' });
       }
@@ -91,7 +91,7 @@ export async function switchRoutes(fastify: FastifyInstance): Promise<void> {
       let userId: number;
       let currentGroupId: number;
       try {
-        const userResult = await xapiClient.getUserByNumber(session.extensionNumber);
+        const userResult = await xapiClient.getUserByNumber(session.extensionNumber!);
         userId = userResult.userId;
         currentGroupId = userResult.currentGroupId;
       } catch {
@@ -131,9 +131,9 @@ export async function switchRoutes(fastify: FastifyInstance): Promise<void> {
           err instanceof PBXUnavailableError ? 'PBX_UNAVAILABLE' : 'INTERNAL_ERROR';
         await writeAuditLog(request, {
           runnerId:        runner.id,
-          entraEmail:      session.entraEmail,
-          pbxFqdn:         session.pbxFqdn,
-          extensionNumber: session.extensionNumber,
+          entraEmail:      session.entraEmail ?? '',
+          pbxFqdn:         session.pbxFqdn ?? '',
+          extensionNumber: session.extensionNumber ?? '',
           fromDeptId:      String(currentGroupId),
           fromDeptName:    prevDept.name,
           toDeptId:        String(targetDeptId),
@@ -148,9 +148,9 @@ export async function switchRoutes(fastify: FastifyInstance): Promise<void> {
       // 9. Audit: success
       await writeAuditLog(request, {
         runnerId:        runner.id,
-        entraEmail:      session.entraEmail,
-        pbxFqdn:         session.pbxFqdn,
-        extensionNumber: session.extensionNumber,
+        entraEmail:      session.entraEmail ?? '',
+        pbxFqdn:         session.pbxFqdn ?? '',
+        extensionNumber: session.extensionNumber ?? '',
         fromDeptId:      String(currentGroupId),
         fromDeptName:    prevDept.name,
         toDeptId:        String(targetDeptId),

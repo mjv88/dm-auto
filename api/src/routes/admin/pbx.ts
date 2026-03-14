@@ -52,7 +52,7 @@ export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
     const { tenantId, entraEmail } = request.adminSession!;
     if (!tenantId) return reply.code(401).send({ error: 'UNAUTHORIZED' });
 
-    try { await assertAdmin(entraEmail, tenantId); } catch (e: unknown) {
+    try { await assertAdmin(entraEmail!, tenantId!); } catch (e: unknown) {
       const err = e as { statusCode?: number; code?: string };
       return reply.code(err.statusCode ?? 403).send({ error: err.code ?? 'FORBIDDEN' });
     }
@@ -80,7 +80,7 @@ export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
     const { tenantId, entraEmail } = request.adminSession!;
     if (!tenantId) return reply.code(401).send({ error: 'UNAUTHORIZED' });
 
-    try { await assertAdmin(entraEmail, tenantId); } catch (e: unknown) {
+    try { await assertAdmin(entraEmail!, tenantId!); } catch (e: unknown) {
       const err = e as { statusCode?: number; code?: string };
       return reply.code(err.statusCode ?? 403).send({ error: err.code ?? 'FORBIDDEN' });
     }
@@ -134,7 +134,7 @@ export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
     const { tenantId, entraEmail } = request.adminSession!;
     if (!tenantId) return reply.code(401).send({ error: 'UNAUTHORIZED' });
 
-    try { await assertAdmin(entraEmail, tenantId); } catch (e: unknown) {
+    try { await assertAdmin(entraEmail!, tenantId!); } catch (e: unknown) {
       const err = e as { statusCode?: number; code?: string };
       return reply.code(err.statusCode ?? 403).send({ error: err.code ?? 'FORBIDDEN' });
     }
@@ -188,7 +188,7 @@ export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
     const { tenantId, entraEmail } = request.adminSession!;
     if (!tenantId) return reply.code(401).send({ error: 'UNAUTHORIZED' });
 
-    try { await assertAdmin(entraEmail, tenantId); } catch (e: unknown) {
+    try { await assertAdmin(entraEmail!, tenantId!); } catch (e: unknown) {
       const err = e as { statusCode?: number; code?: string };
       return reply.code(err.statusCode ?? 403).send({ error: err.code ?? 'FORBIDDEN' });
     }

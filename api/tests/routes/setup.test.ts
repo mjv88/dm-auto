@@ -28,14 +28,18 @@ jest.mock('../../src/db/index', () => ({
 jest.mock('../../src/middleware/session', () => ({
   createSessionToken: jest.fn().mockReturnValue('mock-session-token'),
   validateSessionToken: jest.fn().mockReturnValue({
-    type: 'runner',
-    runnerId: 'user-1',
-    tenantId: '',
-    entraEmail: '',
+    type: 'session',
+    userId: 'user-1',
     email: 'admin@test.com',
+    role: 'runner',
+    tenantId: null,
+    runnerId: null,
     emailVerified: true,
-    pbxFqdn: '',
-    extensionNumber: '',
+    pbxFqdn: null,
+    extensionNumber: null,
+    entraEmail: null,
+    tid: null,
+    oid: null,
   }),
 }));
 

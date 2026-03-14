@@ -46,9 +46,10 @@ import { XAPIClient } from '../../src/xapi/client';
 
 function makeToken() {
   return createSessionToken({
-    type: 'runner', runnerId: RUNNER_ID, tenantId: TENANT_ID,
-    entraEmail: EMAIL, email: EMAIL, emailVerified: true,
-    pbxFqdn: PBX_FQDN, extensionNumber: EXT,
+    type: 'session', userId: RUNNER_ID, email: EMAIL, role: 'runner',
+    tenantId: TENANT_ID, runnerId: RUNNER_ID, emailVerified: true,
+    pbxFqdn: PBX_FQDN, extensionNumber: EXT, entraEmail: EMAIL,
+    tid: null, oid: null,
   });
 }
 

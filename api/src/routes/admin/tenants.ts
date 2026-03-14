@@ -49,7 +49,7 @@ export async function adminTenantRoutes(
       const rows = await db
         .select()
         .from(tenants)
-        .where(eq(tenants.entraTenantId, adminSession.tid))
+        .where(eq(tenants.entraTenantId, adminSession.tid!))
         .limit(1);
       tenantRow = rows[0];
 
@@ -58,10 +58,10 @@ export async function adminTenantRoutes(
         const created = await db
           .insert(tenants)
           .values({
-            entraTenantId: adminSession.tid,
+            entraTenantId: adminSession.tid!,
             name: `Tenant ${adminSession.tid}`,
             entraGroupId: '', // admin must update via PUT /admin/tenants/me
-            adminEmails: [adminSession.entraEmail],
+            adminEmails: [adminSession.entraEmail!],
             isActive: true,
           })
           .returning();
@@ -74,14 +74,21 @@ export async function adminTenantRoutes(
     }
 
     // Check admin_emails membership
-    if (!tenantRow.adminEmails.includes(adminSession.entraEmail)) {
+    if (!tenantRow.adminEmails.includes(adminSession.entraEmail!)) {
       return reply.code(403).send({ error: 'FORBIDDEN' });
     }
 
     // Issue a fresh admin session JWT with the resolved tenantId
     const newSession: AdminSession = {
-      type: 'admin',
+      type: 'session',
+      userId: adminSession.userId ?? '',
+      email: adminSession.entraEmail ?? adminSession.email,
+      role: 'admin',
       tenantId: tenantRow.id,
+      runnerId: null,
+      emailVerified: true,
+      pbxFqdn: null,
+      extensionNumber: null,
       entraEmail: adminSession.entraEmail,
       tid: adminSession.tid || tenantRow.entraTenantId,
       oid: adminSession.oid,
@@ -121,7 +128,7 @@ export async function adminTenantRoutes(
     if (!tenantRow) {
       return reply.code(404).send({ error: 'TENANT_NOT_REGISTERED' });
     }
-    if (!tenantRow.adminEmails.includes(adminSession.entraEmail)) {
+    if (!tenantRow.adminEmails.includes(adminSession.entraEmail!)) {
       return reply.code(403).send({ error: 'FORBIDDEN' });
     }
 

@@ -106,14 +106,18 @@ describe('setupAuthenticate', () => {
 
   it('returns 401 when user is not found in the DB', async () => {
     mockValidate.mockReturnValue({
-      type: 'runner',
-      runnerId: 'r1',
-      tenantId: 't1',
-      entraEmail: 'user@example.com',
+      type: 'session',
+      userId: 'r1',
       email: 'user@example.com',
+      role: 'runner',
+      tenantId: 't1',
+      runnerId: 'r1',
       emailVerified: true,
       pbxFqdn: 'pbx.example.com',
       extensionNumber: '101',
+      entraEmail: 'user@example.com',
+      tid: null,
+      oid: null,
     });
     mockDbRows = [];
 
@@ -128,14 +132,18 @@ describe('setupAuthenticate', () => {
 
   it('attaches setupContext on success with runner session', async () => {
     mockValidate.mockReturnValue({
-      type: 'runner',
-      runnerId: 'r1',
-      tenantId: 't1',
-      entraEmail: 'user@example.com',
+      type: 'session',
+      userId: 'r1',
       email: 'user@example.com',
+      role: 'runner',
+      tenantId: 't1',
+      runnerId: 'r1',
       emailVerified: true,
       pbxFqdn: 'pbx.example.com',
       extensionNumber: '101',
+      entraEmail: 'user@example.com',
+      tid: null,
+      oid: null,
     });
     mockDbRows = [{ id: 'user-uuid', tenantId: 'tenant-uuid' }];
 
@@ -155,8 +163,15 @@ describe('setupAuthenticate', () => {
 
   it('attaches setupContext on success with admin session', async () => {
     mockValidate.mockReturnValue({
-      type: 'admin',
+      type: 'session',
+      userId: '',
+      email: 'admin@example.com',
+      role: 'admin',
       tenantId: 't1',
+      runnerId: null,
+      emailVerified: true,
+      pbxFqdn: null,
+      extensionNumber: null,
       entraEmail: 'admin@example.com',
       tid: 'entra-tid',
       oid: 'entra-oid',

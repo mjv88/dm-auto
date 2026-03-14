@@ -32,8 +32,8 @@ export async function departmentRoutes(fastify: FastifyInstance): Promise<void> 
         .from(runners)
         .where(
           and(
-            eq(runners.id, session.runnerId),
-            eq(runners.tenantId, session.tenantId),
+            eq(runners.id, session.runnerId!),
+            eq(runners.tenantId, session.tenantId!),
             eq(runners.isActive, true),
           ),
         )
@@ -47,7 +47,7 @@ export async function departmentRoutes(fastify: FastifyInstance): Promise<void> 
       // 2. Create xAPI client
       let xapiClient: XAPIClient;
       try {
-        xapiClient = await XAPIClient.create(session.pbxFqdn);
+        xapiClient = await XAPIClient.create(session.pbxFqdn!);
       } catch {
         return reply.code(503).send({ error: 'PBX_UNAVAILABLE' });
       }
@@ -55,7 +55,7 @@ export async function departmentRoutes(fastify: FastifyInstance): Promise<void> 
       // 3. Get current group from xAPI
       let currentGroupId: number;
       try {
-        const userResult = await xapiClient.getUserByNumber(session.extensionNumber);
+        const userResult = await xapiClient.getUserByNumber(session.extensionNumber!);
         currentGroupId = userResult.currentGroupId;
       } catch {
         return reply.code(503).send({ error: 'PBX_UNAVAILABLE' });

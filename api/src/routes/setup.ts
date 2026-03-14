@@ -135,14 +135,18 @@ export async function setupRoutes(fastify: FastifyInstance): Promise<void> {
 
     // Issue new session token with tenantId
     const sessionToken = createSessionToken({
-      type: 'runner',
-      runnerId: ctx.userId,
-      tenantId: tenant.id,
-      entraEmail: '',
+      type: 'session',
+      userId: ctx.userId,
       email: ctx.email,
+      role: 'runner',
+      tenantId: tenant.id,
+      runnerId: null,
       emailVerified: true,
-      pbxFqdn: '',
-      extensionNumber: '',
+      pbxFqdn: null,
+      extensionNumber: null,
+      entraEmail: null,
+      tid: null,
+      oid: null,
     });
 
     return reply.code(201).send({ tenant, sessionToken });

@@ -7,11 +7,11 @@
  *   Returns: { email, name, tid, oid }
  *
  * authenticate — Fastify preHandler that validates an internal session JWT and
- *   attaches the decoded RunnerSession to request.runnerContext.
+ *   attaches the decoded UnifiedSession to request.runnerContext.
  *
  * adminAuthenticate — Fastify preHandler for admin routes.
  *   Accepts either an admin session JWT or a Microsoft ID token (for bootstrap).
- *   Attaches AdminSession to request.adminSession.
+ *   Attaches UnifiedSession to request.adminSession.
  */
 
 import type { FastifyRequest, FastifyReply } from 'fastify';
@@ -143,7 +143,8 @@ export async function validateMicrosoftToken(
 /**
  * Runner route preHandler.
  * Expects: Authorization: Bearer <session-jwt>
- * On success: attaches RunnerSession to request.runnerContext.
+ * On success: attaches UnifiedSession to request.runnerContext.
+ * Rejects admin-role sessions (they should use admin routes).
  */
 export async function authenticate(
   request: FastifyRequest,
@@ -156,7 +157,8 @@ export async function authenticate(
   const token = header.slice(7);
   try {
     const session = validateSessionToken(token);
-    if (session.type !== 'runner') {
+    // Unified sessions always have type 'session'; check role for runner access
+    if (session.role === 'admin' && !session.runnerId) {
       return reply.code(401).send({ error: 'UNAUTHORIZED', message: 'Not a runner session' });
     }
     request.runnerContext = session;
@@ -172,7 +174,7 @@ export async function authenticate(
 /**
  * Admin route preHandler.
  * Expects: Authorization: Bearer <admin-session-jwt> or <microsoft-id-token>
- * On success: attaches AdminSession to request.adminSession.
+ * On success: attaches UnifiedSession to request.adminSession.
  * Returns 401 if token is missing/invalid, 403 if not an admin session.
  */
 export async function adminAuthenticate(
@@ -188,7 +190,8 @@ export async function adminAuthenticate(
   // Try admin session JWT first (fast path for subsequent requests)
   try {
     const session = validateSessionToken(token);
-    if (session.type === 'admin') {
+    // Accept sessions with admin role (unified type is always 'session')
+    if (session.role === 'admin') {
       request.adminSession = session;
       return;
     }
@@ -202,8 +205,15 @@ export async function adminAuthenticate(
     // Attach a partial admin session — the route handler will complete it
     // (e.g. look up / create the tenant and issue a proper admin session JWT)
     request.adminSession = {
-      type: 'admin',
+      type: 'session',
+      userId: '',
+      email: payload.email,
+      role: 'admin',
       tenantId: '', // filled in by the route handler after DB lookup
+      runnerId: null,
+      emailVerified: true,
+      pbxFqdn: null,
+      extensionNumber: null,
       entraEmail: payload.email,
       tid: payload.tid,
       oid: payload.oid,

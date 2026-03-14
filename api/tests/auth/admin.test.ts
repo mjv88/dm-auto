@@ -52,8 +52,15 @@ import { getDb } from '../../src/db/index';
 
 function makeAdminSession(email: string): AdminSession {
   return {
-    type: 'admin',
+    type: 'session',
+    userId: '',
+    email: email,
+    role: 'admin',
     tenantId: TEST_TENANT_ID,
+    runnerId: null,
+    emailVerified: true,
+    pbxFqdn: null,
+    extensionNumber: null,
     entraEmail: email,
     tid: 'tid-0000',
     oid: 'oid-0000',
