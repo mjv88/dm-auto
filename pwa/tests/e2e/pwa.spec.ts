@@ -55,7 +55,8 @@ test.describe('PWA manifest', () => {
 // ---------------------------------------------------------------------------
 test.describe('Service worker', () => {
   test('registers a service worker on first load', async ({ page }) => {
-    await page.goto('/');
+    // Navigate to /offline (static, no auth redirect) to avoid flakiness
+    await page.goto('/offline');
     await page.waitForLoadState('networkidle');
 
     // next-pwa disables the SW in development mode (NODE_ENV=development).
@@ -110,7 +111,8 @@ test.describe('Standalone display mode', () => {
     // In a real PWA, display:standalone hides the browser chrome.
     // We simulate this by checking the meta viewport and theme-color tags
     // which are necessary conditions for the standalone install prompt.
-    await page.goto('/');
+    // Navigate to /offline (static page) to avoid auth redirect flakiness.
+    await page.goto('/offline');
 
     // Viewport meta tag
     const viewport = page.locator('meta[name="viewport"]');
