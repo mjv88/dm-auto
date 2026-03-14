@@ -247,7 +247,7 @@ export async function setupRoutes(fastify: FastifyInstance): Promise<void> {
               email: u.email || null,
               displayName: u.displayName || null,
               currentGroupId: u.currentGroupId ? String(u.currentGroupId) : null,
-              currentGroupName: null,
+              currentGroupName: u.currentGroupName || null,
             })),
           );
         }
@@ -273,7 +273,7 @@ export async function setupRoutes(fastify: FastifyInstance): Promise<void> {
     }
 
     const db = getDb();
-    const { pbxId } = request.query as { pbxId?: string };
+    const { pbxId, department, search } = request.query as { pbxId?: string; department?: string; search?: string };
 
     // Find PBX credential for this tenant
     let pbxCredId: string;
@@ -300,13 +300,37 @@ export async function setupRoutes(fastify: FastifyInstance): Promise<void> {
       pbxCredId = pbxRow[0].id;
     }
 
-    const extensions = await db
+    // Build conditions
+    const conditions = [eq(pbxExtensions.pbxCredentialId, pbxCredId)];
+    if (department) {
+      conditions.push(eq(pbxExtensions.currentGroupName, department));
+    }
+
+    let extensions = await db
       .select()
       .from(pbxExtensions)
-      .where(eq(pbxExtensions.pbxCredentialId, pbxCredId))
+      .where(and(...conditions))
       .orderBy(asc(pbxExtensions.extensionNumber));
 
-    return reply.send({ extensions, pbxId: pbxCredId });
+    // Client-side search filter (name, email, number)
+    if (search) {
+      const s = search.toLowerCase();
+      extensions = extensions.filter(
+        (e) =>
+          e.extensionNumber.toLowerCase().includes(s) ||
+          (e.displayName ?? '').toLowerCase().includes(s) ||
+          (e.email ?? '').toLowerCase().includes(s),
+      );
+    }
+
+    // Get unique department names for the filter dropdown
+    const allExts = await db
+      .select({ currentGroupName: pbxExtensions.currentGroupName })
+      .from(pbxExtensions)
+      .where(eq(pbxExtensions.pbxCredentialId, pbxCredId));
+    const departments = [...new Set(allExts.map(e => e.currentGroupName).filter(Boolean))].sort();
+
+    return reply.send({ extensions, departments, pbxId: pbxCredId });
   });
 
   // ── POST /setup/runners ────────────────────────────────────────────────────

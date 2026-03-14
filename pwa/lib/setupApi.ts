@@ -102,11 +102,19 @@ export async function connectPbx(body: {
   return resp.json() as Promise<{ pbx: Record<string, unknown> }>;
 }
 
-export async function getExtensions(pbxId?: string): Promise<{ extensions: PbxExtension[]; pbxId: string }> {
-  const query = pbxId ? `?pbxId=${pbxId}` : '';
+export async function getExtensions(opts?: {
+  pbxId?: string;
+  department?: string;
+  search?: string;
+}): Promise<{ extensions: PbxExtension[]; departments: string[]; pbxId: string }> {
+  const params = new URLSearchParams();
+  if (opts?.pbxId) params.set('pbxId', opts.pbxId);
+  if (opts?.department) params.set('department', opts.department);
+  if (opts?.search) params.set('search', opts.search);
+  const query = params.toString() ? `?${params}` : '';
   const resp = await setupFetch(`/setup/extensions${query}`);
   if (!resp.ok) throw new Error('Failed to get extensions');
-  return resp.json() as Promise<{ extensions: PbxExtension[]; pbxId: string }>;
+  return resp.json() as Promise<{ extensions: PbxExtension[]; departments: string[]; pbxId: string }>;
 }
 
 export async function createRunners(extensionNumbers: string[]): Promise<CreateRunnersResult> {

@@ -19,6 +19,8 @@ export default function SetupPbxPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [authenticated, setAuthenticated] = useState(false);
+  const [extensionCount, setExtensionCount] = useState(0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,13 +38,15 @@ export default function SetupPbxPage() {
           ? { mode: 'xapi' as const, clientId: clientId.trim(), secret: secret.trim() }
           : { mode: 'user_credentials' as const, username: username.trim(), password: password.trim() };
 
-      await connectPbx({
+      const result = await connectPbx({
         fqdn: fqdn.trim(),
         name: pbxName.trim(),
         authMode,
         credentials,
       });
-      router.push('/setup/runners');
+      setAuthenticated(true);
+      // Show success briefly before navigating
+      setTimeout(() => router.push('/setup/runners'), 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to connect PBX');
     } finally {
@@ -174,14 +178,27 @@ export default function SetupPbxPage() {
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full flex items-center justify-center rounded-md px-4 py-3 min-h-[44px] text-sm font-medium text-white transition-opacity disabled:opacity-60"
-          style={{ backgroundColor: '#0078D4' }}
-        >
-          {loading ? 'Connecting...' : 'Connect & Continue'}
-        </button>
+        {authenticated && (
+          <div className="text-center py-4 space-y-2">
+            <p className="text-sm text-green-700 font-medium">
+              Successfully authenticated with PBX
+            </p>
+            <p className="text-xs text-gray-500">
+              Fetching extensions and departments... Redirecting to runner selection.
+            </p>
+          </div>
+        )}
+
+        {!authenticated && (
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full flex items-center justify-center rounded-md px-4 py-3 min-h-[44px] text-sm font-medium text-white transition-opacity disabled:opacity-60"
+            style={{ backgroundColor: '#0078D4' }}
+          >
+            {loading ? 'Connecting & authenticating...' : 'Connect PBX'}
+          </button>
+        )}
       </form>
     </div>
   );

@@ -26,9 +26,10 @@ export interface XAPIGroup {
 }
 
 export interface XAPIUserExtension {
-  userId:         number;
-  number:         string;
-  email:          string;
+  userId:          number;
+  number:          string;
+  email:           string;
+  currentGroupName: string;
   displayName:    string;
   currentGroupId: number;
 }
@@ -164,23 +165,37 @@ export class XAPIClient {
    *                   &$expand=Groups&$top=1000&$skip=…
    */
   async getAllUsers(): Promise<XAPIUserExtension[]> {
-    const PAGE_SIZE = 1000;
+    const PAGE_SIZE = 50;
     const allUsers: XAPIUserExtension[] = [];
     let skip = 0;
     let hasMore = true;
 
     while (hasMore) {
-      const path = `/Users?$select=Id,Number,FirstName,LastName,EmailAddress&$expand=Groups&$top=${PAGE_SIZE}&$skip=${skip}`;
+      const path =
+        `/Users?$top=${PAGE_SIZE}&$skip=${skip}` +
+        `&$filter=not AIAgent and not startsWith(Number,'HD')` +
+        `&$orderby=Number` +
+        `&$select=Id,Number,DisplayName,EmailAddress` +
+        `&$expand=Groups($select=GroupId,Name;$filter=not startsWith(Name,'___FAVORITES___'))`;
+
       const data = (await this.get(path)) as {
-        value: Array<{ Id: number; Number: string; FirstName: string; LastName: string; EmailAddress: string; Groups: Array<{ GroupId: number }> }>;
+        value: Array<{
+          Id: number;
+          Number: string;
+          DisplayName: string;
+          EmailAddress: string;
+          Groups: Array<{ GroupId: number; Name: string }>;
+        }>;
       };
+
       for (const u of data.value) {
         allUsers.push({
           userId: u.Id,
           number: u.Number,
           email: u.EmailAddress ?? '',
-          displayName: `${u.FirstName} ${u.LastName}`.trim(),
+          displayName: u.DisplayName ?? '',
           currentGroupId: u.Groups[0]?.GroupId ?? 0,
+          currentGroupName: u.Groups[0]?.Name ?? '',
         });
       }
       hasMore = data.value.length === PAGE_SIZE;
