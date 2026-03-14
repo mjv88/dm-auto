@@ -21,6 +21,7 @@ import {
   runners,
   deptCache,
   pbxExtensions,
+  managerTenants,
 } from '../db/schema.js';
 import { setupAuthenticate } from '../middleware/setupAuth.js';
 import { createSessionToken } from '../middleware/session.js';
@@ -413,7 +414,50 @@ export async function setupRoutes(fastify: FastifyInstance): Promise<void> {
       }
     }
 
-    return reply.send({ created, skipped, errors });
+    // Auto-promote user to Manager if currently a runner
+    let sessionToken: string | undefined;
+    const userRows = await db
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(eq(users.id, ctx.userId))
+      .limit(1);
+    const currentUser = userRows[0];
+
+    if (currentUser && (currentUser.role === 'runner' || !currentUser.role)) {
+      // Promote to manager
+      await db
+        .update(users)
+        .set({ role: 'manager' })
+        .where(eq(users.id, ctx.userId));
+
+      // Grant manager access to this tenant
+      await db
+        .insert(managerTenants)
+        .values({
+          userId: ctx.userId,
+          tenantId,
+          assignedBy: ctx.userId,
+        })
+        .onConflictDoNothing();
+
+      // Issue new session token with manager role
+      sessionToken = createSessionToken({
+        type: 'session',
+        userId: ctx.userId,
+        email: ctx.email,
+        role: 'manager',
+        tenantId,
+        runnerId: null,
+        emailVerified: true,
+        pbxFqdn: null,
+        extensionNumber: null,
+        entraEmail: null,
+        tid: null,
+        oid: null,
+      });
+    }
+
+    return reply.send({ created, skipped, errors, ...(sessionToken ? { sessionToken } : {}) });
   });
 
   // ── POST /setup/invite ─────────────────────────────────────────────────────
