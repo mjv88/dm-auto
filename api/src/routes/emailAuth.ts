@@ -14,9 +14,9 @@
 import crypto from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import bcrypt from 'bcrypt';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { users } from '../db/schema.js';
+import { users, tenants, runners } from '../db/schema.js';
 import { config } from '../config.js';
 import { createSessionToken } from '../middleware/session.js';
 import { authenticate } from '../middleware/authenticate.js';
@@ -52,7 +52,7 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
         message: parsed.error.issues[0]?.message ?? 'Invalid input',
       });
     }
-    const { email, password } = parsed.data;
+    const { email, password, company } = parsed.data;
     const normalizedEmail = email.toLowerCase().trim();
 
     const db = getDb();
@@ -74,12 +74,41 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
     const verifyToken = generateToken();
     const verifyTokenExpiresAt = new Date(Date.now() + VERIFY_TOKEN_TTL_MS);
 
-    await db.insert(users).values({
+    // If company (tenantId) provided, look up and verify it's active
+    let tenantId: string | undefined;
+    if (company) {
+      const tenantRows = await db
+        .select({ id: tenants.id, isActive: tenants.isActive })
+        .from(tenants)
+        .where(eq(tenants.id, company))
+        .limit(1);
+      const tenant = tenantRows[0];
+      if (tenant?.isActive) {
+        tenantId = tenant.id;
+      }
+    }
+
+    const inserted = await db.insert(users).values({
       email: normalizedEmail,
       passwordHash,
       verifyToken,
       verifyTokenExpiresAt,
-    });
+      ...(tenantId ? { tenantId } : {}),
+    }).returning({ id: users.id });
+
+    // Auto-link runners with matching email + tenant
+    if (tenantId && inserted[0]) {
+      const userId = inserted[0].id;
+      await db
+        .update(runners)
+        .set({ userId })
+        .where(
+          and(
+            eq(runners.entraEmail, normalizedEmail),
+            eq(runners.tenantId, tenantId),
+          ),
+        );
+    }
 
     // Fire-and-forget email send
     void sendVerificationEmail(normalizedEmail, verifyToken);

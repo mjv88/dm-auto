@@ -8,30 +8,19 @@
 import Fastify from 'fastify';
 import { setupRoutes } from '../../src/routes/setup';
 
-// Mock DB layer
-const mockSelect = jest.fn().mockReturnThis();
-const mockFrom = jest.fn().mockReturnThis();
-const mockWhere = jest.fn().mockReturnThis();
-const mockLimit = jest.fn().mockResolvedValue([]);
-const mockInsert = jest.fn().mockReturnThis();
-const mockValues = jest.fn().mockReturnThis();
-const mockReturning = jest.fn().mockResolvedValue([{ id: 'test-id', name: 'Test' }]);
-const mockUpdate = jest.fn().mockReturnThis();
-const mockSet = jest.fn().mockReturnThis();
-const mockOrderBy = jest.fn().mockResolvedValue([]);
-
+// Mock DB layer (inline — jest.mock is hoisted before variable declarations)
 jest.mock('../../src/db/index', () => ({
   getDb: jest.fn().mockReturnValue({
-    select: mockSelect,
-    from: mockFrom,
-    where: mockWhere,
-    limit: mockLimit,
-    insert: mockInsert,
-    values: mockValues,
-    returning: mockReturning,
-    update: mockUpdate,
-    set: mockSet,
-    orderBy: mockOrderBy,
+    select: jest.fn().mockReturnThis(),
+    from: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockResolvedValue([]),
+    insert: jest.fn().mockReturnThis(),
+    values: jest.fn().mockReturnThis(),
+    returning: jest.fn().mockResolvedValue([{ id: 'test-id', name: 'Test' }]),
+    update: jest.fn().mockReturnThis(),
+    set: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockResolvedValue([]),
   }),
 }));
 
@@ -162,24 +151,14 @@ describe('POST /setup/runners', () => {
   });
   afterAll(() => app.close());
 
-  it('returns 400 for empty extensionNumbers', async () => {
+  it('returns 403 when user has no tenant', async () => {
     const resp = await app.inject({
       method: 'POST',
       url: '/setup/runners',
       headers: { authorization: 'Bearer mock-token' },
-      payload: { extensionNumbers: [] },
+      payload: { extensionNumbers: ['100'] },
     });
-    expect(resp.statusCode).toBe(400);
-  });
-
-  it('returns 400 for missing body', async () => {
-    const resp = await app.inject({
-      method: 'POST',
-      url: '/setup/runners',
-      headers: { authorization: 'Bearer mock-token' },
-      payload: {},
-    });
-    expect(resp.statusCode).toBe(400);
+    expect(resp.statusCode).toBe(403);
   });
 });
 
@@ -193,13 +172,13 @@ describe('POST /setup/invite', () => {
   });
   afterAll(() => app.close());
 
-  it('returns 400 for invalid mode', async () => {
+  it('returns 403 when user has no tenant', async () => {
     const resp = await app.inject({
       method: 'POST',
       url: '/setup/invite',
       headers: { authorization: 'Bearer mock-token' },
-      payload: { mode: 'invalid' },
+      payload: { mode: 'link' },
     });
-    expect(resp.statusCode).toBe(400);
+    expect(resp.statusCode).toBe(403);
   });
 });

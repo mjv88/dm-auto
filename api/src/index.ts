@@ -13,6 +13,8 @@ import { adminRunnerRoutes } from './routes/admin/runners.js';
 import { adminStatsRoutes } from './routes/admin/stats.js';
 import { adminAuditRoutes } from './routes/admin/audit.js';
 import { emailAuthRoutes } from './routes/emailAuth.js';
+import { setupRoutes } from './routes/setup.js';
+import { companyRoutes } from './routes/company.js';
 import { registerRateLimit } from './middleware/rateLimit.js';
 import { registerSecurity } from './middleware/security.js';
 import { RunnerError } from './utils/errors.js';
@@ -47,6 +49,8 @@ async function buildServer() {
   await fastify.register(adminRunnerRoutes);
   await fastify.register(adminStatsRoutes);
   await fastify.register(adminAuditRoutes);
+  await fastify.register(setupRoutes);
+  await fastify.register(companyRoutes);
 
   // Global error handler — maps RunnerError codes → HTTP responses
   fastify.setErrorHandler((error, _request, reply) => {
