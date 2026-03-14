@@ -15,7 +15,9 @@ export default function PbxPage() {
   const [modalPbx, setModalPbx] = useState<PBXCredential | null | undefined>(undefined);
 
   const load = useCallback(() => {
-    adminGet<PBXCredential[]>('/admin/pbx').then(setPbxList).catch(console.error);
+    adminGet<{ pbxList: PBXCredential[] }>('/admin/pbx')
+      .then((data) => setPbxList(data.pbxList ?? []))
+      .catch(console.error);
   }, []);
 
   useEffect(() => { load(); }, [load]);

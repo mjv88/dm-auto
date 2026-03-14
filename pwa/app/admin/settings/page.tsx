@@ -15,11 +15,12 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    adminGet<Tenant>('/admin/tenants/me')
+    adminGet<{ tenant: Tenant } | Tenant>('/admin/tenants/me')
       .then((data) => {
-        setTenant(data);
-        setName(data.name);
-        setEntraGroupId(data.entra_group_id);
+        const t = 'tenant' in data ? data.tenant : data;
+        setTenant(t);
+        setName(t.name ?? '');
+        setEntraGroupId(t.entra_group_id ?? t.entraGroupId ?? '');
       })
       .catch((err) => setError(err.message));
   }, []);

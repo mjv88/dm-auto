@@ -59,8 +59,12 @@ export default function RunnersPage() {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
-    adminGet<PBXCredential[]>('/admin/pbx').then(setPbxList).catch(console.error);
-    adminGet<Department[]>('/admin/departments').then(setDepartments).catch(console.error);
+    adminGet<{ pbxList: PBXCredential[] }>('/admin/pbx')
+      .then((data) => setPbxList(data.pbxList ?? []))
+      .catch(console.error);
+    adminGet<Department[]>('/admin/departments')
+      .then((data) => setDepartments(Array.isArray(data) ? data : []))
+      .catch(console.error);
   }, []);
 
   async function handleSave(data: {
