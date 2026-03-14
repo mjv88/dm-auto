@@ -13,7 +13,7 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, and, sql } from 'drizzle-orm';
 import { getDb } from '../../db/index.js';
-import { runners, pbxCredentials, deptCache } from '../../db/schema.js';
+import { runners, pbxCredentials, deptCache, users } from '../../db/schema.js';
 import { requireAuth, requireRole } from '../../middleware/requireAuth.js';
 import { XAPIClient } from '../../xapi/client.js';
 import { createRunnerSchema, updateRunnerSchema } from '../../utils/validate.js';
@@ -131,6 +131,23 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
       });
     }
 
+    // Auto-link: find user account matching this email
+    const normalizedEmail = email.toLowerCase().trim();
+    let userId: string | null = null;
+    const userRows = await db
+      .select({ id: users.id, tenantId: users.tenantId })
+      .from(users)
+      .where(eq(users.email, normalizedEmail))
+      .limit(1);
+
+    if (userRows[0]) {
+      userId = userRows[0].id;
+      // Also set user's tenantId if not already set
+      if (!userRows[0].tenantId) {
+        await db.update(users).set({ tenantId }).where(eq(users.id, userId));
+      }
+    }
+
     // Persist the runner
     const created = await db
       .insert(runners)
@@ -142,6 +159,7 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
         allowedDeptIds,
         isActive: true,
         createdBy: session.email,
+        userId,
       })
       .returning();
 
