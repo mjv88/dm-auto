@@ -68,6 +68,16 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
   await sendEmail(to, 'Verify your email — Runner Hub', html, 'verification');
 }
 
+export async function sendInviteEmail(to: string, tenantId: string, companyName: string): Promise<void> {
+  const link = `${APP_URL}/register?company=${tenantId}`;
+  const html = `
+    <h2>You're invited to join ${companyName}</h2>
+    <p>Your admin has invited you to Runner Hub. Click the link below to create your account:</p>
+    <p><a href="${link}">${link}</a></p>
+  `;
+  await sendEmail(to, `Join ${companyName} on Runner Hub`, html, 'verification');
+}
+
 export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {
   const link = `${APP_URL}/reset-password?token=${token}`;
   const html = `

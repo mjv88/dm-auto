@@ -25,6 +25,14 @@ export interface XAPIGroup {
   name: string;
 }
 
+export interface XAPIUserExtension {
+  userId:         number;
+  number:         string;
+  email:          string;
+  displayName:    string;
+  currentGroupId: number;
+}
+
 // ── Retry configuration ───────────────────────────────────────────────────────
 
 /** Milliseconds to wait before each successive attempt (index = attempt - 1). */
@@ -146,6 +154,39 @@ export class XAPIClient {
     };
 
     return data.value.map((g) => ({ id: g.Id, name: g.Name }));
+  }
+
+  /**
+   * Returns all users (extensions) from the PBX, paginated via $top/$skip.
+   * Used during onboarding to let admins select which extensions become runners.
+   *
+   * GET /xapi/v1/Users?$select=Id,Number,FirstName,LastName,EmailAddress
+   *                   &$expand=Groups&$top=1000&$skip=…
+   */
+  async getAllUsers(): Promise<XAPIUserExtension[]> {
+    const PAGE_SIZE = 1000;
+    const allUsers: XAPIUserExtension[] = [];
+    let skip = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const path = `/Users?$select=Id,Number,FirstName,LastName,EmailAddress&$expand=Groups&$top=${PAGE_SIZE}&$skip=${skip}`;
+      const data = (await this.get(path)) as {
+        value: Array<{ Id: number; Number: string; FirstName: string; LastName: string; EmailAddress: string; Groups: Array<{ GroupId: number }> }>;
+      };
+      for (const u of data.value) {
+        allUsers.push({
+          userId: u.Id,
+          number: u.Number,
+          email: u.EmailAddress ?? '',
+          displayName: `${u.FirstName} ${u.LastName}`.trim(),
+          currentGroupId: u.Groups[0]?.GroupId ?? 0,
+        });
+      }
+      hasMore = data.value.length === PAGE_SIZE;
+      skip += PAGE_SIZE;
+    }
+    return allUsers;
   }
 
   /**
