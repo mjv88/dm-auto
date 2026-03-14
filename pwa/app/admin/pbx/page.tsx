@@ -22,10 +22,13 @@ export default function PbxPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const filtered = pbxList.filter(
-    (p) =>
-      p.pbx_name.toLowerCase().includes(search.toLowerCase()) ||
-      p.pbx_fqdn.toLowerCase().includes(search.toLowerCase()),
+  const filtered = (pbxList ?? []).filter(
+    (p) => {
+      const name = (p.pbx_name ?? p.pbxName ?? '').toLowerCase();
+      const fqdn = (p.pbx_fqdn ?? p.pbxFqdn ?? '').toLowerCase();
+      const q = search.toLowerCase();
+      return name.includes(q) || fqdn.includes(q);
+    },
   );
 
   async function handleSave(data: {

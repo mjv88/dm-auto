@@ -92,7 +92,7 @@ export default function SettingsPage() {
           <label className="block text-sm font-medium text-gray-700 mb-1">Admin Emails</label>
           <input
             type="text"
-            value={tenant.admin_emails.join(', ')}
+            value={(tenant.admin_emails ?? tenant.adminEmails ?? []).join(', ')}
             readOnly
             className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500"
           />
