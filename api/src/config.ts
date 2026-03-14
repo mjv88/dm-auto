@@ -33,9 +33,14 @@ const envSchema = z.object({
 
   // Email/password auth
   BCRYPT_ROUNDS: z.coerce.number().default(12),
-  EMAIL_WORKER_URL: z.string().url().default('https://email.tcx-hub.com'),
-  EMAIL_WORKER_SECRET: z.string().min(1).optional(),
   APP_URL: z.string().url().default('https://runner.tcx-hub.com'),
+
+  // SMTP (SendGrid)
+  SMTP_HOST: z.string().default('smtp.sendgrid.net'),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().default('noreply@tcx-hub.com'),
 
   // CORS — only requests from the Runner PWA are allowed
   NEXT_PUBLIC_APP_URL: z.string().url(),

@@ -1,8 +1,19 @@
+const mockSendMail = jest.fn().mockResolvedValue({ messageId: 'test-id' });
+
+jest.mock('nodemailer', () => ({
+  createTransport: jest.fn(() => ({
+    sendMail: mockSendMail,
+  })),
+}));
+
 jest.mock('../../src/config.js', () => ({
   config: {
-    EMAIL_WORKER_URL: 'https://email.tcx-hub.com',
-    EMAIL_WORKER_SECRET: 'test-secret',
     APP_URL: 'https://runner.tcx-hub.com',
+    SMTP_HOST: 'smtp.sendgrid.net',
+    SMTP_PORT: 587,
+    SMTP_USER: 'apikey',
+    SMTP_PASS: 'test-key',
+    SMTP_FROM: 'noreply@tcx-hub.com',
   },
 }));
 
@@ -16,39 +27,33 @@ jest.mock('../../src/utils/logger.js', () => ({
 
 import { sendVerificationEmail, sendPasswordResetEmail } from '../../src/utils/email.js';
 
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
-
 describe('email service', () => {
   beforeEach(() => {
-    mockFetch.mockReset();
-    mockFetch.mockResolvedValue({ ok: true });
+    mockSendMail.mockClear();
   });
 
   describe('sendVerificationEmail', () => {
-    it('sends POST to email worker with correct payload', async () => {
+    it('sends email with correct to, subject, and link', async () => {
       await sendVerificationEmail('user@example.com', 'verify-token-123');
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-      const [url, options] = mockFetch.mock.calls[0];
-      expect(url).toBe('https://email.tcx-hub.com/');
-      expect(options.method).toBe('POST');
-      expect(options.headers.Authorization).toBe('Bearer test-secret');
-      const body = JSON.parse(options.body);
-      expect(body.to).toBe('user@example.com');
-      expect(body.type).toBe('verification');
-      expect(body.html).toContain('verify-token-123');
+      expect(mockSendMail).toHaveBeenCalledTimes(1);
+      const call = mockSendMail.mock.calls[0][0];
+      expect(call.to).toBe('user@example.com');
+      expect(call.subject).toContain('Verify your email');
+      expect(call.html).toContain('verify-token-123');
+      expect(call.html).toContain('https://runner.tcx-hub.com/verify-email?token=verify-token-123');
+      expect(call.from).toContain('noreply@tcx-hub.com');
     });
   });
 
   describe('sendPasswordResetEmail', () => {
-    it('sends POST to email worker with correct payload', async () => {
+    it('sends email with correct to, subject, and link', async () => {
       await sendPasswordResetEmail('user@example.com', 'reset-token-456');
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-      const [, options] = mockFetch.mock.calls[0];
-      const body = JSON.parse(options.body);
-      expect(body.to).toBe('user@example.com');
-      expect(body.type).toBe('password-reset');
-      expect(body.html).toContain('reset-token-456');
+      expect(mockSendMail).toHaveBeenCalledTimes(1);
+      const call = mockSendMail.mock.calls[0][0];
+      expect(call.to).toBe('user@example.com');
+      expect(call.subject).toContain('Reset your password');
+      expect(call.html).toContain('reset-token-456');
+      expect(call.html).toContain('https://runner.tcx-hub.com/reset-password?token=reset-token-456');
     });
   });
 });

@@ -1,9 +1,36 @@
+import nodemailer from 'nodemailer';
 import { config } from '../config.js';
 import { logger } from './logger.js';
 
 const APP_URL = config.APP_URL ?? 'https://runner.tcx-hub.com';
-const WORKER_URL = config.EMAIL_WORKER_URL ?? 'https://email.tcx-hub.com';
-const WORKER_SECRET = config.EMAIL_WORKER_SECRET;
+const SMTP_HOST = config.SMTP_HOST ?? 'smtp.sendgrid.net';
+const SMTP_PORT = config.SMTP_PORT ?? 587;
+const SMTP_USER = config.SMTP_USER;
+const SMTP_PASS = config.SMTP_PASS;
+const SMTP_FROM = config.SMTP_FROM ?? 'noreply@tcx-hub.com';
+
+let transporter: nodemailer.Transporter | null = null;
+
+function getTransporter(): nodemailer.Transporter | null {
+  if (transporter) return transporter;
+
+  if (!SMTP_USER || !SMTP_PASS) {
+    logger.warn('SMTP credentials not set — emails will be skipped');
+    return null;
+  }
+
+  transporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: false, // STARTTLS on port 587
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASS,
+    },
+  });
+
+  return transporter;
+}
 
 async function sendEmail(
   to: string,
@@ -11,22 +38,20 @@ async function sendEmail(
   html: string,
   type: 'verification' | 'password-reset',
 ): Promise<void> {
-  if (!WORKER_SECRET) {
-    logger.warn({ to, type }, 'EMAIL_WORKER_SECRET not set — skipping email');
+  const transport = getTransporter();
+  if (!transport) {
+    logger.warn({ to, type }, 'SMTP not configured — skipping email');
     return;
   }
+
   try {
-    const resp = await fetch(`${WORKER_URL}/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${WORKER_SECRET}`,
-      },
-      body: JSON.stringify({ to, subject, html, type }),
+    await transport.sendMail({
+      from: `"Runner Hub" <${SMTP_FROM}>`,
+      to,
+      subject,
+      html,
     });
-    if (!resp.ok) {
-      logger.error({ to, type, status: resp.status }, 'Email worker returned error');
-    }
+    logger.info({ to, type }, 'Email sent successfully');
   } catch (err) {
     logger.error({ to, type, err }, 'Failed to send email');
   }
