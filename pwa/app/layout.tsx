@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import ZustandProvider from '@/components/ZustandProvider';
+import { BottomNav } from '@/components/BottomNav';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -42,7 +43,10 @@ export default function RootLayout({
   return (
     <html lang="de">
       <body className={`${inter.className} pb-safe`}>
-        <ZustandProvider>{children}</ZustandProvider>
+        <ZustandProvider>
+          {children}
+          <BottomNav />
+        </ZustandProvider>
       </body>
     </html>
   );

@@ -41,7 +41,7 @@ export default function SetupLayout({ children }: { children: React.ReactNode })
   const currentStep = STEP_PATHS.findIndex((p) => pathname?.startsWith(p));
 
   return (
-    <main className="min-h-screen bg-gray-50 flex flex-col items-center px-4 py-12">
+    <main className="min-h-screen bg-gray-50 flex flex-col items-center px-4 py-12 pb-20">
       <div className="w-full max-w-lg">
         {currentStep >= 0 && <WizardProgress currentStep={currentStep} />}
         {children}

@@ -149,7 +149,7 @@ export default function DepartmentsPage() {
     <>
       <div
         ref={contentRef}
-        className="flex flex-col min-h-screen bg-brand-bg overflow-y-auto"
+        className="flex flex-col min-h-screen bg-brand-bg overflow-y-auto pb-16"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
