@@ -2,13 +2,21 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { registerWithEmail } from '@/lib/auth';
 import { getCompanyName } from '@/lib/setupApi';
 
 export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterPageInner />
+    </Suspense>
+  );
+}
+
+function RegisterPageInner() {
   const searchParams = useSearchParams();
   const company = searchParams.get('company');
 
