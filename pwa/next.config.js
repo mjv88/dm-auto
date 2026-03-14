@@ -52,7 +52,7 @@ module.exports = withPWA({
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-              "connect-src 'self' https://login.microsoftonline.com https://graph.microsoft.com",
+              `connect-src 'self' ${process.env.NEXT_PUBLIC_API_URL || 'https://runner-api.tcx-hub.com'} https://login.microsoftonline.com https://graph.microsoft.com https://*.sentry.io`,
               "img-src 'self' data:",
               "style-src 'self' 'unsafe-inline'",
               "font-src 'self'",
