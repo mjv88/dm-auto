@@ -16,6 +16,7 @@ import { emailAuthRoutes } from './routes/emailAuth.js';
 import { registerRateLimit } from './middleware/rateLimit.js';
 import { registerSecurity } from './middleware/security.js';
 import { RunnerError } from './utils/errors.js';
+import { startTokenRefreshService } from './xapi/auth.js';
 
 // Initialise Sentry before anything else (no-op if DSN is absent)
 if (config.SENTRY_DSN) {
@@ -76,6 +77,9 @@ async function main() {
     const server = await buildServer();
     await server.listen({ port: config.PORT, host: '0.0.0.0' });
     logger.info(`Server running on port ${config.PORT}`);
+
+    // Start background xAPI token refresh (every 50 min)
+    startTokenRefreshService();
   } catch (err) {
     logger.error(err, 'Failed to start server');
     process.exit(1);

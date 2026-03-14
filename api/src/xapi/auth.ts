@@ -1,30 +1,106 @@
-import { eq } from 'drizzle-orm';
+import { eq, and, lte } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { pbxCredentials } from '../db/schema.js';
 import { encrypt, decrypt } from '../utils/encrypt.js';
 
+// Lazy logger import to avoid pulling in config.ts during unit tests
+// (config.ts calls process.exit when env vars are missing)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LogFn = (...args: any[]) => void;
+
+function getLogger(): { info: LogFn; debug: LogFn; error: LogFn } {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('../utils/logger.js').logger;
+}
+
 type DrizzleDb = ReturnType<typeof getDb>;
+
+// ── Per-PBX mutex ────────────────────────────────────────────────────────────
+// Prevents concurrent token refreshes for the same PBX. If two requests hit
+// an expired token at the same time, only one refresh runs — the other waits
+// for the same result.
+
+const inflight = new Map<string, Promise<string>>();
+
+// ── Background refresh interval ──────────────────────────────────────────────
+
+/** How often the background loop runs (50 minutes). */
+const REFRESH_INTERVAL_MS = 50 * 60 * 1000;
+
+/** Refresh tokens expiring within this window (10 minutes). */
+const REFRESH_AHEAD_MS = 10 * 60 * 1000;
+
+/** 5-minute buffer subtracted from actual expiry when storing. */
+const EXPIRY_BUFFER_SECONDS = 300;
+
+let refreshTimer: ReturnType<typeof setInterval> | null = null;
 
 /**
  * Returns a valid Bearer token for the given PBX FQDN.
  *
- * Checks the pbx_credentials table for a cached token. If the cached token
- * is still valid (within the 5-minute expiry buffer) it is returned as-is.
- * Otherwise a new token is fetched via OAuth 2.0 client_credentials and the
- * result is encrypted and stored back into the table.
+ * 1. Returns the cached token if still valid.
+ * 2. If expired, acquires a per-PBX mutex so only one refresh runs at a time.
+ * 3. After acquiring the mutex, re-checks the cache (another request may have
+ *    refreshed it while we waited).
  *
- * @param pbxFqdn   Fully-qualified domain name of the PBX (e.g. "pbx.example.com")
+ * @param pbxFqdn   Fully-qualified domain name of the PBX
  * @param dbOverride  Optional DB instance for dependency injection in tests
  */
 export async function getXAPIToken(pbxFqdn: string, dbOverride?: DrizzleDb): Promise<string> {
   const db = dbOverride ?? getDb();
 
+  // Fast path: return cached token if valid
+  const cached = await getCachedToken(db, pbxFqdn);
+  if (cached) return cached;
+
+  // Slow path: acquire per-PBX mutex and refresh
+  const existing = inflight.get(pbxFqdn);
+  if (existing) {
+    // Another request is already refreshing this PBX — wait for it
+    return existing;
+  }
+
+  const refreshPromise = refreshToken(db, pbxFqdn);
+  inflight.set(pbxFqdn, refreshPromise);
+
+  try {
+    return await refreshPromise;
+  } finally {
+    inflight.delete(pbxFqdn);
+  }
+}
+
+// ── Internal helpers ─────────────────────────────────────────────────────────
+
+async function getCachedToken(db: DrizzleDb, pbxFqdn: string): Promise<string | null> {
   const rows = await db
     .select({
       xapiToken:          pbxCredentials.xapiToken,
       xapiTokenExpiresAt: pbxCredentials.xapiTokenExpiresAt,
-      xapiClientId:       pbxCredentials.xapiClientId,
-      xapiSecret:         pbxCredentials.xapiSecret,
+    })
+    .from(pbxCredentials)
+    .where(eq(pbxCredentials.pbxFqdn, pbxFqdn))
+    .limit(1);
+
+  const cred = rows[0];
+  if (!cred) return null;
+
+  if (cred.xapiToken && cred.xapiTokenExpiresAt && cred.xapiTokenExpiresAt > new Date()) {
+    return decrypt(cred.xapiToken);
+  }
+
+  return null;
+}
+
+async function refreshToken(db: DrizzleDb, pbxFqdn: string): Promise<string> {
+  // Re-check cache after acquiring mutex (another request may have refreshed)
+  const cached = await getCachedToken(db, pbxFqdn);
+  if (cached) return cached;
+
+  const rows = await db
+    .select({
+      xapiClientId: pbxCredentials.xapiClientId,
+      xapiSecret:   pbxCredentials.xapiSecret,
     })
     .from(pbxCredentials)
     .where(eq(pbxCredentials.pbxFqdn, pbxFqdn))
@@ -35,13 +111,6 @@ export async function getXAPIToken(pbxFqdn: string, dbOverride?: DrizzleDb): Pro
     throw new Error(`No credentials found for PBX: ${pbxFqdn}`);
   }
 
-  // Return cached token if it is still valid (5-minute buffer is already baked
-  // in when we store the expiry, so a simple "now < expires" check suffices).
-  if (cred.xapiToken && cred.xapiTokenExpiresAt && cred.xapiTokenExpiresAt > new Date()) {
-    return decrypt(cred.xapiToken);
-  }
-
-  // Refresh — client_id and client_secret must be present
   if (!cred.xapiClientId || !cred.xapiSecret) {
     throw new Error(`xAPI credentials (client_id / secret) missing for PBX: ${pbxFqdn}`);
   }
@@ -65,14 +134,115 @@ export async function getXAPIToken(pbxFqdn: string, dbOverride?: DrizzleDb): Pro
     expires_in:   number;
   };
 
-  // Cache with a 5-minute buffer before the real expiry
+  // Cache with 5-minute buffer before the real expiry
   await db
     .update(pbxCredentials)
     .set({
       xapiToken:          encrypt(access_token),
-      xapiTokenExpiresAt: new Date(Date.now() + (expires_in - 300) * 1000),
+      xapiTokenExpiresAt: new Date(Date.now() + (expires_in - EXPIRY_BUFFER_SECONDS) * 1000),
     })
     .where(eq(pbxCredentials.pbxFqdn, pbxFqdn));
 
   return access_token;
+}
+
+// ── Background refresh service ───────────────────────────────────────────────
+
+/**
+ * Proactively refreshes tokens for all active PBXs that expire within the
+ * next REFRESH_AHEAD_MS (10 minutes). Runs every REFRESH_INTERVAL_MS
+ * (50 minutes).
+ *
+ * This ensures API calls always find a valid cached token — no request ever
+ * needs to wait for a refresh.
+ */
+async function refreshExpiringSoon(): Promise<void> {
+  try {
+    const db = getDb();
+    const threshold = new Date(Date.now() + REFRESH_AHEAD_MS);
+
+    // Find all active PBXs with xAPI auth whose tokens expire soon (or are already expired)
+    const expiring = await db
+      .select({ pbxFqdn: pbxCredentials.pbxFqdn })
+      .from(pbxCredentials)
+      .where(
+        and(
+          eq(pbxCredentials.isActive, true),
+          eq(pbxCredentials.authMode, 'xapi'),
+          lte(pbxCredentials.xapiTokenExpiresAt, threshold),
+        ),
+      );
+
+    // Also include PBXs with no token at all (null expiry)
+    const noToken = await db
+      .select({ pbxFqdn: pbxCredentials.pbxFqdn })
+      .from(pbxCredentials)
+      .where(
+        and(
+          eq(pbxCredentials.isActive, true),
+          eq(pbxCredentials.authMode, 'xapi'),
+        ),
+      );
+
+    const fqdnsToRefresh = new Set<string>();
+    for (const row of expiring) fqdnsToRefresh.add(row.pbxFqdn);
+    for (const row of noToken) {
+      // Check if token is actually missing
+      const cached = await getCachedToken(db, row.pbxFqdn);
+      if (!cached) fqdnsToRefresh.add(row.pbxFqdn);
+    }
+
+    if (fqdnsToRefresh.size === 0) return;
+
+    getLogger().info({ count: fqdnsToRefresh.size }, 'Background token refresh: refreshing expiring PBX tokens');
+
+    for (const fqdn of fqdnsToRefresh) {
+      try {
+        await getXAPIToken(fqdn, db);
+        getLogger().debug({ pbxFqdn: fqdn }, 'Background token refresh: success');
+      } catch (err) {
+        getLogger().error({ pbxFqdn: fqdn, err }, 'Background token refresh: failed');
+      }
+    }
+  } catch (err) {
+    getLogger().error({ err }, 'Background token refresh loop error');
+  }
+}
+
+/**
+ * Starts the background token refresh service.
+ * Call once from the server's main() after DB is ready.
+ *
+ * - Runs an initial refresh immediately on startup.
+ * - Then runs every 50 minutes.
+ */
+export function startTokenRefreshService(): void {
+  if (refreshTimer) return; // already running
+
+  getLogger().info(
+    { intervalMinutes: REFRESH_INTERVAL_MS / 60_000 },
+    'Starting background xAPI token refresh service',
+  );
+
+  // Initial refresh on startup (don't block — fire and forget)
+  void refreshExpiringSoon();
+
+  refreshTimer = setInterval(() => {
+    void refreshExpiringSoon();
+  }, REFRESH_INTERVAL_MS);
+
+  // Don't prevent Node from exiting
+  if (refreshTimer.unref) refreshTimer.unref();
+}
+
+/**
+ * Stops the background token refresh service.
+ * Call on server shutdown for clean cleanup.
+ */
+export function stopTokenRefreshService(): void {
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+    refreshTimer = null;
+    getLogger().info('Stopped background xAPI token refresh service');
+  }
 }
