@@ -51,12 +51,14 @@ export const users = pgTable(
     resetTokenExpiresAt:   timestamp('reset_token_expires_at', { withTimezone: true }),
     failedLoginAttempts:   integer('failed_login_attempts').notNull().default(0),
     lockedUntil:           timestamp('locked_until', { withTimezone: true }),
+    tenantId:              uuid('tenant_id').references(() => tenants.id),
     createdAt:             timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt:             timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index('idx_users_reset_token').on(t.resetToken),
     index('idx_users_verify_token').on(t.verifyToken),
+    index('idx_users_tenant_id').on(t.tenantId),
   ],
 );
 
@@ -176,6 +178,29 @@ export const deptCache = pgTable(
 );
 
 // ============================================================
+// pbx_extensions
+// Cached extension list per PBX, used during onboarding to
+// let admins select which extensions become runners.
+// ============================================================
+export const pbxExtensions = pgTable(
+  'pbx_extensions',
+  {
+    id:               uuid('id').primaryKey().defaultRandom(),
+    pbxCredentialId:  uuid('pbx_credential_id').notNull().references(() => pbxCredentials.id),
+    extensionNumber:  text('extension_number').notNull(),
+    email:            text('email'),
+    displayName:      text('display_name'),
+    currentGroupId:   text('current_group_id'),
+    currentGroupName: text('current_group_name'),
+    fetchedAt:        timestamp('fetched_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('idx_pbx_ext_unique').on(t.pbxCredentialId, t.extensionNumber),
+    index('idx_pbx_ext_cred_id').on(t.pbxCredentialId),
+  ],
+);
+
+// ============================================================
 // Relations
 // ============================================================
 export const tenantsRelations = relations(tenants, ({ many }) => ({
@@ -184,9 +209,10 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
 }));
 
 export const pbxCredentialsRelations = relations(pbxCredentials, ({ one, many }) => ({
-  tenant:    one(tenants, { fields: [pbxCredentials.tenantId], references: [tenants.id] }),
-  runners:   many(runners),
-  deptCache: many(deptCache),
+  tenant:     one(tenants, { fields: [pbxCredentials.tenantId], references: [tenants.id] }),
+  runners:    many(runners),
+  deptCache:  many(deptCache),
+  extensions: many(pbxExtensions),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -206,4 +232,8 @@ export const auditLogRelations = relations(auditLog, ({ one }) => ({
 
 export const deptCacheRelations = relations(deptCache, ({ one }) => ({
   pbxCredential: one(pbxCredentials, { fields: [deptCache.pbxCredentialId], references: [pbxCredentials.id] }),
+}));
+
+export const pbxExtensionsRelations = relations(pbxExtensions, ({ one }) => ({
+  pbxCredential: one(pbxCredentials, { fields: [pbxExtensions.pbxCredentialId], references: [pbxCredentials.id] }),
 }));
