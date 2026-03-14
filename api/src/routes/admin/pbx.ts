@@ -2,7 +2,7 @@
  * src/routes/admin/pbx.ts
  *
  * Admin routes for managing PBX credentials (per tenant).
- * All routes require: valid admin session + admin_emails membership.
+ * All routes require: valid session + manager or admin role.
  *
  * GET    /admin/pbx        — list PBX credentials for tenant
  * POST   /admin/pbx        — add PBX (validates connectivity, encrypts credentials)
@@ -13,51 +13,29 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, and, sql } from 'drizzle-orm';
 import { getDb } from '../../db/index.js';
-import { tenants, pbxCredentials } from '../../db/schema.js';
-import { adminAuthenticate } from '../../middleware/authenticate.js';
+import { pbxCredentials } from '../../db/schema.js';
+import { requireAuth, requireRole } from '../../middleware/requireAuth.js';
 import { encrypt } from '../../utils/encrypt.js';
-import { XAPIClient } from '../../xapi/client.js';
 import { createPbxSchema, updatePbxSchema } from '../../utils/validate.js';
 import { validatePbxConnectivity } from '../../utils/pbx.js';
-
-// ── Helper ────────────────────────────────────────────────────────────────────
-
-async function assertAdmin(
-  adminEmail: string,
-  tenantId: string,
-): Promise<void> {
-  const db = getDb();
-  const rows = await db
-    .select({ adminEmails: tenants.adminEmails })
-    .from(tenants)
-    .where(eq(tenants.id, tenantId))
-    .limit(1);
-  const row = rows[0];
-  if (!row || !row.adminEmails.includes(adminEmail)) {
-    const e = new Error('Forbidden') as Error & { statusCode: number; code: string };
-    e.statusCode = 403;
-    e.code = 'FORBIDDEN';
-    throw e;
-  }
-}
 
 // ── Route plugin ──────────────────────────────────────────────────────────────
 
 export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
-  fastify.addHook('preHandler', adminAuthenticate);
+  fastify.addHook('preHandler', requireAuth);
 
   // ── GET /admin/pbx ─────────────────────────────────────────────────────────
 
-  fastify.get('/admin/pbx', async (request, reply) => {
-    const { tenantId, entraEmail } = request.adminSession!;
-    if (!tenantId) return reply.code(401).send({ error: 'UNAUTHORIZED' });
-
-    try { await assertAdmin(entraEmail!, tenantId!); } catch (e: unknown) {
-      const err = e as { statusCode?: number; code?: string };
-      return reply.code(err.statusCode ?? 403).send({ error: err.code ?? 'FORBIDDEN' });
+  fastify.get('/admin/pbx', { preHandler: [requireRole('manager')] }, async (request, reply) => {
+    const session = request.session!;
+    const tenantId = (request.query as { tenantId?: string }).tenantId ?? session.tenantId;
+    if (session.role !== 'admin' && !tenantId) {
+      return reply.code(400).send({ error: 'MISSING_TENANT' });
     }
 
     const db = getDb();
+    const conditions = tenantId ? [eq(pbxCredentials.tenantId, tenantId)] : [];
+
     const rows = await db
       .select({
         id: pbxCredentials.id,
@@ -69,20 +47,21 @@ export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
         updatedAt: pbxCredentials.updatedAt,
       })
       .from(pbxCredentials)
-      .where(eq(pbxCredentials.tenantId, tenantId));
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
 
     return reply.send({ pbxList: rows });
   });
 
   // ── POST /admin/pbx ────────────────────────────────────────────────────────
 
-  fastify.post('/admin/pbx', async (request, reply) => {
-    const { tenantId, entraEmail } = request.adminSession!;
-    if (!tenantId) return reply.code(401).send({ error: 'UNAUTHORIZED' });
-
-    try { await assertAdmin(entraEmail!, tenantId!); } catch (e: unknown) {
-      const err = e as { statusCode?: number; code?: string };
-      return reply.code(err.statusCode ?? 403).send({ error: err.code ?? 'FORBIDDEN' });
+  fastify.post('/admin/pbx', { preHandler: [requireRole('manager')] }, async (request, reply) => {
+    const session = request.session!;
+    const tenantId = (request.query as { tenantId?: string }).tenantId ?? session.tenantId;
+    if (session.role !== 'admin' && !tenantId) {
+      return reply.code(400).send({ error: 'MISSING_TENANT' });
+    }
+    if (!tenantId) {
+      return reply.code(400).send({ error: 'MISSING_TENANT', message: 'tenantId required for PBX creation' });
     }
 
     const parseResult = createPbxSchema.safeParse(request.body);
@@ -130,13 +109,11 @@ export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
 
   // ── PUT /admin/pbx/:id ─────────────────────────────────────────────────────
 
-  fastify.put('/admin/pbx/:id', async (request, reply) => {
-    const { tenantId, entraEmail } = request.adminSession!;
-    if (!tenantId) return reply.code(401).send({ error: 'UNAUTHORIZED' });
-
-    try { await assertAdmin(entraEmail!, tenantId!); } catch (e: unknown) {
-      const err = e as { statusCode?: number; code?: string };
-      return reply.code(err.statusCode ?? 403).send({ error: err.code ?? 'FORBIDDEN' });
+  fastify.put('/admin/pbx/:id', { preHandler: [requireRole('manager')] }, async (request, reply) => {
+    const session = request.session!;
+    const tenantId = (request.query as { tenantId?: string }).tenantId ?? session.tenantId;
+    if (session.role !== 'admin' && !tenantId) {
+      return reply.code(400).send({ error: 'MISSING_TENANT' });
     }
 
     const { id } = request.params as { id: string };
@@ -147,11 +124,14 @@ export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
     const { name, credentials, isActive } = parseResult.data;
 
     const db = getDb();
-    // Ensure the PBX belongs to this tenant
+    // Ensure the PBX belongs to this tenant (or admin sees all)
+    const conditions = [eq(pbxCredentials.id, id)];
+    if (tenantId) conditions.push(eq(pbxCredentials.tenantId, tenantId));
+
     const existing = await db
       .select({ id: pbxCredentials.id, pbxFqdn: pbxCredentials.pbxFqdn, authMode: pbxCredentials.authMode })
       .from(pbxCredentials)
-      .where(and(eq(pbxCredentials.id, id), eq(pbxCredentials.tenantId, tenantId)))
+      .where(and(...conditions))
       .limit(1);
 
     if (!existing[0]) {
@@ -184,22 +164,23 @@ export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
 
   // ── DELETE /admin/pbx/:id ──────────────────────────────────────────────────
 
-  fastify.delete('/admin/pbx/:id', async (request, reply) => {
-    const { tenantId, entraEmail } = request.adminSession!;
-    if (!tenantId) return reply.code(401).send({ error: 'UNAUTHORIZED' });
-
-    try { await assertAdmin(entraEmail!, tenantId!); } catch (e: unknown) {
-      const err = e as { statusCode?: number; code?: string };
-      return reply.code(err.statusCode ?? 403).send({ error: err.code ?? 'FORBIDDEN' });
+  fastify.delete('/admin/pbx/:id', { preHandler: [requireRole('manager')] }, async (request, reply) => {
+    const session = request.session!;
+    const tenantId = (request.query as { tenantId?: string }).tenantId ?? session.tenantId;
+    if (session.role !== 'admin' && !tenantId) {
+      return reply.code(400).send({ error: 'MISSING_TENANT' });
     }
 
     const { id } = request.params as { id: string };
     const db = getDb();
 
+    const conditions = [eq(pbxCredentials.id, id)];
+    if (tenantId) conditions.push(eq(pbxCredentials.tenantId, tenantId));
+
     const existing = await db
       .select({ id: pbxCredentials.id })
       .from(pbxCredentials)
-      .where(and(eq(pbxCredentials.id, id), eq(pbxCredentials.tenantId, tenantId)))
+      .where(and(...conditions))
       .limit(1);
 
     if (!existing[0]) {

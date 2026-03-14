@@ -2,7 +2,7 @@
  * src/routes/admin/runners.ts
  *
  * Admin routes for managing runner registrations (per tenant).
- * All routes require: valid admin session + admin_emails membership.
+ * All routes require: valid session + manager or admin role.
  *
  * GET    /admin/runners        — list runners (filterable by pbx, active, email)
  * POST   /admin/runners        — add runner (validates extension on PBX)
@@ -13,53 +13,36 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, and, sql } from 'drizzle-orm';
 import { getDb } from '../../db/index.js';
-import { tenants, runners, pbxCredentials } from '../../db/schema.js';
-import { adminAuthenticate } from '../../middleware/authenticate.js';
+import { runners, pbxCredentials } from '../../db/schema.js';
+import { requireAuth, requireRole } from '../../middleware/requireAuth.js';
 import { XAPIClient } from '../../xapi/client.js';
-import { getXAPIToken } from '../../xapi/auth.js';
 import { createRunnerSchema, updateRunnerSchema } from '../../utils/validate.js';
-
-// ── Helper ────────────────────────────────────────────────────────────────────
-
-async function assertAdmin(adminEmail: string, tenantId: string): Promise<void> {
-  const db = getDb();
-  const rows = await db
-    .select({ adminEmails: tenants.adminEmails })
-    .from(tenants)
-    .where(eq(tenants.id, tenantId))
-    .limit(1);
-  const row = rows[0];
-  if (!row || !row.adminEmails.includes(adminEmail)) {
-    throw Object.assign(new Error('Forbidden'), { statusCode: 403, code: 'FORBIDDEN' });
-  }
-}
 
 // ── Route plugin ──────────────────────────────────────────────────────────────
 
 export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void> {
-  fastify.addHook('preHandler', adminAuthenticate);
+  fastify.addHook('preHandler', requireAuth);
 
   // ── GET /admin/runners ─────────────────────────────────────────────────────
 
-  fastify.get('/admin/runners', async (request, reply) => {
-    const { tenantId, entraEmail } = request.adminSession!;
-    if (!tenantId) return reply.code(401).send({ error: 'UNAUTHORIZED' });
-
-    try { await assertAdmin(entraEmail, tenantId); } catch (e: unknown) {
-      const err = e as { statusCode?: number; code?: string };
-      return reply.code(err.statusCode ?? 403).send({ error: err.code ?? 'FORBIDDEN' });
-    }
-
+  fastify.get('/admin/runners', { preHandler: [requireRole('manager')] }, async (request, reply) => {
+    const session = request.session!;
     const query = request.query as {
+      tenantId?: string;
       pbxId?: string;
       active?: string;
       email?: string;
       page?: string;
       limit?: string;
     };
+    const tenantId = query.tenantId ?? session.tenantId;
+    if (session.role !== 'admin' && !tenantId) {
+      return reply.code(400).send({ error: 'MISSING_TENANT' });
+    }
 
     const db = getDb();
-    const conditions = [eq(runners.tenantId, tenantId)];
+    const conditions = [];
+    if (tenantId) conditions.push(eq(runners.tenantId, tenantId));
 
     if (query.pbxId) conditions.push(eq(runners.pbxCredentialId, query.pbxId));
     if (query.active !== undefined) conditions.push(eq(runners.isActive, query.active === 'true'));
@@ -73,7 +56,7 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
       .select({ count: sql<number>`count(*)::int` })
       .from(runners)
       .innerJoin(pbxCredentials, eq(runners.pbxCredentialId, pbxCredentials.id))
-      .where(and(...conditions));
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
     const total = countResult[0]?.count ?? 0;
 
     const rows = await db
@@ -90,7 +73,7 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
       })
       .from(runners)
       .innerJoin(pbxCredentials, eq(runners.pbxCredentialId, pbxCredentials.id))
-      .where(and(...conditions))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
       .limit(limit)
       .offset(offset);
 
@@ -99,13 +82,14 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
 
   // ── POST /admin/runners ────────────────────────────────────────────────────
 
-  fastify.post('/admin/runners', async (request, reply) => {
-    const { tenantId, entraEmail } = request.adminSession!;
-    if (!tenantId) return reply.code(401).send({ error: 'UNAUTHORIZED' });
-
-    try { await assertAdmin(entraEmail, tenantId); } catch (e: unknown) {
-      const err = e as { statusCode?: number; code?: string };
-      return reply.code(err.statusCode ?? 403).send({ error: err.code ?? 'FORBIDDEN' });
+  fastify.post('/admin/runners', { preHandler: [requireRole('manager')] }, async (request, reply) => {
+    const session = request.session!;
+    const tenantId = (request.query as { tenantId?: string }).tenantId ?? session.tenantId;
+    if (session.role !== 'admin' && !tenantId) {
+      return reply.code(400).send({ error: 'MISSING_TENANT' });
+    }
+    if (!tenantId) {
+      return reply.code(400).send({ error: 'MISSING_TENANT', message: 'tenantId required' });
     }
 
     const parseResult = createRunnerSchema.safeParse(request.body);
@@ -157,7 +141,7 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
         extensionNumber: extension,
         allowedDeptIds,
         isActive: true,
-        createdBy: entraEmail,
+        createdBy: session.email,
       })
       .returning();
 
@@ -166,13 +150,11 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
 
   // ── PUT /admin/runners/:id ─────────────────────────────────────────────────
 
-  fastify.put('/admin/runners/:id', async (request, reply) => {
-    const { tenantId, entraEmail } = request.adminSession!;
-    if (!tenantId) return reply.code(401).send({ error: 'UNAUTHORIZED' });
-
-    try { await assertAdmin(entraEmail, tenantId); } catch (e: unknown) {
-      const err = e as { statusCode?: number; code?: string };
-      return reply.code(err.statusCode ?? 403).send({ error: err.code ?? 'FORBIDDEN' });
+  fastify.put('/admin/runners/:id', { preHandler: [requireRole('manager')] }, async (request, reply) => {
+    const session = request.session!;
+    const tenantId = (request.query as { tenantId?: string }).tenantId ?? session.tenantId;
+    if (session.role !== 'admin' && !tenantId) {
+      return reply.code(400).send({ error: 'MISSING_TENANT' });
     }
 
     const { id } = request.params as { id: string };
@@ -183,10 +165,13 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
     const updates = parseResult.data;
 
     const db = getDb();
+    const conditions = [eq(runners.id, id)];
+    if (tenantId) conditions.push(eq(runners.tenantId, tenantId));
+
     const existing = await db
       .select({ id: runners.id })
       .from(runners)
-      .where(and(eq(runners.id, id), eq(runners.tenantId, tenantId)))
+      .where(and(...conditions))
       .limit(1);
 
     if (!existing[0]) {
@@ -212,22 +197,23 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
 
   // ── DELETE /admin/runners/:id ──────────────────────────────────────────────
 
-  fastify.delete('/admin/runners/:id', async (request, reply) => {
-    const { tenantId, entraEmail } = request.adminSession!;
-    if (!tenantId) return reply.code(401).send({ error: 'UNAUTHORIZED' });
-
-    try { await assertAdmin(entraEmail, tenantId); } catch (e: unknown) {
-      const err = e as { statusCode?: number; code?: string };
-      return reply.code(err.statusCode ?? 403).send({ error: err.code ?? 'FORBIDDEN' });
+  fastify.delete('/admin/runners/:id', { preHandler: [requireRole('manager')] }, async (request, reply) => {
+    const session = request.session!;
+    const tenantId = (request.query as { tenantId?: string }).tenantId ?? session.tenantId;
+    if (session.role !== 'admin' && !tenantId) {
+      return reply.code(400).send({ error: 'MISSING_TENANT' });
     }
 
     const { id } = request.params as { id: string };
     const db = getDb();
 
+    const conditions = [eq(runners.id, id)];
+    if (tenantId) conditions.push(eq(runners.tenantId, tenantId));
+
     const existing = await db
       .select({ id: runners.id })
       .from(runners)
-      .where(and(eq(runners.id, id), eq(runners.tenantId, tenantId)))
+      .where(and(...conditions))
       .limit(1);
 
     if (!existing[0]) {

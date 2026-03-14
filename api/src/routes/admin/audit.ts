@@ -10,25 +10,11 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, and, sql, gte, lte } from 'drizzle-orm';
 import { getDb } from '../../db/index.js';
-import { tenants, runners, pbxCredentials, auditLog } from '../../db/schema.js';
-import { adminAuthenticate } from '../../middleware/authenticate.js';
-
-// ── Helper ────────────────────────────────────────────────────────────────────
-
-async function assertAdmin(adminEmail: string, tenantId: string): Promise<void> {
-  const db = getDb();
-  const rows = await db
-    .select({ adminEmails: tenants.adminEmails })
-    .from(tenants)
-    .where(eq(tenants.id, tenantId))
-    .limit(1);
-  const row = rows[0];
-  if (!row || !row.adminEmails.includes(adminEmail)) {
-    throw Object.assign(new Error('Forbidden'), { statusCode: 403, code: 'FORBIDDEN' });
-  }
-}
+import { runners, auditLog } from '../../db/schema.js';
+import { requireAuth, requireRole } from '../../middleware/requireAuth.js';
 
 interface AuditQuery {
+  tenantId?: string;
   page?: string;
   limit?: string;
   from?: string;
@@ -38,8 +24,9 @@ interface AuditQuery {
   email?: string;
 }
 
-function buildAuditConditions(tenantId: string, query: AuditQuery) {
-  const conditions = [eq(runners.tenantId, tenantId)];
+function buildAuditConditions(tenantId: string | null, query: AuditQuery) {
+  const conditions = [];
+  if (tenantId) conditions.push(eq(runners.tenantId, tenantId));
 
   if (query.from) {
     const fromDate = new Date(query.from);
@@ -69,20 +56,18 @@ function buildAuditConditions(tenantId: string, query: AuditQuery) {
 // ── Route plugin ──────────────────────────────────────────────────────────────
 
 export async function adminAuditRoutes(fastify: FastifyInstance): Promise<void> {
-  fastify.addHook('preHandler', adminAuthenticate);
+  fastify.addHook('preHandler', requireAuth);
 
   // ── GET /admin/audit ────────────────────────────────────────────────────────
 
-  fastify.get('/admin/audit', async (request, reply) => {
-    const { tenantId, entraEmail } = request.adminSession!;
-    if (!tenantId) return reply.code(401).send({ error: 'UNAUTHORIZED' });
-
-    try { await assertAdmin(entraEmail, tenantId); } catch (e: unknown) {
-      const err = e as { statusCode?: number; code?: string };
-      return reply.code(err.statusCode ?? 403).send({ error: err.code ?? 'FORBIDDEN' });
+  fastify.get('/admin/audit', { preHandler: [requireRole('manager')] }, async (request, reply) => {
+    const session = request.session!;
+    const query = request.query as AuditQuery;
+    const tenantId = query.tenantId ?? session.tenantId;
+    if (session.role !== 'admin' && !tenantId) {
+      return reply.code(400).send({ error: 'MISSING_TENANT' });
     }
 
-    const query = request.query as AuditQuery;
     const db = getDb();
     const conditions = buildAuditConditions(tenantId, query);
 
@@ -94,7 +79,7 @@ export async function adminAuditRoutes(fastify: FastifyInstance): Promise<void> 
       .select({ count: sql<number>`count(*)::int` })
       .from(auditLog)
       .innerJoin(runners, eq(auditLog.runnerId, runners.id))
-      .where(and(...conditions));
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
     const total = countResult[0]?.count ?? 0;
 
     const logs = await db
@@ -118,7 +103,7 @@ export async function adminAuditRoutes(fastify: FastifyInstance): Promise<void> 
       })
       .from(auditLog)
       .innerJoin(runners, eq(auditLog.runnerId, runners.id))
-      .where(and(...conditions))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(sql`${auditLog.createdAt} desc`)
       .limit(limit)
       .offset(offset);
@@ -128,16 +113,14 @@ export async function adminAuditRoutes(fastify: FastifyInstance): Promise<void> 
 
   // ── GET /admin/audit/export ─────────────────────────────────────────────────
 
-  fastify.get('/admin/audit/export', async (request, reply) => {
-    const { tenantId, entraEmail } = request.adminSession!;
-    if (!tenantId) return reply.code(401).send({ error: 'UNAUTHORIZED' });
-
-    try { await assertAdmin(entraEmail, tenantId); } catch (e: unknown) {
-      const err = e as { statusCode?: number; code?: string };
-      return reply.code(err.statusCode ?? 403).send({ error: err.code ?? 'FORBIDDEN' });
+  fastify.get('/admin/audit/export', { preHandler: [requireRole('manager')] }, async (request, reply) => {
+    const session = request.session!;
+    const query = request.query as AuditQuery;
+    const tenantId = query.tenantId ?? session.tenantId;
+    if (session.role !== 'admin' && !tenantId) {
+      return reply.code(400).send({ error: 'MISSING_TENANT' });
     }
 
-    const query = request.query as AuditQuery;
     const db = getDb();
     const conditions = buildAuditConditions(tenantId, query);
 
@@ -159,7 +142,7 @@ export async function adminAuditRoutes(fastify: FastifyInstance): Promise<void> 
       })
       .from(auditLog)
       .innerJoin(runners, eq(auditLog.runnerId, runners.id))
-      .where(and(...conditions))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(sql`${auditLog.createdAt} desc`);
 
     // Build CSV
