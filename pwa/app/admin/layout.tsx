@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useRunnerStore } from '@/lib/store';
 import AdminNav from '@/components/admin/AdminNav';
+import CompanySwitcher from '@/components/admin/CompanySwitcher';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -39,9 +40,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <header className="bg-white border-b px-4 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <h1 className="text-lg font-semibold text-gray-900">Admin Console</h1>
-          <Link href="/departments" className="text-sm text-blue-600 hover:underline">
-            &larr; Back to Runner
-          </Link>
+          <div className="flex items-center gap-4">
+            <CompanySwitcher />
+            <Link href="/departments" className="text-sm text-blue-600 hover:underline">
+              &larr; Back to Runner
+            </Link>
+          </div>
         </div>
       </header>
       <AdminNav />

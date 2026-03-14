@@ -2,6 +2,13 @@ import { useRunnerStore } from '@/lib/store';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
+function appendTenantId(path: string): string {
+  const tenantId = useRunnerStore.getState().selectedAdminTenantId;
+  if (!tenantId) return path;
+  const separator = path.includes('?') ? '&' : '?';
+  return `${path}${separator}tenantId=${encodeURIComponent(tenantId)}`;
+}
+
 export async function adminFetch(path: string, options?: RequestInit): Promise<Response> {
   const token = useRunnerStore.getState().sessionToken;
   const headers = new Headers(options?.headers);
@@ -9,7 +16,8 @@ export async function adminFetch(path: string, options?: RequestInit): Promise<R
   if (options?.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
-  const resp = await fetch(`${API_URL}${path}`, { ...options, headers });
+  const fullPath = appendTenantId(path);
+  const resp = await fetch(`${API_URL}${fullPath}`, { ...options, headers });
   if (resp.status === 401 && typeof window !== 'undefined') {
     window.location.href = '/login?redirect=/admin';
   }
