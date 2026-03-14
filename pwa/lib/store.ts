@@ -32,17 +32,41 @@ interface RunnerStore {
   reset: () => void;
 }
 
+// Session persistence helpers
+function loadSession(): { sessionToken: string | null; role: UserRole; authStatus: AuthStatus } {
+  if (typeof window === 'undefined') return { sessionToken: null, role: 'runner', authStatus: 'idle' };
+  try {
+    const token = sessionStorage.getItem('sessionToken');
+    if (!token) return { sessionToken: null, role: 'runner', authStatus: 'idle' };
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    // Check expiry
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      sessionStorage.removeItem('sessionToken');
+      return { sessionToken: null, role: 'runner', authStatus: 'idle' };
+    }
+    return {
+      sessionToken: token,
+      role: payload.role ?? 'runner',
+      authStatus: 'authenticated',
+    };
+  } catch {
+    return { sessionToken: null, role: 'runner', authStatus: 'idle' };
+  }
+}
+
+const persisted = loadSession();
+
 const initialState = {
-  authStatus: 'idle' as AuthStatus,
+  authStatus: persisted.authStatus as AuthStatus,
   runnerProfile: null,
   currentDept: null,
   allowedDepts: [],
   pbxOptions: [],
   selectedPbxFqdn: null,
-  role: 'runner' as UserRole,
+  role: persisted.role as UserRole,
   selectedAdminTenantId: null,
   error: null,
-  sessionToken: null,
+  sessionToken: persisted.sessionToken,
 };
 
 // ---------------------------------------------------------------------------
@@ -78,6 +102,31 @@ export const useRunnerStore = create<RunnerStore>((set) => ({
   setRole: (role) => set({ role }),
   setSelectedAdminTenantId: (id) => set({ selectedAdminTenantId: id }),
   setError: (error) => set({ error }),
-  setSessionToken: (token) => set({ sessionToken: token }),
-  reset: () => set(initialState),
+  setSessionToken: (token) => {
+    if (typeof window !== 'undefined') {
+      if (token) {
+        sessionStorage.setItem('sessionToken', token);
+      } else {
+        sessionStorage.removeItem('sessionToken');
+      }
+    }
+    set({ sessionToken: token });
+  },
+  reset: () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('sessionToken');
+    }
+    set({
+      authStatus: 'idle' as AuthStatus,
+      runnerProfile: null,
+      currentDept: null,
+      allowedDepts: [],
+      pbxOptions: [],
+      selectedPbxFqdn: null,
+      role: 'runner' as UserRole,
+      selectedAdminTenantId: null,
+      error: null,
+      sessionToken: null,
+    });
+  },
 }));
