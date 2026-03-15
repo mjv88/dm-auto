@@ -28,7 +28,6 @@ export default function ConfirmSheet({
         <Dialog.Content
           className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl px-6 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] shadow-[0_-4px_24px_rgba(0,0,0,0.12)] sheet-slide-up focus:outline-none"
           aria-modal="true"
-          aria-describedby="confirm-sheet-desc"
         >
           {/* Handle bar */}
           <div aria-hidden="true" className="mx-auto mb-5 h-1 w-10 rounded-full bg-gray-200" />
@@ -37,9 +36,9 @@ export default function ConfirmSheet({
             Abteilung wechseln?
           </Dialog.Title>
 
-          <p id="confirm-sheet-desc" className="text-brand-secondary text-sm mb-6">
+          <Dialog.Description className="text-brand-secondary text-sm mb-6">
             Switch department?
-          </p>
+          </Dialog.Description>
 
           {/* From → To */}
           <div className="flex items-center justify-center gap-3 mb-8 px-4 py-4 bg-brand-bg rounded-card">
