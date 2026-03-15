@@ -1,57 +1,91 @@
 'use client';
 
+import { useState } from 'react';
 import { clsx } from 'clsx';
 import type { Dept } from '@/types/auth';
-import { Badge } from './ui/Badge';
 
 interface DeptCardProps {
   dept: Dept;
   isCurrent?: boolean;
-  isDisabled?: boolean;
-  onClick?: () => void;
+  isLoading?: boolean;
+  onConfirmSwitch?: (dept: Dept) => void;
 }
 
-const MAX_NAME_LENGTH = 40;
+export default function DeptCard({ dept, isCurrent = false, isLoading = false, onConfirmSwitch }: DeptCardProps) {
+  const [confirming, setConfirming] = useState(false);
 
-function truncateName(name: string): string {
-  return name.length > MAX_NAME_LENGTH ? `${name.slice(0, MAX_NAME_LENGTH)}\u2026` : name;
-}
+  function handleChangeClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    setConfirming(true);
+  }
 
-export default function DeptCard({ dept, isCurrent = false, isDisabled = false, onClick }: DeptCardProps) {
-  const displayName = truncateName(dept.name);
+  function handleCancel(e: React.MouseEvent) {
+    e.stopPropagation();
+    setConfirming(false);
+  }
+
+  function handleConfirm(e: React.MouseEvent) {
+    e.stopPropagation();
+    onConfirmSwitch?.(dept);
+  }
 
   return (
-    <button
-      type="button"
-      role="button"
-      aria-label={isCurrent ? `${displayName} – aktuell` : `Zu ${displayName} wechseln`}
-      aria-current={isCurrent ? 'true' : undefined}
-      aria-disabled={isDisabled ? 'true' : undefined}
-      disabled={isDisabled}
-      onClick={onClick}
+    <div
       className={clsx(
-        'w-full text-left flex items-center justify-between px-4 min-h-[44px] rounded-card shadow-card bg-white transition-transform',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2',
-        isCurrent && 'border-l-4 border-brand-blue bg-gray-50',
-        !isCurrent && !isDisabled && 'hover:shadow-md active:scale-[0.98] cursor-pointer',
-        isDisabled && 'opacity-40 pointer-events-none cursor-default'
+        'w-full flex items-center justify-between px-4 py-3 rounded-xl bg-white transition-all',
+        isCurrent
+          ? 'border-2 border-green-400 shadow-sm'
+          : 'border border-gray-200 shadow-sm hover:shadow-md',
       )}
     >
+      {/* Department name */}
       <span
         className={clsx(
-          'text-base font-medium truncate',
-          isCurrent ? 'text-brand-secondary' : 'text-brand-text'
+          'text-sm font-medium truncate flex-1',
+          isCurrent ? 'text-gray-900' : 'text-gray-700'
         )}
-        title={dept.name.length > MAX_NAME_LENGTH ? dept.name : undefined}
       >
-        {displayName}
+        {dept.name}
       </span>
 
-      {isCurrent && (
-        <Badge variant="info" aria-label="Aktuell hier">
-          Aktuell hier
-        </Badge>
+      {/* Right side: Assigned / Change / Confirm */}
+      {isCurrent ? (
+        <span className="ml-3 text-sm font-semibold text-green-600 whitespace-nowrap">
+          Assigned
+        </span>
+      ) : confirming ? (
+        <div className="ml-3 flex items-center gap-2 flex-shrink-0">
+          {isLoading ? (
+            <span className="text-xs text-blue-600 font-medium">Switching...</span>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={handleConfirm}
+                className="px-3 py-1 text-xs font-medium text-white rounded-md"
+                style={{ backgroundColor: '#0078D4' }}
+              >
+                Confirm
+              </button>
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="px-3 py-1 text-xs font-medium text-gray-500 hover:text-gray-700"
+              >
+                Cancel
+              </button>
+            </>
+          )}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={handleChangeClick}
+          className="ml-3 text-sm font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap"
+        >
+          Change
+        </button>
       )}
-    </button>
+    </div>
   );
 }

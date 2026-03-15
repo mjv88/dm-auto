@@ -9,16 +9,11 @@ import { getDepartments, switchDepartment } from '@/lib/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 import RunnerHeader from '@/components/RunnerHeader';
-import StatusBadge from '@/components/StatusBadge';
 import DeptCard from '@/components/DeptCard';
-import ConfirmSheet from '@/components/ConfirmSheet';
 import SuccessToast from '@/components/SuccessToast';
 import type { Dept } from '@/types/auth';
 
 const SLOW_REQUEST_THRESHOLD_MS = 5_000;
-
-// Memoised list item — avoids re-rendering unchanged cards when store updates
-const MemoizedDeptCard = memo(DeptCard);
 
 export default function DepartmentsPage() {
   const router = useRouter();
@@ -32,11 +27,11 @@ export default function DepartmentsPage() {
 
   const sessionToken = useRunnerStore((s) => s.sessionToken);
 
-  const [pendingDept, setPendingDept] = useState<Dept | null>(null);
-  const [isSwitching, setIsSwitching] = useState(false);
+  const [switchingDeptId, setSwitchingDeptId] = useState<number | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [successDeptName, setSuccessDeptName] = useState('');
+  const isSwitching = switchingDeptId !== null;
   const [isSlow, setIsSlow] = useState(false);
   const [emailVerified, setEmailVerified] = useState(true);
 
@@ -171,25 +166,22 @@ export default function DepartmentsPage() {
     [handleRefresh],
   );
 
-  async function handleConfirm() {
-    if (!pendingDept || !selectedPbxFqdn) return;
-    setIsSwitching(true);
+  async function handleConfirmSwitch(dept: Dept) {
+    if (!selectedPbxFqdn) return;
+    setSwitchingDeptId(dept.id);
     try {
-      await switchDepartment(selectedPbxFqdn, pendingDept.groupId);
-      setCurrentDept(pendingDept);
-      setPendingDept(null);
-      setSuccessDeptName(pendingDept.name);
+      await switchDepartment(selectedPbxFqdn, dept.groupId);
+      setCurrentDept(dept);
+      setSuccessDeptName(dept.name);
       setShowToast(true);
     } catch (err: unknown) {
-      setPendingDept(null);
-      // AppError carries a typed .code; plain Errors fall back to 'UNKNOWN'.
       const code =
         err != null && typeof (err as { code?: string }).code === 'string'
           ? (err as { code: string }).code
           : 'UNKNOWN';
       router.push(`/error?code=${encodeURIComponent(code)}`);
     } finally {
-      setIsSwitching(false);
+      setSwitchingDeptId(null);
     }
   }
 
@@ -252,14 +244,6 @@ export default function DepartmentsPage() {
           </button>
         </div>
 
-        {/* Status badge */}
-        <div className="px-4 pt-4 pb-2">
-          <StatusBadge
-            deptName={currentDeptName}
-            variant={isSwitching ? 'switching' : 'active'}
-          />
-        </div>
-
         {/* Slow request warning */}
         {isSlow && (
           <p
@@ -272,7 +256,7 @@ export default function DepartmentsPage() {
         )}
 
         {/* Department list */}
-        <div className="px-4 pb-8 space-y-3 flex-1">
+        <div className="px-4 pt-4 pb-8 space-y-2 flex-1">
           {hasNoDepts ? (
             <p
               role="status"
@@ -282,50 +266,30 @@ export default function DepartmentsPage() {
             </p>
           ) : (
             <>
-              <p className="text-xs text-brand-secondary uppercase tracking-wide font-semibold mt-2">
-                Aktuell hier
-              </p>
-
-              {currentDept ? (
-                <MemoizedDeptCard dept={currentDept} isCurrent isDisabled />
-              ) : (
-                <p className="text-sm text-brand-secondary">—</p>
+              {/* Current department first */}
+              {currentDept && (
+                <DeptCard dept={currentDept} isCurrent />
               )}
 
-              {hasNoOtherDepts ? (
-                <p
-                  role="status"
-                  className="mt-4 text-sm text-brand-secondary text-center"
-                >
-                  No departments found
+              {/* Other departments */}
+              {otherDepts.map((dept) => (
+                <DeptCard
+                  key={dept.id}
+                  dept={dept}
+                  isLoading={switchingDeptId === dept.id}
+                  onConfirmSwitch={handleConfirmSwitch}
+                />
+              ))}
+
+              {hasNoOtherDepts && (
+                <p className="mt-4 text-sm text-brand-secondary text-center">
+                  No other departments available
                 </p>
-              ) : (
-                <>
-                  <p className="text-xs text-brand-secondary uppercase tracking-wide font-semibold mt-4">
-                    Wechseln zu
-                  </p>
-                  {otherDepts.map((dept) => (
-                    <MemoizedDeptCard
-                      key={dept.id}
-                      dept={dept}
-                      onClick={() => setPendingDept(dept)}
-                    />
-                  ))}
-                </>
               )}
             </>
           )}
         </div>
       </div>
-
-      <ConfirmSheet
-        open={pendingDept !== null}
-        fromDept={currentDeptName}
-        toDept={pendingDept?.name ?? ''}
-        onConfirm={handleConfirm}
-        onCancel={() => setPendingDept(null)}
-        isLoading={isSwitching}
-      />
 
       <SuccessToast
         deptName={successDeptName}
