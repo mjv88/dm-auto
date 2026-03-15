@@ -62,11 +62,23 @@ export default function DepartmentsPage() {
 
       if (!pbxFqdn) return; // no PBX assigned
 
-      // Set runner profile from JWT if not already set
+      // Set runner profile — fetch display name from API
       if (!runnerProfile) {
+        // Try to get display name from runner profile API
+        let displayName = payload.email ?? 'Runner';
+        try {
+          const profileResp = await fetch(`${API_URL}/runner/profile`, {
+            headers: { Authorization: `Bearer ${sessionToken}` },
+          });
+          if (profileResp.ok) {
+            const profile = await profileResp.json();
+            displayName = profile.displayName ?? profile.name ?? displayName;
+          }
+        } catch { /* fallback to email */ }
+
         setRunnerProfile({
           id: payload.runnerId ?? '',
-          name: payload.email ?? 'Runner',
+          name: displayName,
           email: payload.email ?? '',
           extension: extNum ?? '',
           pbxFqdn,

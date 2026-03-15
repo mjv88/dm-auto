@@ -14,11 +14,38 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, and } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { runners, deptCache } from '../db/schema.js';
+import { runners, deptCache, pbxExtensions, pbxCredentials } from '../db/schema.js';
 import { authenticate } from '../middleware/authenticate.js';
+import { requireAuth } from '../middleware/requireAuth.js';
 import { XAPIClient } from '../xapi/client.js';
 
 export async function departmentRoutes(fastify: FastifyInstance): Promise<void> {
+
+  // ── GET /runner/profile ─────────────────────────────────────────────────
+  fastify.get('/runner/profile', { preHandler: requireAuth }, async (request, reply) => {
+    const session = request.session!;
+    if (!session.runnerId) {
+      return reply.send({ displayName: session.email, extensionNumber: session.extensionNumber });
+    }
+
+    const db = getDb();
+
+    // Try to get display name from pbx_extensions cache
+    const extRows = await db
+      .select({ displayName: pbxExtensions.displayName })
+      .from(pbxExtensions)
+      .innerJoin(pbxCredentials, eq(pbxExtensions.pbxCredentialId, pbxCredentials.id))
+      .where(
+        and(
+          eq(pbxCredentials.pbxFqdn, session.pbxFqdn ?? ''),
+          eq(pbxExtensions.extensionNumber, session.extensionNumber ?? ''),
+        ),
+      )
+      .limit(1);
+
+    const displayName = extRows[0]?.displayName ?? session.email;
+    return reply.send({ displayName, extensionNumber: session.extensionNumber });
+  });
   fastify.get(
     '/runner/departments',
     { preHandler: authenticate },
