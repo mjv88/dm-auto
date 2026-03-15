@@ -30,7 +30,7 @@ export async function departmentRoutes(fastify: FastifyInstance): Promise<void> 
 
     const db = getDb();
 
-    // Try to get display name from pbx_extensions cache
+    // Try cache first
     const extRows = await db
       .select({ displayName: pbxExtensions.displayName })
       .from(pbxExtensions)
@@ -43,8 +43,51 @@ export async function departmentRoutes(fastify: FastifyInstance): Promise<void> 
       )
       .limit(1);
 
-    const displayName = extRows[0]?.displayName ?? session.email;
-    return reply.send({ displayName, extensionNumber: session.extensionNumber });
+    if (extRows[0]?.displayName) {
+      return reply.send({ displayName: extRows[0].displayName, extensionNumber: session.extensionNumber });
+    }
+
+    // Cache miss — look up runner record for the entraEmail (PBX email)
+    // and try pbx_extensions by that email
+    const runnerRows = await db
+      .select({ entraEmail: runners.entraEmail })
+      .from(runners)
+      .where(eq(runners.id, session.runnerId!))
+      .limit(1);
+
+    if (runnerRows[0]?.entraEmail) {
+      // Try finding by PBX email in extensions
+      const byEmail = await db
+        .select({ displayName: pbxExtensions.displayName })
+        .from(pbxExtensions)
+        .where(eq(pbxExtensions.email, runnerRows[0].entraEmail))
+        .limit(1);
+      if (byEmail[0]?.displayName) {
+        return reply.send({ displayName: byEmail[0].displayName, extensionNumber: session.extensionNumber });
+      }
+    }
+
+    // Last resort — fetch from xAPI directly
+    if (session.pbxFqdn && session.extensionNumber) {
+      try {
+        const { getXAPIToken } = await import('../xapi/auth.js');
+        const token = await getXAPIToken(session.pbxFqdn);
+        const resp = await fetch(
+          `https://${session.pbxFqdn}/xapi/v1/Users?$filter=Number eq '${session.extensionNumber}'&$select=DisplayName`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (resp.ok) {
+          const data = await resp.json() as { value: Array<{ DisplayName: string }> };
+          if (data.value[0]?.DisplayName) {
+            return reply.send({ displayName: data.value[0].DisplayName, extensionNumber: session.extensionNumber });
+          }
+        }
+      } catch {
+        // xAPI unavailable
+      }
+    }
+
+    return reply.send({ displayName: session.email, extensionNumber: session.extensionNumber });
   });
   fastify.get(
     '/runner/departments',
