@@ -55,65 +55,70 @@ export default function DepartmentsPage() {
   useEffect(() => {
     if (!sessionToken || allowedDepts.length > 0) return;
 
-    try {
-      const payload = JSON.parse(atob(sessionToken.split('.')[1]));
-      const pbxFqdn = payload.pbxFqdn;
-      const extNum = payload.extensionNumber;
+    let cancelled = false;
 
-      if (!pbxFqdn) return; // no PBX assigned
+    async function loadData() {
+      try {
+        const payload = JSON.parse(atob(sessionToken!.split('.')[1]));
+        const pbxFqdn = payload.pbxFqdn;
+        const extNum = payload.extensionNumber;
 
-      // Set runner profile — fetch display name from API
-      if (!runnerProfile) {
-        // Try to get display name from runner profile API
-        let displayName = payload.email ?? 'Runner';
-        try {
-          const profileResp = await fetch(`${API_URL}/runner/profile`, {
-            headers: { Authorization: `Bearer ${sessionToken}` },
-          });
-          if (profileResp.ok) {
-            const profile = await profileResp.json();
-            displayName = profile.displayName ?? profile.name ?? displayName;
+        if (!pbxFqdn) return;
+
+        // Fetch display name from profile API
+        if (!runnerProfile) {
+          let displayName = payload.email ?? 'Runner';
+          try {
+            const profileResp = await fetch(`${API_URL}/runner/profile`, {
+              headers: { Authorization: `Bearer ${sessionToken}` },
+            });
+            if (profileResp.ok) {
+              const profile = await profileResp.json();
+              displayName = profile.displayName ?? displayName;
+            }
+          } catch { /* fallback to email */ }
+
+          if (!cancelled) {
+            setRunnerProfile({
+              id: payload.runnerId ?? '',
+              name: displayName,
+              email: payload.email ?? '',
+              extension: extNum ?? '',
+              pbxFqdn,
+              allowedDepts: [],
+              currentDept: null,
+            });
           }
-        } catch { /* fallback to email */ }
-
-        setRunnerProfile({
-          id: payload.runnerId ?? '',
-          name: displayName,
-          email: payload.email ?? '',
-          extension: extNum ?? '',
-          pbxFqdn,
-          allowedDepts: [],
-          currentDept: null,
-        });
-      }
-
-      // Set selected PBX
-      if (!selectedPbxFqdn) {
-        setSelectedPbxFqdn(pbxFqdn);
-      }
-
-      // Fetch departments from API
-      getDepartments(pbxFqdn).then((depts) => {
-        setAllowedDepts(depts);
-        // Set current dept from the first one or find it
-        if (depts.length > 0 && !currentDept) {
-          // Try to get current dept from API response
-          fetch(`${API_URL}/runner/departments`, {
-            headers: { Authorization: `Bearer ${sessionToken}` },
-          })
-            .then(r => r.json())
-            .then((data: { currentDeptId?: number; currentDeptName?: string }) => {
-              if (data.currentDeptId) {
-                const found = depts.find(d => d.id === data.currentDeptId);
-                if (found) setCurrentDept(found);
-              }
-            })
-            .catch(() => {});
         }
-      }).catch(() => {});
-    } catch {
-      // JWT decode failed
+
+        if (!selectedPbxFqdn && !cancelled) {
+          setSelectedPbxFqdn(pbxFqdn);
+        }
+
+        // Fetch departments
+        const deptsResp = await fetch(`${API_URL}/runner/departments`, {
+          headers: { Authorization: `Bearer ${sessionToken}` },
+        });
+        if (deptsResp.ok && !cancelled) {
+          const data = await deptsResp.json() as {
+            currentDeptId?: number;
+            currentDeptName?: string;
+            allowedDepts?: Array<{ id: number; name: string }>;
+          };
+          const depts = (data.allowedDepts ?? []).map(d => ({ id: d.id, name: d.name, groupId: d.id }));
+          setAllowedDepts(depts);
+          if (data.currentDeptId && !currentDept) {
+            const found = depts.find(d => d.id === data.currentDeptId);
+            if (found) setCurrentDept(found);
+          }
+        }
+      } catch {
+        // JWT decode or fetch failed
+      }
     }
+
+    loadData();
+    return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionToken]);
 
