@@ -31,11 +31,15 @@ export default function DeptCard({ dept, isCurrent = false, isLoading = false, o
 
   return (
     <div
+      role="button"
+      tabIndex={isCurrent ? undefined : 0}
+      onClick={!isCurrent && !confirming ? handleChangeClick : undefined}
+      onKeyDown={!isCurrent && !confirming ? (e) => { if (e.key === 'Enter' || e.key === ' ') handleChangeClick(e as unknown as React.MouseEvent); } : undefined}
       className={clsx(
         'w-full flex items-center justify-between px-4 py-3 rounded-xl bg-white transition-all',
         isCurrent
           ? 'border-2 border-green-400 shadow-sm'
-          : 'border border-gray-200 shadow-sm hover:shadow-md',
+          : 'border border-gray-200 shadow-sm hover:shadow-md cursor-pointer',
       )}
     >
       {/* Department name */}
@@ -54,7 +58,7 @@ export default function DeptCard({ dept, isCurrent = false, isLoading = false, o
           Assigned
         </span>
       ) : confirming ? (
-        <div className="ml-3 flex items-center gap-2 flex-shrink-0">
+        <div className="ml-3 flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
           {isLoading ? (
             <span className="text-xs text-blue-600 font-medium">Switching...</span>
           ) : (
@@ -78,13 +82,9 @@ export default function DeptCard({ dept, isCurrent = false, isLoading = false, o
           )}
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={handleChangeClick}
-          className="ml-3 text-sm font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap"
-        >
+        <span className="ml-3 text-sm font-medium text-blue-600 whitespace-nowrap">
           Change
-        </button>
+        </span>
       )}
     </div>
   );
