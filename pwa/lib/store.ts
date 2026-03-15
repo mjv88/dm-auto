@@ -32,41 +32,17 @@ interface RunnerStore {
   reset: () => void;
 }
 
-// Session persistence helpers
-function loadSession(): { sessionToken: string | null; role: UserRole; authStatus: AuthStatus } {
-  if (typeof window === 'undefined') return { sessionToken: null, role: 'runner', authStatus: 'idle' };
-  try {
-    const token = sessionStorage.getItem('sessionToken');
-    if (!token) return { sessionToken: null, role: 'runner', authStatus: 'idle' };
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    // Check expiry
-    if (payload.exp && payload.exp * 1000 < Date.now()) {
-      sessionStorage.removeItem('sessionToken');
-      return { sessionToken: null, role: 'runner', authStatus: 'idle' };
-    }
-    return {
-      sessionToken: token,
-      role: payload.role ?? 'runner',
-      authStatus: 'authenticated',
-    };
-  } catch {
-    return { sessionToken: null, role: 'runner', authStatus: 'idle' };
-  }
-}
-
-const persisted = loadSession();
-
 const initialState = {
-  authStatus: persisted.authStatus as AuthStatus,
+  authStatus: 'idle' as AuthStatus,
   runnerProfile: null,
   currentDept: null,
   allowedDepts: [],
   pbxOptions: [],
   selectedPbxFqdn: null,
-  role: persisted.role as UserRole,
+  role: 'runner' as UserRole,
   selectedAdminTenantId: null,
   error: null,
-  sessionToken: persisted.sessionToken,
+  sessionToken: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -130,3 +106,27 @@ export const useRunnerStore = create<RunnerStore>((set) => ({
     });
   },
 }));
+
+/**
+ * Restore session from sessionStorage on client mount.
+ * Call this in the root layout's useEffect to avoid hydration mismatch.
+ */
+export function restoreSession(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const token = sessionStorage.getItem('sessionToken');
+    if (!token) return;
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      sessionStorage.removeItem('sessionToken');
+      return;
+    }
+    useRunnerStore.setState({
+      sessionToken: token,
+      role: payload.role ?? 'runner',
+      authStatus: 'authenticated',
+    });
+  } catch {
+    sessionStorage.removeItem('sessionToken');
+  }
+}
