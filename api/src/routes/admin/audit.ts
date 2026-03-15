@@ -64,7 +64,7 @@ export async function adminAuditRoutes(fastify: FastifyInstance): Promise<void> 
     const session = request.session!;
     const query = request.query as AuditQuery;
     const tenantId = query.tenantId ?? session.tenantId;
-    if (session.role !== 'admin' && !tenantId) {
+    if (session.role !== 'super_admin' && !tenantId) {
       return reply.code(400).send({ error: 'MISSING_TENANT' });
     }
 
@@ -117,7 +117,7 @@ export async function adminAuditRoutes(fastify: FastifyInstance): Promise<void> 
     const session = request.session!;
     const query = request.query as AuditQuery;
     const tenantId = query.tenantId ?? session.tenantId;
-    if (session.role !== 'admin' && !tenantId) {
+    if (session.role !== 'super_admin' && !tenantId) {
       return reply.code(400).send({ error: 'MISSING_TENANT' });
     }
 

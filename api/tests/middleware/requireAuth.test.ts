@@ -48,7 +48,7 @@ function makeReply(): FastifyReply & { _status: number; _body: unknown } {
 }
 
 function makeSession(overrides: Partial<{
-  role: 'admin' | 'manager' | 'runner';
+  role: 'super_admin' | 'admin' | 'manager' | 'runner';
   userId: string;
   tenantId: string | null;
 }> = {}) {
@@ -172,9 +172,9 @@ describe('requireCompanyAccess', () => {
     expect(reply._status).toBe(401);
   });
 
-  it('passes for admin role regardless of tenant', async () => {
+  it('passes for super_admin role regardless of tenant', async () => {
     const req = makeRequest();
-    req.session = makeSession({ role: 'admin' });
+    req.session = makeSession({ role: 'super_admin' });
     const reply = makeReply();
     await requireCompanyAccess(getTenantId)(req, reply);
     expect(reply._status).toBe(0);

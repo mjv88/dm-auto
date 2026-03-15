@@ -36,7 +36,7 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
       limit?: string;
     };
     const tenantId = query.tenantId ?? session.tenantId;
-    if (session.role !== 'admin' && !tenantId) {
+    if (session.role !== 'super_admin' && !tenantId) {
       return reply.code(400).send({ error: 'MISSING_TENANT' });
     }
 
@@ -85,7 +85,7 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
   fastify.post('/admin/runners', { preHandler: [requireRole('manager')] }, async (request, reply) => {
     const session = request.session!;
     const tenantId = (request.query as { tenantId?: string }).tenantId ?? session.tenantId;
-    if (session.role !== 'admin' && !tenantId) {
+    if (session.role !== 'super_admin' && !tenantId) {
       return reply.code(400).send({ error: 'MISSING_TENANT' });
     }
     if (!tenantId) {
@@ -171,7 +171,7 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
   fastify.put('/admin/runners/:id', { preHandler: [requireRole('manager')] }, async (request, reply) => {
     const session = request.session!;
     const tenantId = (request.query as { tenantId?: string }).tenantId ?? session.tenantId;
-    if (session.role !== 'admin' && !tenantId) {
+    if (session.role !== 'super_admin' && !tenantId) {
       return reply.code(400).send({ error: 'MISSING_TENANT' });
     }
 
@@ -218,7 +218,7 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
   fastify.delete('/admin/runners/:id', { preHandler: [requireRole('manager')] }, async (request, reply) => {
     const session = request.session!;
     const tenantId = (request.query as { tenantId?: string }).tenantId ?? session.tenantId;
-    if (session.role !== 'admin' && !tenantId) {
+    if (session.role !== 'super_admin' && !tenantId) {
       return reply.code(400).send({ error: 'MISSING_TENANT' });
     }
 
@@ -258,7 +258,7 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
 
     // Find PBXs for this tenant (or all if admin with no filter)
     let pbxIds: string[];
-    if (session.role === 'admin' && !tenantId) {
+    if (session.role === 'super_admin' && !tenantId) {
       const rows = await db.select({ id: pbxCredentials.id }).from(pbxCredentials).where(eq(pbxCredentials.isActive, true));
       pbxIds = rows.map(r => r.id);
     } else if (tenantId) {

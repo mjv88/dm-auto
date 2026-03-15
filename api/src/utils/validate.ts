@@ -168,6 +168,6 @@ export const changePasswordSchema = z.object({
 // ── User management schemas ─────────────────────────────────────────────────
 
 export const changeRoleSchema = z.object({
-  role: z.enum(['manager', 'runner']),
+  role: z.enum(['super_admin', 'admin', 'manager', 'runner']),
   tenantIds: z.array(z.string().uuid()).optional(),
 });

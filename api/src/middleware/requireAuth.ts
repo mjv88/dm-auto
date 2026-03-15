@@ -11,7 +11,7 @@ declare module 'fastify' {
   }
 }
 
-const ROLE_HIERARCHY: Record<string, number> = { admin: 3, manager: 2, runner: 1 };
+const ROLE_HIERARCHY: Record<string, number> = { super_admin: 4, admin: 3, manager: 2, runner: 1 };
 
 export async function requireAuth(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const header = request.headers.authorization;
@@ -27,7 +27,7 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply):
   }
 }
 
-export function requireRole(...roles: Array<'admin' | 'manager' | 'runner'>) {
+export function requireRole(...roles: Array<'super_admin' | 'admin' | 'manager' | 'runner'>) {
   return async function (request: FastifyRequest, reply: FastifyReply): Promise<void> {
     const session = request.session;
     if (!session) return reply.code(401).send({ error: 'UNAUTHORIZED' });
@@ -43,10 +43,10 @@ export function requireCompanyAccess(getTenantId: (request: FastifyRequest) => s
   return async function (request: FastifyRequest, reply: FastifyReply): Promise<void> {
     const session = request.session;
     if (!session) return reply.code(401).send({ error: 'UNAUTHORIZED' });
-    if (session.role === 'admin') return; // Admin always passes
+    if (session.role === 'super_admin') return; // Super admin always passes
     const tenantId = getTenantId(request);
     if (!tenantId) return reply.code(400).send({ error: 'MISSING_TENANT' });
-    if (session.role === 'manager') {
+    if (session.role === 'admin' || session.role === 'manager') {
       const db = getDb();
       const rows = await db.select({ tenantId: managerTenants.tenantId }).from(managerTenants).where(eq(managerTenants.userId, session.userId));
       if (!rows.some(r => r.tenantId === tenantId)) {

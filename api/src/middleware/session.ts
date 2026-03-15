@@ -13,7 +13,7 @@ export interface UnifiedSession {
   type: 'session';
   userId: string;
   email: string;
-  role: 'admin' | 'manager' | 'runner';
+  role: 'super_admin' | 'admin' | 'manager' | 'runner';
   tenantId: string | null;
   runnerId: string | null;
   emailVerified: boolean;

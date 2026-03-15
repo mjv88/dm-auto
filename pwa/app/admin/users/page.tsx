@@ -60,11 +60,13 @@ export default function UsersPage() {
       render: (row: UserRow) => (
         <span
           className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-            row.role === 'admin'
-              ? 'bg-purple-100 text-purple-800'
-              : row.role === 'manager'
-                ? 'bg-blue-100 text-blue-800'
-                : 'bg-gray-100 text-gray-800'
+            row.role === 'super_admin'
+              ? 'bg-red-100 text-red-800'
+              : row.role === 'admin'
+                ? 'bg-purple-100 text-purple-800'
+                : row.role === 'manager'
+                  ? 'bg-blue-100 text-blue-800'
+                  : 'bg-gray-100 text-gray-800'
           }`}
         >
           {row.role}
@@ -102,6 +104,7 @@ export default function UsersPage() {
           className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
         >
           <option value="">All Roles</option>
+          <option value="super_admin">Super Admin</option>
           <option value="admin">Admin</option>
           <option value="manager">Manager</option>
           <option value="runner">Runner</option>
@@ -127,7 +130,7 @@ export default function UsersPage() {
             data={data.users}
             rowKey={(row) => row.id}
             actions={(row) =>
-              row.role !== 'admin' ? (
+              row.role !== 'super_admin' ? (
                 <button
                   onClick={() => setEditingUser(row)}
                   className="text-sm text-blue-600 hover:underline"

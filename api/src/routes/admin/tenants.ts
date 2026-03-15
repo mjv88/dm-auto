@@ -99,7 +99,7 @@ export async function adminTenantRoutes(
   fastify.put('/admin/tenants/me', { preHandler: [requireRole('manager')] }, async (request, reply) => {
     const session = request.session!;
     const tenantId = (request.query as { tenantId?: string }).tenantId ?? session.tenantId;
-    if (session.role !== 'admin' && !tenantId) {
+    if (session.role !== 'super_admin' && !tenantId) {
       return reply.code(400).send({ error: 'MISSING_TENANT' });
     }
 

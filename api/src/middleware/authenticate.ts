@@ -158,7 +158,7 @@ export async function authenticate(
   try {
     const session = validateSessionToken(token);
     // Unified sessions always have type 'session'; check role for runner access
-    if (session.role === 'admin' && !session.runnerId) {
+    if ((session.role === 'super_admin' || session.role === 'admin') && !session.runnerId) {
       return reply.code(401).send({ error: 'UNAUTHORIZED', message: 'Not a runner session' });
     }
     request.runnerContext = session;
@@ -191,7 +191,7 @@ export async function adminAuthenticate(
   try {
     const session = validateSessionToken(token);
     // Accept sessions with admin role (unified type is always 'session')
-    if (session.role === 'admin') {
+    if (session.role === 'super_admin' || session.role === 'admin') {
       request.adminSession = session;
       return;
     }

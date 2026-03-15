@@ -53,8 +53,8 @@ export async function adminUserRoutes(fastify: FastifyInstance): Promise<void> {
       conditions.push(eq(users.tenantId, filterTenantId));
     }
 
-    // Manager can only see users in their managed tenants
-    if (session.role === 'manager') {
+    // Admin and manager can only see users in their managed tenants
+    if (session.role === 'admin' || session.role === 'manager') {
       const managedRows = await db
         .select({ tenantId: managerTenants.tenantId })
         .from(managerTenants)
@@ -120,8 +120,8 @@ export async function adminUserRoutes(fastify: FastifyInstance): Promise<void> {
       return reply.code(404).send({ error: 'NOT_FOUND' });
     }
 
-    // Manager can only view users in their managed tenants
-    if (session.role === 'manager') {
+    // Admin and manager can only view users in their managed tenants
+    if (session.role === 'admin' || session.role === 'manager') {
       const managedRows = await db
         .select({ tenantId: managerTenants.tenantId })
         .from(managerTenants)
@@ -191,13 +191,18 @@ export async function adminUserRoutes(fastify: FastifyInstance): Promise<void> {
       return reply.code(404).send({ error: 'NOT_FOUND' });
     }
 
-    // Cannot change an admin's role (only admins can do that, and even they shouldn't easily)
-    if (target.role === 'admin' && session.role !== 'admin') {
+    // Only super_admin can change an admin's or super_admin's role
+    if ((target.role === 'admin' || target.role === 'super_admin') && session.role !== 'super_admin') {
       return reply.code(403).send({ error: 'FORBIDDEN', message: 'Cannot change an admin role' });
     }
 
-    // Manager can only promote within their managed tenants
-    if (session.role === 'manager') {
+    // Only super_admin can assign admin or super_admin roles
+    if ((newRole === 'admin' || newRole === 'super_admin') && session.role !== 'super_admin') {
+      return reply.code(403).send({ error: 'FORBIDDEN', message: 'Only super_admin can assign admin or super_admin roles' });
+    }
+
+    // Admin and manager can only promote within their managed tenants
+    if (session.role === 'admin' || session.role === 'manager') {
       const managedRows = await db
         .select({ tenantId: managerTenants.tenantId })
         .from(managerTenants)
@@ -208,7 +213,7 @@ export async function adminUserRoutes(fastify: FastifyInstance): Promise<void> {
         return reply.code(403).send({ error: 'FORBIDDEN', message: 'User not in your managed companies' });
       }
 
-      // Manager can only assign tenants they manage
+      // Admin/manager can only assign tenants they manage
       if (tenantIds) {
         const unauthorized = tenantIds.filter(tid => !managedTenantIds.includes(tid));
         if (unauthorized.length > 0) {
@@ -229,8 +234,8 @@ export async function adminUserRoutes(fastify: FastifyInstance): Promise<void> {
       await db
         .delete(managerTenants)
         .where(eq(managerTenants.userId, id));
-    } else if (newRole === 'manager' && tenantIds && tenantIds.length > 0) {
-      // Promoting to manager: add tenant assignments
+    } else if ((newRole === 'admin' || newRole === 'manager') && tenantIds && tenantIds.length > 0) {
+      // Promoting to admin/manager: add tenant assignments
       // First remove existing entries (clean slate)
       await db
         .delete(managerTenants)
@@ -250,7 +255,7 @@ export async function adminUserRoutes(fastify: FastifyInstance): Promise<void> {
     }
 
     // Check if user has no manager_tenants remaining — auto-demote to runner
-    if (newRole === 'manager') {
+    if (newRole === 'admin' || newRole === 'manager') {
       const remaining = await db
         .select({ id: managerTenants.id })
         .from(managerTenants)

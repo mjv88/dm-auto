@@ -17,7 +17,9 @@ interface RoleModalProps {
 }
 
 export default function RoleModal({ userId, currentRole, userName, onClose, onSuccess }: RoleModalProps) {
-  const [role, setRole] = useState<'manager' | 'runner'>(currentRole === 'manager' ? 'manager' : 'runner');
+  const [role, setRole] = useState<'admin' | 'manager' | 'runner'>(
+    currentRole === 'admin' ? 'admin' : currentRole === 'manager' ? 'manager' : 'runner',
+  );
   const [tenantIds, setTenantIds] = useState<string[]>([]);
   const [availableTenants, setAvailableTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(false);
@@ -60,7 +62,7 @@ export default function RoleModal({ userId, currentRole, userName, onClose, onSu
     try {
       await adminPut(`/admin/users/${userId}/role`, {
         role,
-        ...(role === 'manager' ? { tenantIds } : {}),
+        ...(role === 'admin' || role === 'manager' ? { tenantIds } : {}),
       });
       onSuccess();
     } catch (err) {
@@ -88,15 +90,16 @@ export default function RoleModal({ userId, currentRole, userName, onClose, onSu
             <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
             <select
               value={role}
-              onChange={(e) => setRole(e.target.value as 'manager' | 'runner')}
+              onChange={(e) => setRole(e.target.value as 'admin' | 'manager' | 'runner')}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
             >
               <option value="runner">Runner</option>
               <option value="manager">Manager</option>
+              <option value="admin">Admin</option>
             </select>
           </div>
 
-          {role === 'manager' && availableTenants.length > 0 && (
+          {(role === 'admin' || role === 'manager') && availableTenants.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Managed Companies</label>
               <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-2">

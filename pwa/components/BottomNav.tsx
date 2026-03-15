@@ -19,12 +19,12 @@ export function BottomNav() {
   }
 
   // Build tabs based on auth state and role
-  const isAdminOrManager = role === 'admin' || role === 'manager';
+  const isAdminOrAbove = role === 'super_admin' || role === 'admin' || role === 'manager';
   const tabs: Array<{ href: string; label: string; icon: React.FC<{ active: boolean }>; show: boolean; exact: boolean }> = isAuthenticated
     ? [
         { href: '/departments', label: 'Home', icon: HomeIcon, show: true, exact: true },
-        { href: '/admin', label: 'Admin', icon: AdminIcon, show: isAdminOrManager, exact: false },
-        { href: '/setup', label: 'Setup', icon: SetupIcon, show: role === 'admin', exact: false },
+        { href: '/admin', label: 'Admin', icon: AdminIcon, show: isAdminOrAbove, exact: false },
+        { href: '/setup', label: 'Setup', icon: SetupIcon, show: role === 'super_admin', exact: false },
       ]
     : [
         { href: '/login', label: 'Login', icon: LoginIcon, show: true, exact: false },

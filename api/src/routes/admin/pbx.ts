@@ -29,7 +29,7 @@ export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get('/admin/pbx', { preHandler: [requireRole('manager')] }, async (request, reply) => {
     const session = request.session!;
     const tenantId = (request.query as { tenantId?: string }).tenantId ?? session.tenantId;
-    if (session.role !== 'admin' && !tenantId) {
+    if (session.role !== 'super_admin' && !tenantId) {
       return reply.code(400).send({ error: 'MISSING_TENANT' });
     }
 
@@ -57,7 +57,7 @@ export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.post('/admin/pbx', { preHandler: [requireRole('manager')] }, async (request, reply) => {
     const session = request.session!;
     const tenantId = (request.query as { tenantId?: string }).tenantId ?? session.tenantId;
-    if (session.role !== 'admin' && !tenantId) {
+    if (session.role !== 'super_admin' && !tenantId) {
       return reply.code(400).send({ error: 'MISSING_TENANT' });
     }
     if (!tenantId) {
@@ -112,7 +112,7 @@ export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.put('/admin/pbx/:id', { preHandler: [requireRole('manager')] }, async (request, reply) => {
     const session = request.session!;
     const tenantId = (request.query as { tenantId?: string }).tenantId ?? session.tenantId;
-    if (session.role !== 'admin' && !tenantId) {
+    if (session.role !== 'super_admin' && !tenantId) {
       return reply.code(400).send({ error: 'MISSING_TENANT' });
     }
 
@@ -167,7 +167,7 @@ export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.delete('/admin/pbx/:id', { preHandler: [requireRole('manager')] }, async (request, reply) => {
     const session = request.session!;
     const tenantId = (request.query as { tenantId?: string }).tenantId ?? session.tenantId;
-    if (session.role !== 'admin' && !tenantId) {
+    if (session.role !== 'super_admin' && !tenantId) {
       return reply.code(400).send({ error: 'MISSING_TENANT' });
     }
 

@@ -20,8 +20,8 @@ export default function CompanySwitcher() {
   useEffect(() => {
     async function fetchTenants() {
       try {
-        if (role === 'admin') {
-          // Admin sees all tenants — use admin tenants endpoint
+        if (role === 'super_admin') {
+          // Super admin sees all tenants — use admin tenants endpoint
           const data = await adminGet<{ tenant: TenantOption } | { tenants: TenantOption[] }>('/admin/tenants/me');
           if ('tenants' in data && Array.isArray(data.tenants)) {
             setTenants(data.tenants);
@@ -72,7 +72,7 @@ export default function CompanySwitcher() {
         onChange={(e) => setSelectedAdminTenantId(e.target.value || null)}
         className="text-sm border border-gray-300 rounded-md px-2 py-1 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
-        {role === 'admin' && <option value="">All Companies</option>}
+        {role === 'super_admin' && <option value="">All Companies</option>}
         {tenants.map((t) => (
           <option key={t.id} value={t.id}>
             {t.name}

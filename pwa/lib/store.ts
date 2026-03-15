@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import type { AuthStatus, RunnerProfile, Dept, PBXOption, AppError } from '@/types/auth';
 
-type UserRole = 'admin' | 'manager' | 'runner';
+type UserRole = 'super_admin' | 'admin' | 'manager' | 'runner';
 
 interface RunnerStore {
   // Auth state

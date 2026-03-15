@@ -448,13 +448,13 @@ export async function setupRoutes(fastify: FastifyInstance): Promise<void> {
     const currentUser = userRows[0];
 
     if (currentUser && (currentUser.role === 'runner' || !currentUser.role)) {
-      // Promote to manager
+      // Promote to admin
       await db
         .update(users)
-        .set({ role: 'manager' })
+        .set({ role: 'admin' })
         .where(eq(users.id, ctx.userId));
 
-      // Grant manager access to this tenant
+      // Grant admin access to this tenant
       await db
         .insert(managerTenants)
         .values({
@@ -464,12 +464,12 @@ export async function setupRoutes(fastify: FastifyInstance): Promise<void> {
         })
         .onConflictDoNothing();
 
-      // Issue new session token with manager role
+      // Issue new session token with admin role
       sessionToken = createSessionToken({
         type: 'session',
         userId: ctx.userId,
         email: ctx.email,
-        role: 'manager',
+        role: 'admin',
         tenantId,
         runnerId: null,
         emailVerified: true,
