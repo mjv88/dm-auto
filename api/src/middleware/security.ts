@@ -28,7 +28,7 @@ export async function registerSecurity(fastify: FastifyInstance): Promise<void> 
       reply
         .header('Access-Control-Allow-Origin', allowedOrigin)
         .header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-        .header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        .header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-request-id')
         .header('Access-Control-Max-Age', '86400')
         .header('Vary', 'Origin');
     }
