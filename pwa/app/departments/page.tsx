@@ -28,6 +28,7 @@ export default function DepartmentsPage() {
   const sessionToken = useRunnerStore((s) => s.sessionToken);
 
   const [switchingDeptId, setSwitchingDeptId] = useState<number | null>(null);
+  const [confirmingDeptId, setConfirmingDeptId] = useState<number | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [successDeptName, setSuccessDeptName] = useState('');
@@ -293,8 +294,11 @@ export default function DepartmentsPage() {
                 <DeptCard
                   key={dept.id}
                   dept={dept}
+                  isConfirming={confirmingDeptId === dept.id}
                   isLoading={switchingDeptId === dept.id}
-                  onConfirmSwitch={handleConfirmSwitch}
+                  onSelect={(d) => setConfirmingDeptId(d.id)}
+                  onConfirmSwitch={(d) => { setConfirmingDeptId(null); handleConfirmSwitch(d); }}
+                  onCancel={() => setConfirmingDeptId(null)}
                 />
               ))}
 

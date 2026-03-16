@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { clsx } from 'clsx';
 import type { Dept } from '@/types/auth';
 
@@ -8,20 +7,17 @@ interface DeptCardProps {
   dept: Dept;
   isCurrent?: boolean;
   isLoading?: boolean;
+  isConfirming?: boolean;
+  onSelect?: (dept: Dept) => void;
   onConfirmSwitch?: (dept: Dept) => void;
+  onCancel?: () => void;
 }
 
-export default function DeptCard({ dept, isCurrent = false, isLoading = false, onConfirmSwitch }: DeptCardProps) {
-  const [confirming, setConfirming] = useState(false);
-
-  function handleChangeClick(e: React.MouseEvent) {
-    e.stopPropagation();
-    setConfirming(true);
-  }
-
-  function handleCancel(e: React.MouseEvent) {
-    e.stopPropagation();
-    setConfirming(false);
+export default function DeptCard({ dept, isCurrent = false, isLoading = false, isConfirming = false, onSelect, onConfirmSwitch, onCancel }: DeptCardProps) {
+  function handleRowClick() {
+    if (!isCurrent && !isConfirming) {
+      onSelect?.(dept);
+    }
   }
 
   function handleConfirm(e: React.MouseEvent) {
@@ -29,12 +25,17 @@ export default function DeptCard({ dept, isCurrent = false, isLoading = false, o
     onConfirmSwitch?.(dept);
   }
 
+  function handleCancel(e: React.MouseEvent) {
+    e.stopPropagation();
+    onCancel?.();
+  }
+
   return (
     <div
       role="button"
       tabIndex={isCurrent ? undefined : 0}
-      onClick={!isCurrent && !confirming ? handleChangeClick : undefined}
-      onKeyDown={!isCurrent && !confirming ? (e) => { if (e.key === 'Enter' || e.key === ' ') handleChangeClick(e as unknown as React.MouseEvent); } : undefined}
+      onClick={!isCurrent && !isConfirming ? handleRowClick : undefined}
+      onKeyDown={!isCurrent && !isConfirming ? (e) => { if (e.key === 'Enter' || e.key === ' ') handleRowClick(); } : undefined}
       className={clsx(
         'w-full flex items-center justify-between px-4 py-3 rounded-xl bg-white transition-all',
         isCurrent
@@ -57,7 +58,7 @@ export default function DeptCard({ dept, isCurrent = false, isLoading = false, o
         <span className="ml-3 text-sm font-semibold text-green-600 whitespace-nowrap">
           Assigned
         </span>
-      ) : confirming ? (
+      ) : isConfirming ? (
         <div className="ml-3 flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
           {isLoading ? (
             <span className="text-xs text-blue-600 font-medium">Switching...</span>
