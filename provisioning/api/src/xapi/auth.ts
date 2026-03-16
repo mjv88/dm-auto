@@ -8,9 +8,15 @@ import { encrypt, decrypt } from '../utils/encrypt.js';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LogFn = (...args: any[]) => void;
 
+let _logger: { info: LogFn; debug: LogFn; error: LogFn } | null = null;
+
 function getLogger(): { info: LogFn; debug: LogFn; error: LogFn } {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return require('../utils/logger.js').logger;
+  if (!_logger) {
+    // Fallback console logger — replaced once config loads
+    _logger = { info: console.log, debug: console.log, error: console.error };
+    import('../utils/logger.js').then(m => { _logger = m.logger; }).catch(() => {});
+  }
+  return _logger;
 }
 
 type DrizzleDb = ReturnType<typeof getDb>;
