@@ -7,7 +7,8 @@ interface PbxForm {
   pbxFqdn: string;
   pbxName: string;
   authMode: 'xapi' | 'user_credentials';
-  apiKey?: string;
+  clientId?: string;
+  secret?: string;
   username?: string;
   password?: string;
 }
@@ -23,7 +24,8 @@ export default function PbxModal({ pbx, onSave, onClose }: PbxModalProps) {
     pbxFqdn: '',
     pbxName: '',
     authMode: 'xapi',
-    apiKey: '',
+    clientId: '',
+    secret: '',
     username: '',
     password: '',
   });
@@ -36,7 +38,8 @@ export default function PbxModal({ pbx, onSave, onClose }: PbxModalProps) {
         pbxFqdn: pbx.pbxFqdn,
         pbxName: pbx.pbxName,
         authMode: pbx.authMode,
-        apiKey: '',
+        clientId: '',
+        secret: '',
         username: '',
         password: '',
       });
@@ -102,16 +105,28 @@ export default function PbxModal({ pbx, onSave, onClose }: PbxModalProps) {
           </div>
 
           {form.authMode === 'xapi' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">API Key</label>
-              <input
-                type="password"
-                value={form.apiKey ?? ''}
-                onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
-                placeholder={pbx ? '(unchanged)' : 'Enter API key'}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Client ID</label>
+                <input
+                  type="text"
+                  value={form.clientId ?? ''}
+                  onChange={(e) => setForm({ ...form, clientId: e.target.value })}
+                  placeholder={pbx ? '(unchanged)' : 'xapi-client-id'}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Client Secret</label>
+                <input
+                  type="password"
+                  value={form.secret ?? ''}
+                  onChange={(e) => setForm({ ...form, secret: e.target.value })}
+                  placeholder={pbx ? '(unchanged)' : 'xapi-secret'}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </>
           )}
 
           {form.authMode === 'user_credentials' && (

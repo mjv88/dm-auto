@@ -35,14 +35,30 @@ export default function PbxPage() {
     pbxFqdn: string;
     pbxName: string;
     authMode: 'xapi' | 'user_credentials';
-    apiKey?: string;
+    clientId?: string;
+    secret?: string;
     username?: string;
     password?: string;
   }) {
+    const credentials =
+      data.authMode === 'xapi'
+        ? { mode: 'xapi' as const, clientId: data.clientId ?? '', secret: data.secret ?? '' }
+        : { mode: 'user_credentials' as const, username: data.username ?? '', password: data.password ?? '' };
+
+    const payload = {
+      fqdn: data.pbxFqdn,
+      name: data.pbxName,
+      authMode: data.authMode,
+      credentials,
+    };
+
     if (modalPbx) {
-      await adminPut(`/admin/pbx/${modalPbx.id}`, data);
+      await adminPut(`/admin/pbx/${modalPbx.id}`, {
+        name: data.pbxName,
+        credentials,
+      });
     } else {
-      await adminPost('/admin/pbx', data);
+      await adminPost('/admin/pbx', payload);
     }
     setModalPbx(undefined);
     load();
