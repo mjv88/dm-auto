@@ -15,7 +15,7 @@ import { z } from 'zod';
 // ── FQDN validation ────────────────────────────────────────────────────────────
 
 /** Pre-compiled regex — must start with alphanumeric, no leading/trailing dots. */
-const FQDN_REGEX = /^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/;
+const FQDN_REGEX = /^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}(:\d{1,5})?$/;
 
 /**
  * Validates a PBX FQDN in two stages:

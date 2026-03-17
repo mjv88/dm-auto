@@ -8,7 +8,7 @@ import { z } from 'zod';
 
 // ── FQDN validation ────────────────────────────────────────────────────────────
 
-const FQDN_REGEX = /^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/;
+const FQDN_REGEX = /^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}(:\d{1,5})?$/;
 
 // ── Email/password auth schemas ──────────────────────────────────────────────
 
