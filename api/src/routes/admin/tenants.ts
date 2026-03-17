@@ -42,7 +42,7 @@ export async function adminTenantRoutes(
       ? ilike(tenants.name, `%${search}%`)
       : undefined;
 
-    const [rows, [{ total }]] = await Promise.all([
+    const [rows, countResult] = await Promise.all([
       db
         .select()
         .from(tenants)
@@ -55,12 +55,13 @@ export async function adminTenantRoutes(
         .from(tenants)
         .where(whereClause),
     ]);
+    const total = Number(countResult[0]?.total ?? 0);
 
     return reply.send({
       tenants: rows,
-      total: Number(total),
+      total,
       page,
-      pages: Math.ceil(Number(total) / limit),
+      pages: Math.ceil(total / limit),
     });
   });
 
@@ -83,8 +84,8 @@ export async function adminTenantRoutes(
     const { name, adminEmails, entraTenantId } = parseResult.data;
 
     // Reject if super_admin tries to assign themselves — they already have global access.
-    const myEmail = session.entraEmail ?? session.email;
-    if (adminEmails.some((e) => e.toLowerCase() === myEmail.toLowerCase())) {
+    const myEmail = (session.entraEmail ?? session.email ?? '').toLowerCase();
+    if (adminEmails.some((e) => e.toLowerCase() === myEmail)) {
       return reply.code(400).send({
         error: 'SELF_ASSIGN_NOT_ALLOWED',
         message: 'You cannot assign yourself as a company admin. Add a different email.',
@@ -96,18 +97,28 @@ export async function adminTenantRoutes(
     // Use provided Entra tenant ID or a placeholder UUID (admin fills in later via Settings).
     const resolvedEntraTenantId = entraTenantId ?? randomUUID();
 
-    const [tenant] = await db
-      .insert(tenants)
-      .values({
-        entraTenantId: resolvedEntraTenantId,
-        name,
-        entraGroupId: '',
-        adminEmails,
-        isActive: true,
-      })
-      .returning();
-
-    return reply.code(201).send({ tenant });
+    try {
+      const [tenant] = await db
+        .insert(tenants)
+        .values({
+          entraTenantId: resolvedEntraTenantId,
+          name,
+          entraGroupId: '',
+          adminEmails,
+          isActive: true,
+        })
+        .returning();
+      return reply.code(201).send({ tenant });
+    } catch (err: unknown) {
+      const pgCode = (err as { code?: string }).code;
+      if (pgCode === '23505') {
+        return reply.code(409).send({
+          error: 'DUPLICATE_TENANT',
+          message: 'A company with this Entra Tenant ID already exists.',
+        });
+      }
+      throw err;
+    }
   });
 
   // ── GET /admin/tenants/me ──────────────────────────────────────────────────
