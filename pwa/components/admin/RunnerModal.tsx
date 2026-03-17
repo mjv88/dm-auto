@@ -67,15 +67,18 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
     }
   }, [runner, pbxList]);
 
-  // Load extensions when PBX selection changes (add mode only)
+  // Live-fetch PBX users whenever the selected PBX changes (add mode only)
   useEffect(() => {
     if (runner || !form.pbxId) return;
+    let cancelled = false;
     setExtLoading(true);
     setExtensions([]);
-    adminGet<{ extensions: PbxExtension[] }>(`/admin/pbx/${form.pbxId}/extensions`)
-      .then(data => setExtensions(data.extensions))
+    setExtSearch('');
+    adminGet<{ users: PbxExtension[] }>(`/admin/pbx/${form.pbxId}/users`)
+      .then(data => { if (!cancelled) setExtensions(data.users); })
       .catch(() => { /* silently fail — user can still type manually */ })
-      .finally(() => setExtLoading(false));
+      .finally(() => { if (!cancelled) setExtLoading(false); });
+    return () => { cancelled = true; };
   }, [form.pbxId, runner]);
 
   const filteredExtensions = useMemo(() => {
@@ -150,14 +153,28 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
                 Pick from PBX users
                 <span className="ml-1 text-xs font-normal text-gray-400">— or fill in manually below</span>
               </label>
-              <input
-                type="text"
-                value={extSearch}
-                onChange={e => setExtSearch(e.target.value)}
-                placeholder={extLoading ? 'Loading…' : extensions.length === 0 ? 'No cached users — add manually' : 'Search name, email, or extension…'}
-                disabled={extLoading || extensions.length === 0}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={extSearch}
+                  onChange={e => setExtSearch(e.target.value)}
+                  placeholder={
+                    extLoading
+                      ? 'Fetching users from PBX…'
+                      : extensions.length === 0
+                        ? 'PBX unavailable — fill in manually below'
+                        : `Search from ${extensions.length} users…`
+                  }
+                  disabled={extLoading}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400"
+                />
+                {extLoading && (
+                  <svg className="absolute right-3 top-2.5 animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                  </svg>
+                )}
+              </div>
               {extSearch && filteredExtensions.length > 0 && (
                 <ul className="mt-1 border border-gray-200 rounded-md max-h-44 overflow-y-auto bg-white shadow-sm">
                   {filteredExtensions.slice(0, 50).map(ext => (

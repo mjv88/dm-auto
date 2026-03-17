@@ -18,6 +18,7 @@ import { requireAuth, requireRole } from '../../middleware/requireAuth.js';
 import { encrypt } from '../../utils/encrypt.js';
 import { createPbxSchema, updatePbxSchema } from '../../utils/validate.js';
 import { validatePbxConnectivity } from '../../utils/pbx.js';
+import { XAPIClient } from '../../xapi/client.js';
 
 // ── Route plugin ──────────────────────────────────────────────────────────────
 
@@ -196,25 +197,37 @@ export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
     return reply.code(204).send();
   });
 
-  // ── GET /admin/pbx/:id/extensions ─────────────────────────────────────────
-  // Returns cached extensions for a PBX, for use in the Add Runner dropdown.
-  // Optional ?search= for client-side filtering support.
+  // ── GET /admin/pbx/:id/users ──────────────────────────────────────────────
+  // Live fetch of users from the PBX xAPI — used by the Add Runner dropdown.
+  // Returns extension number, display name, email, and current group.
 
-  fastify.get('/admin/pbx/:id/extensions', { preHandler: [requireRole('manager')] }, async (request, reply) => {
+  fastify.get('/admin/pbx/:id/users', { preHandler: [requireRole('manager')] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const db = getDb();
 
     const rows = await db
-      .select({
-        extensionNumber: pbxExtensions.extensionNumber,
-        email: pbxExtensions.email,
-        displayName: pbxExtensions.displayName,
-        currentGroupName: pbxExtensions.currentGroupName,
-      })
-      .from(pbxExtensions)
-      .where(eq(pbxExtensions.pbxCredentialId, id))
-      .orderBy(pbxExtensions.extensionNumber);
+      .select({ pbxFqdn: pbxCredentials.pbxFqdn })
+      .from(pbxCredentials)
+      .where(eq(pbxCredentials.id, id))
+      .limit(1);
 
-    return reply.send({ extensions: rows });
+    if (!rows[0]) {
+      return reply.code(404).send({ error: 'PBX_NOT_FOUND' });
+    }
+
+    try {
+      const client = await XAPIClient.create(rows[0].pbxFqdn);
+      const users = await client.getAllUsers();
+      return reply.send({
+        users: users.map(u => ({
+          extensionNumber: u.number,
+          email: u.email,
+          displayName: u.displayName,
+          currentGroupName: u.currentGroupName,
+        })),
+      });
+    } catch {
+      return reply.code(502).send({ error: 'PBX_UNAVAILABLE', message: 'Could not reach the PBX.' });
+    }
   });
 }
