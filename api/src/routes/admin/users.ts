@@ -14,6 +14,7 @@ import { getDb } from '../../db/index.js';
 import { users, managerTenants, tenants, runners } from '../../db/schema.js';
 import { requireAuth, requireRole } from '../../middleware/requireAuth.js';
 import { changeRoleSchema } from '../../utils/validate.js';
+import { createSessionToken } from '../../middleware/session.js';
 
 export async function adminUserRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.addHook('preHandler', requireAuth);
@@ -271,5 +272,88 @@ export async function adminUserRoutes(fastify: FastifyInstance): Promise<void> {
     }
 
     return reply.send({ user: { id, role: newRole } });
+  });
+
+  // ── POST /admin/users/:id/impersonate ──────────────────────────────────
+
+  fastify.post('/admin/users/:id/impersonate', { preHandler: [requireRole('super_admin')] }, async (request, reply) => {
+    const session = request.session!;
+    const { id } = request.params as { id: string };
+    const db = getDb();
+
+    const targetRows = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        role: users.role,
+        tenantId: users.tenantId,
+        emailVerified: users.emailVerified,
+      })
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+
+    const target = targetRows[0];
+    if (!target) {
+      return reply.code(404).send({ error: 'NOT_FOUND' });
+    }
+
+    // Issue a session token as the target user
+    const sessionToken = createSessionToken({
+      type: 'session',
+      userId: target.id,
+      email: target.email,
+      role: target.role as 'super_admin' | 'admin' | 'manager' | 'runner',
+      tenantId: target.tenantId,
+      runnerId: null,
+      emailVerified: target.emailVerified,
+      pbxFqdn: null,
+      extensionNumber: null,
+      entraEmail: null,
+      tid: null,
+      oid: null,
+    });
+
+    return reply.send({
+      sessionToken,
+      originalToken: request.headers.authorization?.slice(7) ?? null,
+      user: { id: target.id, email: target.email, role: target.role },
+    });
+  });
+
+  // ── DELETE /admin/users/:id ───────────────────────────────────────────
+
+  fastify.delete('/admin/users/:id', { preHandler: [requireRole('admin')] }, async (request, reply) => {
+    const session = request.session!;
+    const { id } = request.params as { id: string };
+    const db = getDb();
+
+    // Cannot delete yourself
+    if (id === session.userId) {
+      return reply.code(400).send({ error: 'CANNOT_DELETE_SELF' });
+    }
+
+    const targetRows = await db
+      .select({ id: users.id, email: users.email, role: users.role })
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+
+    const target = targetRows[0];
+    if (!target) {
+      return reply.code(404).send({ error: 'NOT_FOUND' });
+    }
+
+    // Only super_admin can delete admin or super_admin
+    if ((target.role === 'admin' || target.role === 'super_admin') && session.role !== 'super_admin') {
+      return reply.code(403).send({ error: 'FORBIDDEN', message: 'Only super_admin can delete admin users' });
+    }
+
+    // Delete manager_tenants, runners, then user
+    await db.delete(managerTenants).where(eq(managerTenants.userId, id));
+    await db.delete(runners).where(eq(runners.userId, id));
+    await db.delete(users).where(eq(users.id, id));
+
+    return reply.code(204).send();
   });
 }

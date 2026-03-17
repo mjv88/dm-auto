@@ -35,8 +35,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
+  const impersonatingEmail = useRunnerStore((s) => s.impersonatingEmail);
+  const stopImpersonation = useRunnerStore((s) => s.stopImpersonation);
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {impersonatingEmail && (
+        <div className="bg-orange-500 text-white text-center py-2 px-4 text-sm font-medium">
+          Impersonating: {impersonatingEmail}
+          <button
+            onClick={() => { stopImpersonation(); window.location.href = '/admin/users'; }}
+            className="ml-4 underline font-bold"
+          >
+            Exit
+          </button>
+        </div>
+      )}
       <header className="bg-white border-b px-4 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <h1 className="text-lg font-semibold text-gray-900">Admin Console</h1>

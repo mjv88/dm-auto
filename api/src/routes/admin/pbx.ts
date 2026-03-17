@@ -188,8 +188,7 @@ export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
     }
 
     await db
-      .update(pbxCredentials)
-      .set({ isActive: false, updatedAt: sql`now()` })
+      .delete(pbxCredentials)
       .where(eq(pbxCredentials.id, id));
 
     return reply.code(204).send();

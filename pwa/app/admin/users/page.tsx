@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { adminGet } from '@/lib/adminApi';
+import { adminGet, adminPost, adminDelete } from '@/lib/adminApi';
 import { useRunnerStore } from '@/lib/store';
 import DataTable from '@/components/admin/DataTable';
 import RoleModal from '@/components/admin/RoleModal';
@@ -30,6 +30,8 @@ export default function UsersPage() {
   const [filterEmail, setFilterEmail] = useState('');
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
   const selectedAdminTenantId = useRunnerStore((s) => s.selectedAdminTenantId);
+  const myRole = useRunnerStore((s) => s.role);
+  const startImpersonation = useRunnerStore((s) => s.startImpersonation);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -129,16 +131,54 @@ export default function UsersPage() {
             columns={columns}
             data={data.users}
             rowKey={(row) => row.id}
-            actions={(row) =>
-              row.role !== 'super_admin' ? (
-                <button
-                  onClick={() => setEditingUser(row)}
-                  className="text-sm text-blue-600 hover:underline"
-                >
-                  Change Role
-                </button>
-              ) : null
-            }
+            actions={(row) => (
+              <div className="flex gap-2">
+                {row.role !== 'super_admin' && (
+                  <button
+                    onClick={() => setEditingUser(row)}
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    Change Role
+                  </button>
+                )}
+                {myRole === 'super_admin' && row.role !== 'super_admin' && (
+                  <button
+                    onClick={async () => {
+                      if (!confirm(`Impersonate ${row.email}?`)) return;
+                      try {
+                        const result = await adminPost<{ sessionToken: string; originalToken: string; user: { email: string } }>(
+                          `/admin/users/${row.id}/impersonate`,
+                          {},
+                        );
+                        startImpersonation(result.sessionToken, result.originalToken, result.user.email);
+                        window.location.href = '/';
+                      } catch (err) {
+                        alert(err instanceof Error ? err.message : 'Impersonation failed');
+                      }
+                    }}
+                    className="text-sm text-orange-600 hover:underline"
+                  >
+                    Impersonate
+                  </button>
+                )}
+                {row.role !== 'super_admin' && (
+                  <button
+                    onClick={async () => {
+                      if (!confirm(`Delete user ${row.email}? This cannot be undone.`)) return;
+                      try {
+                        await adminDelete(`/admin/users/${row.id}`);
+                        fetchUsers();
+                      } catch (err) {
+                        alert(err instanceof Error ? err.message : 'Delete failed');
+                      }
+                    }}
+                    className="text-sm text-red-500 hover:underline"
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            )}
           />
 
           {/* Pagination */}

@@ -17,6 +17,9 @@ interface RunnerStore {
   error: AppError | null;
   // Session token — memory only, never persisted to localStorage/sessionStorage
   sessionToken: string | null;
+  // Impersonation — stores the super_admin's original token
+  originalToken: string | null;
+  impersonatingEmail: string | null;
 
   // Actions
   setAuthStatus: (status: AuthStatus) => void;
@@ -29,6 +32,8 @@ interface RunnerStore {
   setSelectedAdminTenantId: (id: string | null) => void;
   setError: (error: AppError | null) => void;
   setSessionToken: (token: string | null) => void;
+  startImpersonation: (sessionToken: string, originalToken: string, email: string) => void;
+  stopImpersonation: () => void;
   reset: () => void;
 }
 
@@ -43,6 +48,8 @@ const initialState = {
   selectedAdminTenantId: null,
   error: null,
   sessionToken: null,
+  originalToken: null,
+  impersonatingEmail: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -88,9 +95,40 @@ export const useRunnerStore = create<RunnerStore>((set) => ({
     }
     set({ sessionToken: token });
   },
+  startImpersonation: (sessionToken, originalToken, email) => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('sessionToken', sessionToken);
+      sessionStorage.setItem('originalToken', originalToken);
+    }
+    const payload = JSON.parse(atob(sessionToken.split('.')[1]));
+    set({
+      sessionToken,
+      originalToken,
+      impersonatingEmail: email,
+      role: payload.role ?? 'runner',
+      selectedAdminTenantId: payload.tenantId ?? null,
+    });
+  },
+  stopImpersonation: () => {
+    const original = useRunnerStore.getState().originalToken;
+    if (!original) return;
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('sessionToken', original);
+      sessionStorage.removeItem('originalToken');
+    }
+    const payload = JSON.parse(atob(original.split('.')[1]));
+    set({
+      sessionToken: original,
+      originalToken: null,
+      impersonatingEmail: null,
+      role: payload.role ?? 'runner',
+      selectedAdminTenantId: null,
+    });
+  },
   reset: () => {
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('sessionToken');
+      sessionStorage.removeItem('originalToken');
     }
     set({
       authStatus: 'idle' as AuthStatus,
@@ -103,6 +141,8 @@ export const useRunnerStore = create<RunnerStore>((set) => ({
       selectedAdminTenantId: null,
       error: null,
       sessionToken: null,
+      originalToken: null,
+      impersonatingEmail: null,
     });
   },
 }));
