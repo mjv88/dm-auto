@@ -11,6 +11,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const authStatus = useRunnerStore((s) => s.authStatus);
   const role = useRunnerStore((s) => s.role);
+  const impersonatingEmail = useRunnerStore((s) => s.impersonatingEmail);
+  const stopImpersonation = useRunnerStore((s) => s.stopImpersonation);
 
   useEffect(() => {
     if (authStatus === 'authenticated' && role === 'runner') {
@@ -34,9 +36,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </main>
     );
   }
-
-  const impersonatingEmail = useRunnerStore((s) => s.impersonatingEmail);
-  const stopImpersonation = useRunnerStore((s) => s.stopImpersonation);
 
   return (
     <div className="min-h-screen bg-gray-50">
