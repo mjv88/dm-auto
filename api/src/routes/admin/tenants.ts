@@ -1,32 +1,114 @@
 /**
  * src/routes/admin/tenants.ts
  *
- * Admin self-service routes for tenant configuration.
- * All routes require: valid session + manager or admin role.
- *
- * GET  /admin/tenants/me — get current tenant config (auto-creates on first login)
- * PUT  /admin/tenants/me — update tenant (entra_group_id, name)
- *
- * "First admin login" bootstrap:
- *   If the Authorization header carries a Microsoft ID token (not a session JWT),
- *   adminAuthenticate sets request.adminSession.tenantId = '' and the route
- *   looks up or creates the tenant row by tid.
+ * GET  /admin/tenants      — list all tenants (super_admin only)
+ * POST /admin/tenants      — create a new tenant (super_admin only)
+ * GET  /admin/tenants/me   — get current tenant config (auto-creates on first login)
+ * PUT  /admin/tenants/me   — update tenant (name, entraGroupId, entraTenantId)
  */
 
 import type { FastifyInstance } from 'fastify';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, sql, ilike, count } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 import { getDb } from '../../db/index.js';
 import { tenants } from '../../db/schema.js';
 import { requireAuth, requireRole } from '../../middleware/requireAuth.js';
 import { createSessionToken } from '../../middleware/session.js';
 import type { UnifiedSession } from '../../middleware/session.js';
-import { updateTenantSchema } from '../../utils/validate.js';
+import { updateTenantSchema, createTenantSchema } from '../../utils/validate.js';
 
 export async function adminTenantRoutes(
   fastify: FastifyInstance,
 ): Promise<void> {
-  // Apply auth to all routes in this plugin
   fastify.addHook('preHandler', requireAuth);
+
+  // ── GET /admin/tenants ─────────────────────────────────────────────────────
+  // Lists all tenants. Super_admin only.
+  // Query: ?search=name&page=1&limit=25
+
+  fastify.get('/admin/tenants', { preHandler: [requireRole('super_admin')] }, async (request, reply) => {
+    const { search, page: pageStr, limit: limitStr } = request.query as {
+      search?: string;
+      page?: string;
+      limit?: string;
+    };
+
+    const db = getDb();
+    const page = Math.max(1, parseInt(pageStr ?? '1', 10));
+    const limit = Math.min(100, Math.max(1, parseInt(limitStr ?? '25', 10)));
+    const offset = (page - 1) * limit;
+
+    const whereClause = search
+      ? ilike(tenants.name, `%${search}%`)
+      : undefined;
+
+    const [rows, [{ total }]] = await Promise.all([
+      db
+        .select()
+        .from(tenants)
+        .where(whereClause)
+        .orderBy(tenants.createdAt)
+        .limit(limit)
+        .offset(offset),
+      db
+        .select({ total: count() })
+        .from(tenants)
+        .where(whereClause),
+    ]);
+
+    return reply.send({
+      tenants: rows,
+      total: Number(total),
+      page,
+      pages: Math.ceil(Number(total) / limit),
+    });
+  });
+
+  // ── POST /admin/tenants ────────────────────────────────────────────────────
+  // Creates a new tenant. Super_admin only.
+  // Body: { name, adminEmails: string[], entraTenantId?: string }
+  // Returns: { tenant }
+
+  fastify.post('/admin/tenants', { preHandler: [requireRole('super_admin')] }, async (request, reply) => {
+    const session = request.session!;
+
+    const parseResult = createTenantSchema.safeParse(request.body);
+    if (!parseResult.success) {
+      return reply.code(400).send({
+        error: 'VALIDATION_ERROR',
+        message: parseResult.error.errors.map((e) => e.message).join('; '),
+      });
+    }
+
+    const { name, adminEmails, entraTenantId } = parseResult.data;
+
+    // Reject if super_admin tries to assign themselves — they already have global access.
+    const myEmail = session.entraEmail ?? session.email;
+    if (adminEmails.some((e) => e.toLowerCase() === myEmail.toLowerCase())) {
+      return reply.code(400).send({
+        error: 'SELF_ASSIGN_NOT_ALLOWED',
+        message: 'You cannot assign yourself as a company admin. Add a different email.',
+      });
+    }
+
+    const db = getDb();
+
+    // Use provided Entra tenant ID or a placeholder UUID (admin fills in later via Settings).
+    const resolvedEntraTenantId = entraTenantId ?? randomUUID();
+
+    const [tenant] = await db
+      .insert(tenants)
+      .values({
+        entraTenantId: resolvedEntraTenantId,
+        name,
+        entraGroupId: '',
+        adminEmails,
+        isActive: true,
+      })
+      .returning();
+
+    return reply.code(201).send({ tenant });
+  });
 
   // ── GET /admin/tenants/me ──────────────────────────────────────────────────
 
@@ -37,7 +119,6 @@ export async function adminTenantRoutes(
 
     let tenantRow: typeof tenants.$inferSelect | undefined;
 
-    // If tenantId is set, look up directly (subsequent logins with session JWT)
     if (tenantId) {
       const rows = await db
         .select()
@@ -46,7 +127,6 @@ export async function adminTenantRoutes(
         .limit(1);
       tenantRow = rows[0];
     } else if (session.tid) {
-      // First login: look up by Entra tenant ID (from Microsoft ID token)
       const rows = await db
         .select()
         .from(tenants)
@@ -55,13 +135,12 @@ export async function adminTenantRoutes(
       tenantRow = rows[0];
 
       if (!tenantRow) {
-        // Auto-create tenant row on first admin login
         const created = await db
           .insert(tenants)
           .values({
             entraTenantId: session.tid,
             name: `Tenant ${session.tid}`,
-            entraGroupId: '', // admin must update via PUT /admin/tenants/me
+            entraGroupId: '',
             adminEmails: [session.entraEmail ?? session.email],
             isActive: true,
           })
@@ -74,7 +153,6 @@ export async function adminTenantRoutes(
       return reply.code(404).send({ error: 'TENANT_NOT_REGISTERED' });
     }
 
-    // Issue a fresh session JWT with the resolved tenantId
     const newSession: UnifiedSession = {
       type: 'session',
       userId: session.userId ?? '',
@@ -114,7 +192,6 @@ export async function adminTenantRoutes(
 
     const db = getDb();
 
-    // Verify tenant exists
     const rows = await db
       .select()
       .from(tenants)
@@ -131,6 +208,7 @@ export async function adminTenantRoutes(
       .set({
         ...(updates.name !== undefined && { name: updates.name }),
         ...(updates.entraGroupId !== undefined && { entraGroupId: updates.entraGroupId }),
+        ...(updates.entraTenantId !== undefined && { entraTenantId: updates.entraTenantId }),
         updatedAt: sql`now()`,
       })
       .where(eq(tenants.id, tenantId!))
