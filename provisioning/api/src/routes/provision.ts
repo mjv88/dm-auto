@@ -44,7 +44,7 @@ export async function provisionRoutes(fastify: FastifyInstance): Promise<void> {
       // Audit log
       await db.insert(auditLog).values({ userEmail: session.email, action: 'provision.delivered', targetType: 'extension', targetId: ext.id });
 
-      const filename = `3cxprov_${ext.extensionNumber}.3cxconfig.xml`;
+      const filename = `3cxprov_${ext.extensionNumber}.3cxconfig`;
       return reply
         .type('application/3cxconfig')
         .header('Content-Disposition', `attachment; filename="${filename}"`)

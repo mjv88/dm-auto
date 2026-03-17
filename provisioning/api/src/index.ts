@@ -8,6 +8,7 @@ import { emailAuthRoutes } from './routes/emailAuth.js';
 import { setupRoutes } from './routes/setup.js';
 import { adminRoutes } from './routes/admin/index.js';
 import { provisionRoutes } from './routes/provision.js';
+import { deviceProvisionRoutes } from './routes/device-provision.js';
 import { registerRateLimit } from './middleware/rateLimit.js';
 import { registerSecurity } from './middleware/security.js';
 import { ProvisioningError } from './utils/errors.js';
@@ -37,6 +38,7 @@ async function buildServer() {
   await fastify.register(setupRoutes);
   await fastify.register(adminRoutes);
   await fastify.register(provisionRoutes);
+  await fastify.register(deviceProvisionRoutes);
 
   // Global error handler
   fastify.setErrorHandler((error, _request, reply) => {

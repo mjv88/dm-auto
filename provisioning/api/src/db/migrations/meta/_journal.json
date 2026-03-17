@@ -8,6 +8,13 @@
       "when": 1773662235326,
       "tag": "0000_pale_living_tribunal",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1773726401185,
+      "tag": "0001_cute_red_ghost",
+      "breakpoints": true
     }
   ]
 }
