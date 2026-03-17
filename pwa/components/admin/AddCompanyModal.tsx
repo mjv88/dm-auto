@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { adminPost } from '@/lib/adminApi';
 import { useRunnerStore } from '@/lib/store';
 
@@ -24,7 +24,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? '';
 export default function AddCompanyModal({ onClose, onSuccess }: Props) {
   // Read current user's email from JWT payload as fallback for self-assignment guard
   const sessionToken = useRunnerStore((s) => s.sessionToken);
-  const myEmail = (() => {
+  const myEmail = useMemo(() => {
     try {
       if (!sessionToken) return '';
       const payload = JSON.parse(atob(sessionToken.split('.')[1]));
@@ -32,21 +32,24 @@ export default function AddCompanyModal({ onClose, onSuccess }: Props) {
     } catch {
       return '';
     }
-  })();
+  }, [sessionToken]);
 
+  const nextId = useRef(0);
   const [name, setName] = useState('');
-  const [adminEmails, setAdminEmails] = useState<string[]>(['']);
+  const [adminEmails, setAdminEmails] = useState<Array<{ id: number; value: string }>>([{ id: 0, value: '' }]);
   const [entraTenantId, setEntraTenantId] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useState<Tenant | null>(null);
+  const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
 
   function addEmailRow() {
-    setAdminEmails((prev) => [...prev, '']);
+    nextId.current += 1;
+    setAdminEmails((prev) => [...prev, { id: nextId.current, value: '' }]);
   }
 
   function updateEmail(index: number, value: string) {
-    setAdminEmails((prev) => prev.map((e, i) => (i === index ? value : e)));
+    setAdminEmails((prev) => prev.map((e, i) => (i === index ? { ...e, value } : e)));
   }
 
   function removeEmail(index: number) {
@@ -55,7 +58,7 @@ export default function AddCompanyModal({ onClose, onSuccess }: Props) {
 
   function validate(): string | null {
     if (!name.trim()) return 'Company name is required.';
-    const filled = adminEmails.map((e) => e.trim()).filter(Boolean);
+    const filled = adminEmails.map((e) => e.value.trim()).filter(Boolean);
     if (filled.length === 0) return 'Add at least one admin email.';
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     for (const e of filled) {
@@ -81,7 +84,7 @@ export default function AddCompanyModal({ onClose, onSuccess }: Props) {
     try {
       const body: Record<string, unknown> = {
         name: name.trim(),
-        adminEmails: adminEmails.map((e) => e.trim()).filter(Boolean),
+        adminEmails: adminEmails.map((e) => e.value.trim()).filter(Boolean),
       };
       if (entraTenantId.trim()) body.entraTenantId = entraTenantId.trim();
 
@@ -99,8 +102,14 @@ export default function AddCompanyModal({ onClose, onSuccess }: Props) {
     return `${APP_URL}/register?company=${tenantId}`;
   }
 
-  async function copyToClipboard(text: string) {
-    await navigator.clipboard.writeText(text);
+  async function copyToClipboard(text: string, email: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedEmail(email);
+      setTimeout(() => setCopiedEmail(null), 2000);
+    } catch {
+      // clipboard not available (HTTP context, etc.)
+    }
   }
 
   return (
@@ -132,11 +141,11 @@ export default function AddCompanyModal({ onClose, onSuccess }: Props) {
                   <span className="ml-1 text-xs font-normal text-gray-400">— at least one, not yourself</span>
                 </label>
                 <div className="space-y-2">
-                  {adminEmails.map((email, i) => (
-                    <div key={i} className="flex gap-2">
+                  {adminEmails.map((emailObj, i) => (
+                    <div key={emailObj.id} className="flex gap-2">
                       <input
                         type="email"
-                        value={email}
+                        value={emailObj.value}
                         onChange={(e) => updateEmail(i, e.target.value)}
                         placeholder="admin@company.com"
                         className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -223,10 +232,11 @@ export default function AddCompanyModal({ onClose, onSuccess }: Props) {
                       {inviteLink(created.id)}
                     </code>
                     <button
-                      onClick={() => copyToClipboard(inviteLink(created.id))}
+                      type="button"
+                      onClick={() => copyToClipboard(inviteLink(created.id), email)}
                       className="text-xs text-blue-600 hover:underline whitespace-nowrap"
                     >
-                      Copy
+                      {copiedEmail === email ? 'Copied!' : 'Copy'}
                     </button>
                   </div>
                 </div>
@@ -239,6 +249,7 @@ export default function AddCompanyModal({ onClose, onSuccess }: Props) {
 
             <div className="flex justify-end">
               <button
+                type="button"
                 onClick={onClose}
                 className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
