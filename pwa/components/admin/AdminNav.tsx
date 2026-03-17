@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useRunnerStore } from '@/lib/store';
 
-const links = [
+const BASE_LINKS = [
   { href: '/admin', label: 'Dashboard', exact: true },
   { href: '/admin/pbx', label: 'PBX' },
   { href: '/admin/runners', label: 'Runners' },
@@ -12,8 +13,17 @@ const links = [
   { href: '/admin/settings', label: 'Settings' },
 ];
 
+const SUPER_ADMIN_LINKS: { href: string; label: string; exact?: boolean }[] = [
+  { href: '/admin/companies', label: 'Companies' },
+];
+
 export default function AdminNav() {
   const pathname = usePathname();
+  const role = useRunnerStore((s) => s.role);
+
+  const links = role === 'super_admin'
+    ? [...SUPER_ADMIN_LINKS, ...BASE_LINKS]
+    : BASE_LINKS;
 
   return (
     <nav className="bg-white border-b">
