@@ -1,7 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { PBXCredential } from '@/types/auth';
+import { adminGet } from '@/lib/adminApi';
+
+interface PbxExtension {
+  extensionNumber: string;
+  email: string | null;
+  displayName: string | null;
+  currentGroupName: string | null;
+}
 
 interface RunnerForm {
   email: string;
@@ -43,6 +51,11 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // PBX extension picker (add mode only)
+  const [extensions, setExtensions] = useState<PbxExtension[]>([]);
+  const [extSearch, setExtSearch] = useState('');
+  const [extLoading, setExtLoading] = useState(false);
+
   useEffect(() => {
     if (runner) {
       setForm({
@@ -53,6 +66,36 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
       });
     }
   }, [runner, pbxList]);
+
+  // Load extensions when PBX selection changes (add mode only)
+  useEffect(() => {
+    if (runner || !form.pbxId) return;
+    setExtLoading(true);
+    setExtensions([]);
+    adminGet<{ extensions: PbxExtension[] }>(`/admin/pbx/${form.pbxId}/extensions`)
+      .then(data => setExtensions(data.extensions))
+      .catch(() => { /* silently fail — user can still type manually */ })
+      .finally(() => setExtLoading(false));
+  }, [form.pbxId, runner]);
+
+  const filteredExtensions = useMemo(() => {
+    if (!extSearch.trim()) return extensions;
+    const q = extSearch.toLowerCase();
+    return extensions.filter(e =>
+      e.extensionNumber.includes(q) ||
+      e.displayName?.toLowerCase().includes(q) ||
+      e.email?.toLowerCase().includes(q),
+    );
+  }, [extensions, extSearch]);
+
+  function pickExtension(ext: PbxExtension) {
+    setForm(prev => ({
+      ...prev,
+      email: ext.email ?? prev.email,
+      extension: ext.extensionNumber,
+    }));
+    setExtSearch('');
+  }
 
   function toggleDept(id: number) {
     setForm((prev) => ({
@@ -84,6 +127,64 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
         </h2>
         {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-3">
+          {/* PBX selector */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">PBX</label>
+            <select
+              value={form.pbxId}
+              onChange={(e) => setForm({ ...form, pbxId: e.target.value })}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            >
+              {pbxList.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.pbxName} ({p.pbxFqdn})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Extension picker (add mode only) */}
+          {!runner && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Pick from PBX users
+                <span className="ml-1 text-xs font-normal text-gray-400">— or fill in manually below</span>
+              </label>
+              <input
+                type="text"
+                value={extSearch}
+                onChange={e => setExtSearch(e.target.value)}
+                placeholder={extLoading ? 'Loading…' : extensions.length === 0 ? 'No cached users — add manually' : 'Search name, email, or extension…'}
+                disabled={extLoading || extensions.length === 0}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400"
+              />
+              {extSearch && filteredExtensions.length > 0 && (
+                <ul className="mt-1 border border-gray-200 rounded-md max-h-44 overflow-y-auto bg-white shadow-sm">
+                  {filteredExtensions.slice(0, 50).map(ext => (
+                    <li key={ext.extensionNumber}>
+                      <button
+                        type="button"
+                        onClick={() => pickExtension(ext)}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex items-center justify-between"
+                      >
+                        <span>
+                          <span className="font-medium">{ext.displayName ?? ext.email ?? ext.extensionNumber}</span>
+                          {ext.email && ext.displayName && (
+                            <span className="ml-1 text-gray-400 text-xs">{ext.email}</span>
+                          )}
+                        </span>
+                        <span className="text-gray-400 text-xs ml-2">ext {ext.extensionNumber}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {extSearch && filteredExtensions.length === 0 && extensions.length > 0 && (
+                <p className="mt-1 text-xs text-gray-400 px-1">No matches — fill in manually below.</p>
+              )}
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
@@ -105,20 +206,6 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
               required
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">PBX</label>
-            <select
-              value={form.pbxId}
-              onChange={(e) => setForm({ ...form, pbxId: e.target.value })}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            >
-              {pbxList.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.pbxName} ({p.pbxFqdn})
-                </option>
-              ))}
-            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Departments</label>

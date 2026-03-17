@@ -195,4 +195,26 @@ export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
 
     return reply.code(204).send();
   });
+
+  // ── GET /admin/pbx/:id/extensions ─────────────────────────────────────────
+  // Returns cached extensions for a PBX, for use in the Add Runner dropdown.
+  // Optional ?search= for client-side filtering support.
+
+  fastify.get('/admin/pbx/:id/extensions', { preHandler: [requireRole('manager')] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const db = getDb();
+
+    const rows = await db
+      .select({
+        extensionNumber: pbxExtensions.extensionNumber,
+        email: pbxExtensions.email,
+        displayName: pbxExtensions.displayName,
+        currentGroupName: pbxExtensions.currentGroupName,
+      })
+      .from(pbxExtensions)
+      .where(eq(pbxExtensions.pbxCredentialId, id))
+      .orderBy(pbxExtensions.extensionNumber);
+
+    return reply.send({ extensions: rows });
+  });
 }
