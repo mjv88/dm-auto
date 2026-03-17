@@ -270,6 +270,37 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
 
     if (pbxIds.length === 0) return reply.send([]);
 
+    // Refresh dept cache from PBX via xAPI before returning
+    const pbxFqdnRows = await db
+      .select({ id: pbxCredentials.id, pbxFqdn: pbxCredentials.pbxFqdn })
+      .from(pbxCredentials)
+      .where(and(eq(pbxCredentials.isActive, true)));
+    const fqdnById = new Map(pbxFqdnRows.map(r => [r.id, r.pbxFqdn]));
+
+    for (const pbxId of pbxIds) {
+      const fqdn = fqdnById.get(pbxId);
+      if (!fqdn) continue;
+      try {
+        const client = await XAPIClient.create(fqdn);
+        const groups = await client.getGroups();
+
+        // Replace cached departments for this PBX
+        await db.delete(deptCache).where(eq(deptCache.pbxCredentialId, pbxId));
+        if (groups.length > 0) {
+          await db.insert(deptCache).values(
+            groups.map((g) => ({
+              pbxCredentialId: pbxId,
+              deptId: String(g.id),
+              deptName: g.name,
+            })),
+          );
+        }
+      } catch (err) {
+        // Non-fatal: fall back to stale cache if xAPI is unreachable
+        fastify.log.warn({ err, pbxId }, 'Failed to refresh dept cache from PBX');
+      }
+    }
+
     // Get unique departments from dept_cache
     const allDepts = [];
     for (const pbxId of pbxIds) {

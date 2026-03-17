@@ -24,7 +24,7 @@ export function BottomNav() {
     ? [
         { href: '/departments', label: 'Home', icon: HomeIcon, show: true, exact: true },
         { href: '/admin', label: 'Admin', icon: AdminIcon, show: isAdminOrAbove, exact: false },
-        { href: '/setup', label: 'Setup', icon: SetupIcon, show: role === 'super_admin', exact: false },
+        { href: '/setup', label: 'Setup', icon: SetupIcon, show: role === 'super_admin' || role === 'admin', exact: false },
       ]
     : [
         { href: '/login', label: 'Login', icon: LoginIcon, show: true, exact: false },

@@ -140,7 +140,7 @@ export async function setupRoutes(fastify: FastifyInstance): Promise<void> {
 
     // Also add to manager_tenants so super_admin can manage this tenant
     if (isSuperAdmin && userRow[0]?.tenantId) {
-      await db.insert(managerTenants).values({ userId: ctx.userId, tenantId: tenant.id, assignedBy: ctx.email }).onConflictDoNothing();
+      await db.insert(managerTenants).values({ userId: ctx.userId, tenantId: tenant.id, assignedBy: ctx.userId }).onConflictDoNothing();
     }
 
     // Issue session token scoped to the NEW tenant (for subsequent setup steps)
