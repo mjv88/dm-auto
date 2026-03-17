@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { adminGet, adminPost, adminPut, adminDelete } from '@/lib/adminApi';
+import { useRunnerStore } from '@/lib/store';
 import DataTable, { type Column } from '@/components/admin/DataTable';
 import PbxModal from '@/components/admin/PbxModal';
 import type { PBXCredential } from '@/types/auth';
@@ -58,6 +59,10 @@ export default function PbxPage() {
         credentials,
       });
     } else {
+      const tenantId = useRunnerStore.getState().selectedAdminTenantId;
+      if (!tenantId) {
+        throw new Error('Please select a company from the dropdown before adding a PBX');
+      }
       await adminPost('/admin/pbx', payload);
     }
     setModalPbx(undefined);
