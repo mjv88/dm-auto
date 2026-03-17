@@ -210,7 +210,6 @@ export default function CompaniesPage() {
         <AddCompanyModal
           onClose={() => setShowModal(false)}
           onSuccess={() => {
-            setShowModal(false);
             fetchTenants();
           }}
         />
