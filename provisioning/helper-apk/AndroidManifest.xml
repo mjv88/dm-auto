@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.dm.provhelper">
+
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34"/>
+
+    <!-- Package visibility: allow querying 3CX app -->
+    <queries>
+        <package android:name="com.tcx.sipphone14"/>
+    </queries>
+
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
+    <application android:label="ProvHelper" android:debuggable="true">
+
+        <!-- Declare managed config support (Intune reads this) -->
+        <meta-data
+            android:name="android.content.APP_RESTRICTIONS"
+            android:resource="@xml/app_restrictions"/>
+
+        <!-- Debug activity — no launcher icon, invoke via adb -->
+        <activity android:name=".MainActivity"
+            android:exported="true"/>
+
+        <!-- Boot + install triggers -->
+        <receiver android:name=".ProvisionReceiver"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+            </intent-filter>
+        </receiver>
+
+        <!-- JobService for background provisioning work -->
+        <service android:name=".ProvisionJobService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false"/>
+
+        <!-- ContentProvider to serve config file to 3CX -->
+        <provider
+            android:name=".ProvFileProvider"
+            android:authorities="com.dm.provhelper.provider"
+            android:exported="false"
+            android:grantUriPermissions="true"/>
+    </application>
+</manifest>
