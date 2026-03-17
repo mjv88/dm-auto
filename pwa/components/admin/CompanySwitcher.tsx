@@ -21,26 +21,19 @@ export default function CompanySwitcher() {
     async function fetchTenants() {
       try {
         if (role === 'super_admin') {
-          // Super admin sees all tenants — use admin tenants endpoint
-          const data = await adminGet<{ tenant: TenantOption } | { tenants: TenantOption[] }>('/admin/tenants/me');
-          if ('tenants' in data && Array.isArray(data.tenants)) {
-            setTenants(data.tenants);
-          } else if ('tenant' in data && data.tenant) {
-            setTenants([data.tenant]);
-          }
+          const data = await adminGet<{ tenants: TenantOption[] }>('/admin/tenants?limit=100');
+          setTenants(data.tenants);
         } else {
-          // Manager sees their tenant
           const data = await adminGet<{ tenant: TenantOption }>('/admin/tenants/me');
           if (data.tenant) {
             setTenants([data.tenant]);
-            // Auto-select if only one
             if (!selectedAdminTenantId) {
               setSelectedAdminTenantId(data.tenant.id);
             }
           }
         }
       } catch {
-        // Silently fail — tenants will be empty
+        // Silently fail
       } finally {
         setLoading(false);
       }
@@ -50,16 +43,10 @@ export default function CompanySwitcher() {
   }, [role]);
 
   if (loading) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-gray-400">
-        <span>Loading companies...</span>
-      </div>
-    );
+    return <div className="flex items-center gap-2 text-sm text-gray-400"><span>Loading companies...</span></div>;
   }
 
-  if (tenants.length === 0) {
-    return null;
-  }
+  if (tenants.length === 0) return null;
 
   return (
     <div className="flex items-center gap-2">
