@@ -1,16 +1,23 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { adminGet, adminPost, adminDelete } from '@/lib/adminApi';
+import { adminGet, adminPost, adminPut, adminDelete } from '@/lib/adminApi';
 import { useRunnerStore } from '@/lib/store';
 import DataTable from '@/components/admin/DataTable';
 import RoleModal from '@/components/admin/RoleModal';
+
+interface TenantOption {
+  id: string;
+  name: string;
+}
 
 interface UserRow {
   id: string;
   email: string;
   role: string;
   tenantId: string | null;
+  tenantName: string | null;
+  pbxNames: string[];
   emailVerified: boolean;
   createdAt: string;
 }
@@ -29,6 +36,8 @@ export default function UsersPage() {
   const [filterRole, setFilterRole] = useState('');
   const [filterEmail, setFilterEmail] = useState('');
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
+  const [reassignTarget, setReassignTarget] = useState<Record<string, string>>({}); // userId → tenantId
+  const [tenantOptions, setTenantOptions] = useState<TenantOption[]>([]);
   const selectedAdminTenantId = useRunnerStore((s) => s.selectedAdminTenantId);
   const myRole = useRunnerStore((s) => s.role);
   const startImpersonation = useRunnerStore((s) => s.startImpersonation);
@@ -54,6 +63,22 @@ export default function UsersPage() {
     fetchUsers();
   }, [fetchUsers]);
 
+  // Load available companies for the Reassign dropdown
+  useEffect(() => {
+    async function loadTenants() {
+      try {
+        if (myRole === 'super_admin') {
+          const data = await adminGet<{ tenants: TenantOption[] }>('/admin/tenants?limit=100');
+          setTenantOptions(data.tenants);
+        } else {
+          const data = await adminGet<{ tenant: TenantOption }>('/admin/tenants/me');
+          if (data.tenant) setTenantOptions([data.tenant]);
+        }
+      } catch { /* silently fail */ }
+    }
+    if (myRole === 'admin' || myRole === 'super_admin') loadTenants();
+  }, [myRole]);
+
   const columns = [
     { key: 'email', header: 'Email' },
     {
@@ -74,6 +99,22 @@ export default function UsersPage() {
           {row.role}
         </span>
       ),
+    },
+    {
+      key: 'tenantName',
+      header: 'Company',
+      render: (row: UserRow) =>
+        row.tenantName
+          ? <span className="text-sm text-gray-700">{row.tenantName}</span>
+          : <span className="text-xs text-gray-400 italic">—</span>,
+    },
+    {
+      key: 'pbxNames',
+      header: 'PBX',
+      render: (row: UserRow) =>
+        row.pbxNames.length > 0
+          ? <span className="text-sm text-gray-600">{row.pbxNames.join(', ')}</span>
+          : <span className="text-xs text-gray-400 italic">—</span>,
     },
     {
       key: 'emailVerified',
@@ -132,7 +173,7 @@ export default function UsersPage() {
             data={data.users}
             rowKey={(row) => row.id}
             actions={(row) => (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 items-center">
                 {row.role !== 'super_admin' && (
                   <button
                     onClick={() => setEditingUser(row)}
@@ -140,6 +181,39 @@ export default function UsersPage() {
                   >
                     Change Role
                   </button>
+                )}
+                {/* Reassign company — admin+ */}
+                {(myRole === 'admin' || myRole === 'super_admin') && row.role !== 'super_admin' && tenantOptions.length > 1 && (
+                  <div className="flex items-center gap-1">
+                    <select
+                      value={reassignTarget[row.id] ?? ''}
+                      onChange={e => setReassignTarget(prev => ({ ...prev, [row.id]: e.target.value }))}
+                      className="text-xs border border-gray-300 rounded px-1.5 py-1 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    >
+                      <option value="">Move to…</option>
+                      {tenantOptions
+                        .filter(t => t.id !== row.tenantId)
+                        .map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                    <button
+                      disabled={!reassignTarget[row.id]}
+                      onClick={async () => {
+                        const tid = reassignTarget[row.id];
+                        const tname = tenantOptions.find(t => t.id === tid)?.name ?? tid;
+                        if (!confirm(`Move ${row.email} to "${tname}"?`)) return;
+                        try {
+                          await adminPut(`/admin/users/${row.id}/company`, { tenantId: tid });
+                          setReassignTarget(prev => { const n = { ...prev }; delete n[row.id]; return n; });
+                          fetchUsers();
+                        } catch (err) {
+                          alert(err instanceof Error ? err.message : 'Reassign failed.');
+                        }
+                      }}
+                      className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 disabled:opacity-40"
+                    >
+                      Move
+                    </button>
+                  </div>
                 )}
                 {myRole === 'super_admin' && row.role !== 'super_admin' && (
                   <button

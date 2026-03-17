@@ -11,7 +11,7 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, and, sql, ilike, inArray } from 'drizzle-orm';
 import { getDb } from '../../db/index.js';
-import { users, managerTenants, tenants, runners } from '../../db/schema.js';
+import { users, managerTenants, tenants, runners, pbxCredentials } from '../../db/schema.js';
 import { requireAuth, requireRole } from '../../middleware/requireAuth.js';
 import { changeRoleSchema } from '../../utils/validate.js';
 import { createSessionToken } from '../../middleware/session.js';
@@ -82,17 +82,46 @@ export async function adminUserRoutes(fastify: FastifyInstance): Promise<void> {
         email: users.email,
         role: users.role,
         tenantId: users.tenantId,
+        tenantName: tenants.name,
         emailVerified: users.emailVerified,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
       })
       .from(users)
+      .leftJoin(tenants, eq(users.tenantId, tenants.id))
       .where(whereClause)
       .orderBy(users.createdAt)
       .limit(limit)
       .offset(offset);
 
-    return reply.send({ users: rows, total, page, pages: Math.ceil(total / limit) });
+    // Fetch PBX names for each user (via runners → pbx_credentials)
+    const userIds = rows.map(r => r.id);
+    const pbxRows = userIds.length > 0
+      ? await db
+          .select({
+            userId: runners.userId,
+            pbxName: pbxCredentials.pbxName,
+          })
+          .from(runners)
+          .innerJoin(pbxCredentials, eq(runners.pbxCredentialId, pbxCredentials.id))
+          .where(inArray(runners.userId, userIds))
+      : [];
+
+    // Group pbx names by userId
+    const pbxByUser = new Map<string, string[]>();
+    for (const r of pbxRows) {
+      if (!r.userId) continue;
+      const existing = pbxByUser.get(r.userId) ?? [];
+      if (!existing.includes(r.pbxName)) existing.push(r.pbxName);
+      pbxByUser.set(r.userId, existing);
+    }
+
+    const enriched = rows.map(r => ({
+      ...r,
+      pbxNames: pbxByUser.get(r.id) ?? [],
+    }));
+
+    return reply.send({ users: enriched, total, page, pages: Math.ceil(total / limit) });
   });
 
   // ── GET /admin/users/:id ────────────────────────────────────────────────
@@ -355,5 +384,79 @@ export async function adminUserRoutes(fastify: FastifyInstance): Promise<void> {
     await db.delete(users).where(eq(users.id, id));
 
     return reply.code(204).send();
+  });
+
+  // ── PUT /admin/users/:id/company ──────────────────────────────────────────
+  // Reassigns a user to a different company. Admin+ can do this, scoped to
+  // companies they manage. Super_admin is unrestricted.
+
+  fastify.put('/admin/users/:id/company', { preHandler: [requireRole('admin')] }, async (request, reply) => {
+    const session = request.session!;
+    const { id } = request.params as { id: string };
+
+    const body = request.body as { tenantId?: string };
+    if (!body.tenantId) {
+      return reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'tenantId is required.' });
+    }
+    const targetTenantId = body.tenantId;
+
+    if (id === session.userId) {
+      return reply.code(400).send({ error: 'CANNOT_REASSIGN_SELF' });
+    }
+
+    const db = getDb();
+
+    // Verify target tenant exists
+    const tenantRows = await db
+      .select({ id: tenants.id })
+      .from(tenants)
+      .where(eq(tenants.id, targetTenantId))
+      .limit(1);
+    if (!tenantRows[0]) {
+      return reply.code(404).send({ error: 'TENANT_NOT_FOUND' });
+    }
+
+    // Fetch target user
+    const userRows = await db
+      .select({ id: users.id, tenantId: users.tenantId, role: users.role })
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+    const target = userRows[0];
+    if (!target) return reply.code(404).send({ error: 'NOT_FOUND' });
+
+    // Admin (non-super_admin): must manage both source and target company
+    if (session.role !== 'super_admin') {
+      const managedRows = await db
+        .select({ tenantId: managerTenants.tenantId })
+        .from(managerTenants)
+        .where(eq(managerTenants.userId, session.userId));
+      const managedIds = managedRows.map(r => r.tenantId);
+
+      if (target.tenantId && !managedIds.includes(target.tenantId)) {
+        return reply.code(403).send({ error: 'FORBIDDEN', message: 'You do not manage the user\'s current company.' });
+      }
+      if (!managedIds.includes(targetTenantId)) {
+        return reply.code(403).send({ error: 'FORBIDDEN', message: 'You do not manage the target company.' });
+      }
+    }
+
+    const sourceTenantId = target.tenantId;
+
+    // Update primary tenant
+    await db.update(users).set({ tenantId: targetTenantId }).where(eq(users.id, id));
+
+    // Move managerTenants: remove from source, add to target
+    if (sourceTenantId) {
+      await db
+        .delete(managerTenants)
+        .where(and(eq(managerTenants.userId, id), eq(managerTenants.tenantId, sourceTenantId)));
+    }
+    await db
+      .insert(managerTenants)
+      .values({ userId: id, tenantId: targetTenantId, assignedBy: session.userId })
+      .onConflictDoNothing();
+
+    return reply.send({ message: 'User reassigned.' });
   });
 }
