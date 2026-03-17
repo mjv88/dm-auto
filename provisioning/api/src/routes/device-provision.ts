@@ -38,7 +38,7 @@ export async function deviceProvisionRoutes(fastify: FastifyInstance): Promise<v
       return reply.code(500).send({ error: 'PROVISION_ERROR', message: ext.provisioningError ?? 'Provisioning failed' });
     }
 
-    if (!ext.provConfigXml) {
+    if (!ext.provConfigXml && !ext.provLinkExternal) {
       return reply.code(425).send({ error: 'TOO_EARLY', message: 'Config not available yet' });
     }
 
@@ -47,7 +47,26 @@ export async function deviceProvisionRoutes(fastify: FastifyInstance): Promise<v
       return reply.code(304).send();
     }
 
-    const xml = decrypt(ext.provConfigXml);
+    let xml: string;
+    if (ext.provConfigXml) {
+      xml = decrypt(ext.provConfigXml);
+    } else {
+      // Fallback: fetch XML from provLinkExternal and cache it
+      const provLink = decrypt(ext.provLinkExternal!);
+      const res = await fetch(provLink);
+      if (!res.ok) {
+        return reply.code(502).send({ error: 'UPSTREAM_ERROR', message: 'Failed to fetch config from PBX' });
+      }
+      xml = await res.text();
+      // Cache for next time
+      const { createHash } = await import('node:crypto');
+      const version = createHash('sha256').update(xml).digest('hex');
+      await db.update(pbxExtensions).set({
+        provConfigXml: (await import('../utils/encrypt.js')).encrypt(xml),
+        configVersion: version,
+        updatedAt: new Date(),
+      }).where(eq(pbxExtensions.id, ext.id));
+    }
 
     // Update status
     await db.update(pbxExtensions).set({
