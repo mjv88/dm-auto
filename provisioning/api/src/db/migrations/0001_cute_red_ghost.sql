@@ -1,0 +1,1 @@
+ALTER TABLE "pbx_extensions" ADD COLUMN "prov_config_xml" text;

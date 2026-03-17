@@ -51,9 +51,10 @@ export async function provisionExtension(
 
     const provLinkExternal = match[1];
 
-    // Store encrypted
+    // Store encrypted (both the link and the full XML config)
     await db.update(pbxExtensions).set({
       provLinkExternal: encrypt(provLinkExternal),
+      provConfigXml: encrypt(xml),
       provLinkFetchedAt: new Date(),
       provisioningStatus: 'fetched',
       provisioningError: null,

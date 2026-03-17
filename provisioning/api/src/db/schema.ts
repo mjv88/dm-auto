@@ -88,6 +88,7 @@ export const pbxExtensions = pgTable(
     email: text('email'),
     pbxUserId: integer('pbx_user_id'),
     provLinkExternal: text('prov_link_external'),  // encrypted
+    provConfigXml: text('prov_config_xml'),  // encrypted full provisioning XML
     provLinkFetchedAt: timestamp('prov_link_fetched_at', { withTimezone: true }),
     provisioningStatus: text('provisioning_status').notNull().default('pending'),
     provisioningError: text('provisioning_error'),
