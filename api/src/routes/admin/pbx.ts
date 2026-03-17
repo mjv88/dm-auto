@@ -13,7 +13,7 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, and, sql } from 'drizzle-orm';
 import { getDb } from '../../db/index.js';
-import { pbxCredentials } from '../../db/schema.js';
+import { pbxCredentials, runners, deptCache, pbxExtensions } from '../../db/schema.js';
 import { requireAuth, requireRole } from '../../middleware/requireAuth.js';
 import { encrypt } from '../../utils/encrypt.js';
 import { createPbxSchema, updatePbxSchema } from '../../utils/validate.js';
@@ -187,9 +187,11 @@ export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
       return reply.code(404).send({ error: 'NOT_FOUND' });
     }
 
-    await db
-      .delete(pbxCredentials)
-      .where(eq(pbxCredentials.id, id));
+    // Delete related records first (no cascade FK)
+    await db.delete(runners).where(eq(runners.pbxCredentialId, id));
+    await db.delete(deptCache).where(eq(deptCache.pbxCredentialId, id));
+    await db.delete(pbxExtensions).where(eq(pbxExtensions.pbxCredentialId, id));
+    await db.delete(pbxCredentials).where(eq(pbxCredentials.id, id));
 
     return reply.code(204).send();
   });
