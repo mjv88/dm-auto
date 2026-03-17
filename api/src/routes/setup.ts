@@ -128,18 +128,27 @@ export async function setupRoutes(fastify: FastifyInstance): Promise<void> {
 
     const tenant = created[0];
 
-    // Set user's tenantId
-    await db
-      .update(users)
-      .set({ tenantId: tenant.id })
-      .where(eq(users.id, ctx.userId));
+    // Only set user's tenantId if they don't have one yet (not super_admin creating additional companies)
+    const userRow = await db.select({ tenantId: users.tenantId, role: users.role }).from(users).where(eq(users.id, ctx.userId)).limit(1);
+    const isSuperAdmin = userRow[0]?.role === 'super_admin';
+    if (!isSuperAdmin || !userRow[0]?.tenantId) {
+      await db
+        .update(users)
+        .set({ tenantId: tenant.id })
+        .where(eq(users.id, ctx.userId));
+    }
 
-    // Issue new session token with tenantId
+    // Also add to manager_tenants so super_admin can manage this tenant
+    if (isSuperAdmin && userRow[0]?.tenantId) {
+      await db.insert(managerTenants).values({ userId: ctx.userId, tenantId: tenant.id, assignedBy: ctx.email }).onConflictDoNothing();
+    }
+
+    // Issue session token scoped to the NEW tenant (for subsequent setup steps)
     const sessionToken = createSessionToken({
       type: 'session',
       userId: ctx.userId,
       email: ctx.email,
-      role: 'runner',
+      role: isSuperAdmin ? 'super_admin' : 'runner',
       tenantId: tenant.id,
       runnerId: null,
       emailVerified: true,
