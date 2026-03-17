@@ -6,6 +6,7 @@ import { adminGet, adminDelete } from '@/lib/adminApi';
 import { useRunnerStore } from '@/lib/store';
 import DataTable from '@/components/admin/DataTable';
 import AddCompanyModal from '@/components/admin/AddCompanyModal';
+import ManageAdminsModal from '@/components/admin/ManageAdminsModal';
 
 interface TenantRow {
   id: string;
@@ -34,6 +35,7 @@ export default function CompaniesPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [managingAdmins, setManagingAdmins] = useState<{ id: string; name: string } | null>(null);
 
   // Gate: only super_admin can access this page
   useEffect(() => {
@@ -166,6 +168,13 @@ export default function CompaniesPage() {
               <div className="flex gap-3">
                 <button
                   type="button"
+                  onClick={() => setManagingAdmins({ id: row.id, name: row.name })}
+                  className="text-sm text-gray-600 hover:underline"
+                >
+                  Admins
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     setSelectedAdminTenantId(row.id);
                     router.push('/admin/settings');
@@ -174,23 +183,21 @@ export default function CompaniesPage() {
                 >
                   Settings
                 </button>
-                {row.isActive && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (!confirm(`Deactivate "${row.name}"? The company and its history are preserved but it will no longer be accessible.`)) return;
-                      try {
-                        await adminDelete(`/admin/tenants/${row.id}`);
-                        fetchTenants();
-                      } catch (err) {
-                        alert(err instanceof Error ? err.message : 'Failed to deactivate company.');
-                      }
-                    }}
-                    className="text-sm text-red-500 hover:underline"
-                  >
-                    Deactivate
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!confirm(`Delete "${row.name}"?\n\nAll PBX systems, runners, and audit history for this company will be permanently deleted. Users will be unlinked but not deleted.\n\nThis cannot be undone.`)) return;
+                    try {
+                      await adminDelete(`/admin/tenants/${row.id}`);
+                      fetchTenants();
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : 'Failed to delete company.');
+                    }
+                  }}
+                  className="text-sm text-red-500 hover:underline"
+                >
+                  Delete
+                </button>
               </div>
             )}
           />
@@ -231,6 +238,14 @@ export default function CompaniesPage() {
           onSuccess={() => {
             fetchTenants();
           }}
+        />
+      )}
+
+      {managingAdmins && (
+        <ManageAdminsModal
+          tenantId={managingAdmins.id}
+          tenantName={managingAdmins.name}
+          onClose={() => setManagingAdmins(null)}
         />
       )}
     </div>

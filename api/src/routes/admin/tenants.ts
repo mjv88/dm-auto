@@ -8,10 +8,10 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { eq, sql, ilike, count } from 'drizzle-orm';
+import { eq, sql, ilike, count, inArray, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { getDb } from '../../db/index.js';
-import { tenants } from '../../db/schema.js';
+import { tenants, users, pbxCredentials, runners, auditLog, deptCache, pbxExtensions, managerTenants } from '../../db/schema.js';
 import { requireAuth, requireRole } from '../../middleware/requireAuth.js';
 import { createSessionToken } from '../../middleware/session.js';
 import type { UnifiedSession } from '../../middleware/session.js';
@@ -122,8 +122,10 @@ export async function adminTenantRoutes(
   });
 
   // ── DELETE /admin/tenants/:id ─────────────────────────────────────────────
-  // Soft-deletes a tenant (sets isActive = false). Super_admin only.
-  // Hard delete is intentionally not supported — audit history is preserved.
+  // Hard-deletes a tenant and all its data. Super_admin only.
+  // Users are unlinked (tenantId set to null), not deleted.
+  // Cascade order: auditLog → runners → deptCache/pbxExtensions → pbxCredentials
+  //                → managerTenants → users.tenantId null → tenant
 
   fastify.delete('/admin/tenants/:id', { preHandler: [requireRole('super_admin')] }, async (request, reply) => {
     const { id } = request.params as { id: string };
@@ -139,12 +141,122 @@ export async function adminTenantRoutes(
       return reply.code(404).send({ error: 'TENANT_NOT_FOUND' });
     }
 
-    await db
-      .update(tenants)
-      .set({ isActive: false, updatedAt: sql`now()` })
-      .where(eq(tenants.id, id));
+    // Get pbx credential IDs for this tenant (needed for cascade)
+    const pbxRows = await db
+      .select({ id: pbxCredentials.id })
+      .from(pbxCredentials)
+      .where(eq(pbxCredentials.tenantId, id));
+    const pbxIds = pbxRows.map(r => r.id);
 
-    return reply.code(200).send({ message: `${rows[0].name} deactivated.` });
+    // Get runner IDs for this tenant (needed for audit log cascade)
+    const runnerRows = await db
+      .select({ id: runners.id })
+      .from(runners)
+      .where(eq(runners.tenantId, id));
+    const runnerIds = runnerRows.map(r => r.id);
+
+    // Cascade delete in FK-safe order
+    if (runnerIds.length > 0) {
+      await db.delete(auditLog).where(inArray(auditLog.runnerId, runnerIds));
+    }
+    await db.delete(runners).where(eq(runners.tenantId, id));
+
+    if (pbxIds.length > 0) {
+      await db.delete(deptCache).where(inArray(deptCache.pbxCredentialId, pbxIds));
+      await db.delete(pbxExtensions).where(inArray(pbxExtensions.pbxCredentialId, pbxIds));
+    }
+    await db.delete(pbxCredentials).where(eq(pbxCredentials.tenantId, id));
+
+    // Unlink users (keep their accounts, just remove tenant association)
+    await db.update(users).set({ tenantId: null }).where(eq(users.tenantId, id));
+
+    // managerTenants has ON DELETE CASCADE on tenantId — deleted automatically with tenant
+    await db.delete(tenants).where(eq(tenants.id, id));
+
+    return reply.code(200).send({ message: `${rows[0].name} deleted.` });
+  });
+
+  // ── GET /admin/tenants/:id/admins ─────────────────────────────────────────
+  // Returns users who are admins/managers of this tenant. Super_admin only.
+
+  fastify.get('/admin/tenants/:id/admins', { preHandler: [requireRole('super_admin')] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const db = getDb();
+
+    const adminUsers = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        role: users.role,
+        tenantId: users.tenantId,
+      })
+      .from(managerTenants)
+      .innerJoin(users, eq(managerTenants.userId, users.id))
+      .where(eq(managerTenants.tenantId, id));
+
+    return reply.send({ admins: adminUsers });
+  });
+
+  // ── POST /admin/tenants/:id/admins/reassign ───────────────────────────────
+  // Moves a user's admin access from this tenant to a different one.
+  // Super_admin only.
+  // Body: { userId, targetTenantId }
+
+  fastify.post('/admin/tenants/:id/admins/reassign', { preHandler: [requireRole('super_admin')] }, async (request, reply) => {
+    const { id: sourceTenantId } = request.params as { id: string };
+    const session = request.session!;
+
+    const body = request.body as { userId?: string; targetTenantId?: string };
+    if (!body.userId || !body.targetTenantId) {
+      return reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'userId and targetTenantId are required.' });
+    }
+    const { userId, targetTenantId } = body;
+
+    if (sourceTenantId === targetTenantId) {
+      return reply.code(400).send({ error: 'SAME_TENANT', message: 'Source and target company are the same.' });
+    }
+
+    const db = getDb();
+
+    // Verify both tenants exist
+    const [sourceRows, targetRows] = await Promise.all([
+      db.select({ id: tenants.id }).from(tenants).where(eq(tenants.id, sourceTenantId)).limit(1),
+      db.select({ id: tenants.id }).from(tenants).where(eq(tenants.id, targetTenantId)).limit(1),
+    ]);
+    if (!sourceRows[0]) return reply.code(404).send({ error: 'SOURCE_TENANT_NOT_FOUND' });
+    if (!targetRows[0]) return reply.code(404).send({ error: 'TARGET_TENANT_NOT_FOUND' });
+
+    // Verify user exists and is linked to source tenant
+    const userRows = await db
+      .select({ id: users.id, email: users.email, tenantId: users.tenantId })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    if (!userRows[0]) return reply.code(404).send({ error: 'USER_NOT_FOUND' });
+    const user = userRows[0];
+
+    // Remove from source tenant's managerTenants
+    await db
+      .delete(managerTenants)
+      .where(
+        and(
+          eq(managerTenants.userId, userId),
+          eq(managerTenants.tenantId, sourceTenantId),
+        ),
+      );
+
+    // Add to target tenant's managerTenants (ignore if already exists)
+    await db
+      .insert(managerTenants)
+      .values({ userId, tenantId: targetTenantId, assignedBy: session.userId })
+      .onConflictDoNothing();
+
+    // Update user's primary tenantId if it was the source tenant
+    if (user.tenantId === sourceTenantId) {
+      await db.update(users).set({ tenantId: targetTenantId }).where(eq(users.id, userId));
+    }
+
+    return reply.send({ message: 'Admin reassigned successfully.' });
   });
 
   // ── GET /admin/tenants/me ──────────────────────────────────────────────────
