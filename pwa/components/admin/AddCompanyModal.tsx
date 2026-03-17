@@ -86,8 +86,8 @@ export default function AddCompanyModal({ onClose, onSuccess }: Props) {
       if (entraTenantId.trim()) body.entraTenantId = entraTenantId.trim();
 
       const result = await adminPost<{ tenant: Tenant }>('/admin/tenants', body);
-      setCreated(result.tenant);
       onSuccess(result.tenant);
+      setCreated(result.tenant);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create company.');
     } finally {
