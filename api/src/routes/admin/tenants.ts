@@ -121,6 +121,32 @@ export async function adminTenantRoutes(
     }
   });
 
+  // ── DELETE /admin/tenants/:id ─────────────────────────────────────────────
+  // Soft-deletes a tenant (sets isActive = false). Super_admin only.
+  // Hard delete is intentionally not supported — audit history is preserved.
+
+  fastify.delete('/admin/tenants/:id', { preHandler: [requireRole('super_admin')] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const db = getDb();
+
+    const rows = await db
+      .select({ id: tenants.id, name: tenants.name })
+      .from(tenants)
+      .where(eq(tenants.id, id))
+      .limit(1);
+
+    if (!rows[0]) {
+      return reply.code(404).send({ error: 'TENANT_NOT_FOUND' });
+    }
+
+    await db
+      .update(tenants)
+      .set({ isActive: false, updatedAt: sql`now()` })
+      .where(eq(tenants.id, id));
+
+    return reply.code(200).send({ message: `${rows[0].name} deactivated.` });
+  });
+
   // ── GET /admin/tenants/me ──────────────────────────────────────────────────
 
   fastify.get('/admin/tenants/me', { preHandler: [requireRole('manager')] }, async (request, reply) => {

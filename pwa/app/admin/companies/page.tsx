@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { adminGet } from '@/lib/adminApi';
+import { adminGet, adminDelete } from '@/lib/adminApi';
 import { useRunnerStore } from '@/lib/store';
 import DataTable from '@/components/admin/DataTable';
 import AddCompanyModal from '@/components/admin/AddCompanyModal';
@@ -163,16 +163,35 @@ export default function CompaniesPage() {
             data={data.tenants}
             rowKey={(row) => row.id}
             actions={(row) => (
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedAdminTenantId(row.id);
-                  router.push('/admin/settings');
-                }}
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Settings
-              </button>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedAdminTenantId(row.id);
+                    router.push('/admin/settings');
+                  }}
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  Settings
+                </button>
+                {row.isActive && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!confirm(`Deactivate "${row.name}"? The company and its history are preserved but it will no longer be accessible.`)) return;
+                      try {
+                        await adminDelete(`/admin/tenants/${row.id}`);
+                        fetchTenants();
+                      } catch (err) {
+                        alert(err instanceof Error ? err.message : 'Failed to deactivate company.');
+                      }
+                    }}
+                    className="text-sm text-red-500 hover:underline"
+                  >
+                    Deactivate
+                  </button>
+                )}
+              </div>
             )}
           />
 
