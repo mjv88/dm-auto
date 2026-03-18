@@ -412,55 +412,38 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
                         />
                       )}
                     </div>
-                    {checked && (
+                    {checked && pbxRingGroups.length > 0 && (
                       <div className="ml-5 mb-1 flex flex-wrap gap-1 items-center">
-                        {/* Selected ring groups — removable */}
-                        {(form.deptRingGroups[String(dept.id)] ?? []).map(rgId => {
-                          const rg = pbxRingGroups.find(r => r.id === rgId);
-                          if (!rg) return null;
-                          return (
+                        {pbxRingGroups.map(rg => {
+                          const selected = (form.deptRingGroups[String(dept.id)] ?? []).includes(rg.id);
+                          return selected ? (
+                            // Selected — blue badge with × to remove
                             <span
-                              key={rgId}
+                              key={rg.id}
                               className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded text-xs bg-blue-50 text-blue-700 border border-blue-200"
                             >
                               {rg.name}
                               <button
                                 type="button"
-                                onClick={() => removeRingGroupFromDept(dept.id, rgId)}
+                                onClick={() => removeRingGroupFromDept(dept.id, rg.id)}
                                 className="hover:text-blue-900 leading-none"
                               >
                                 ×
                               </button>
                             </span>
+                          ) : (
+                            // Not selected — grey badge, click to add
+                            <button
+                              key={rg.id}
+                              type="button"
+                              onClick={() => addRingGroupToDept(dept.id, rg.id)}
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs bg-gray-50 text-gray-400 border border-gray-200 hover:bg-gray-100 hover:text-gray-600 cursor-pointer"
+                              title="Click to add"
+                            >
+                              + {rg.name}
+                            </button>
                           );
                         })}
-
-                        {/* Add ring group dropdown */}
-                        {(() => {
-                          const selected = form.deptRingGroups[String(dept.id)] ?? [];
-                          const available = pbxRingGroups.filter(rg => !selected.includes(rg.id));
-                          if (available.length === 0) return null;
-                          return (
-                            <select
-                              value=""
-                              onChange={e => {
-                                const id = Number(e.target.value);
-                                if (id) addRingGroupToDept(dept.id, id);
-                              }}
-                              className="text-xs border border-dashed border-blue-300 rounded px-1.5 py-0.5 text-blue-500 bg-white focus:outline-none cursor-pointer"
-                            >
-                              <option value="">+ Add ring group</option>
-                              {available.map(rg => (
-                                <option key={rg.id} value={rg.id}>{rg.name}</option>
-                              ))}
-                            </select>
-                          );
-                        })()}
-
-                        {/* Show message if no ring groups loaded yet */}
-                        {pbxRingGroups.length === 0 && (
-                          <span className="text-xs text-gray-300 italic">Loading ring groups…</span>
-                        )}
                       </div>
                     )}
                   </div>
