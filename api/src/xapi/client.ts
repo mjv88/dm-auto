@@ -159,7 +159,9 @@ export class XAPIClient {
    * GET /xapi/v1/Groups?$select=Id,Name&$orderby=Name
    */
   async getGroups(): Promise<XAPIGroup[]> {
-    const data = (await this.get('/Groups?$select=Id,Name&$orderby=Name')) as {
+    const data = (await this.get(
+      `/Groups?$filter=not startsWith(Name,'___FAVORITES___')&$orderby=Name&$select=Name,Id`,
+    )) as {
       value: Array<{ Id: number; Name: string }>;
     };
 
