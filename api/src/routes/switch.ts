@@ -158,9 +158,23 @@ export async function switchRoutes(fastify: FastifyInstance): Promise<void> {
         const ringGroups = await xapiClient.getRingGroups();
         const ext = session.extensionNumber!;
 
-        // Ring groups for old dept and new dept
-        const toLeave = ringGroups.filter(rg => rg.groupIds.includes(currentGroupId));
-        const toJoin  = ringGroups.filter(rg => rg.groupIds.includes(targetDeptId));
+        // Ring groups for old dept and new dept.
+        // Prefer admin-stored config; fall back to PBX-auto.
+        const storedConfig = runner.deptRingGroups as Record<string, number[]> | null;
+
+        // Keys in storedConfig are String(deptId) — same representation as
+        // String(targetDeptId) and String(currentGroupId) since both are numeric
+        // integer dept/group IDs from the PBX (e.g. "33", "28").
+        const targetKey  = String(targetDeptId);
+        const currentKey = String(currentGroupId);
+
+        const toJoin = storedConfig?.[targetKey] !== undefined
+          ? ringGroups.filter(rg => storedConfig![targetKey].includes(rg.id))
+          : ringGroups.filter(rg => rg.groupIds.includes(targetDeptId));
+
+        const toLeave = storedConfig?.[currentKey] !== undefined
+          ? ringGroups.filter(rg => storedConfig![currentKey].includes(rg.id))
+          : ringGroups.filter(rg => rg.groupIds.includes(currentGroupId));
 
         // Avoid touching ring groups that belong to both (no net change needed)
         const toJoinIds  = new Set(toJoin.map(rg => rg.id));
