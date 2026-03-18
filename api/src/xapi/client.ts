@@ -301,6 +301,32 @@ export class XAPIClient {
     }));
   }
 
+  /**
+   * Replaces the member list of a ring group.
+   * Must include ALL members (not just the changed one) — the PBX replaces
+   * the entire Members array on PATCH.
+   *
+   * PATCH /xapi/v1/RingGroups({ringGroupId})
+   * Body: { Members: [...] }  — PascalCase keys required by 3CX xAPI
+   * Expected: 204 No Content
+   *
+   * Only the runner is added/removed — all other members are preserved by caller.
+   */
+  async updateRingGroupMembers(
+    ringGroupId: number,
+    members: XAPIRingGroupMember[],
+  ): Promise<void> {
+    // The 3CX xAPI requires PascalCase keys in the PATCH body.
+    // XAPIRingGroupMember uses camelCase internally — serialize here.
+    const pbxMembers = members.map(m => ({
+      ...(m.id     !== undefined ? { Id:   m.id }   : {}),
+      Number: m.number,
+      ...(m.name   !== undefined ? { Name: m.name } : {}),
+      ...(m.tags   !== undefined ? { Tags: m.tags } : {}),
+    }));
+    await this.patch(`/RingGroups(${ringGroupId})`, { Members: pbxMembers });
+  }
+
   // ── Private helpers ─────────────────────────────────────────────────────────
 
   private async get(path: string): Promise<unknown> {

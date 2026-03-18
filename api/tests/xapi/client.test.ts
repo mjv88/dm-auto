@@ -244,6 +244,53 @@ describe('getRingGroups', () => {
   });
 });
 
+// ── 3c. updateRingGroupMembers ────────────────────────────────────────────────
+
+describe('updateRingGroupMembers', () => {
+  it('PATCHes the ring group with PascalCase member keys (as required by 3CX xAPI)', async () => {
+    // nock matches the EXACT body sent to the PBX — must be PascalCase
+    nock(`https://${TEST_FQDN}`)
+      .patch('/xapi/v1/RingGroups(206)', {
+        Members: [
+          { Id: 45, Number: '101', Name: 'Alice', Tags: [] },
+        ],
+      })
+      .reply(204);
+
+    const client = makeClient();
+    await expect(
+      client.updateRingGroupMembers(206, [
+        { id: 45, number: '101', name: 'Alice', tags: [] },
+      ]),
+    ).resolves.toBeUndefined();
+    expect(nock.isDone()).toBe(true);
+  });
+
+  it('serializes a new member (no id) with only Number in the body', async () => {
+    nock(`https://${TEST_FQDN}`)
+      .patch('/xapi/v1/RingGroups(207)', {
+        Members: [{ Number: '000' }],
+      })
+      .reply(204);
+
+    const client = makeClient();
+    await expect(
+      client.updateRingGroupMembers(207, [{ number: '000' }]),
+    ).resolves.toBeUndefined();
+    expect(nock.isDone()).toBe(true);
+  });
+
+  it('accepts an empty member list (remove last member)', async () => {
+    nock(`https://${TEST_FQDN}`)
+      .patch('/xapi/v1/RingGroups(208)', { Members: [] })
+      .reply(204);
+
+    const client = makeClient();
+    await expect(client.updateRingGroupMembers(208, [])).resolves.toBeUndefined();
+    expect(nock.isDone()).toBe(true);
+  });
+});
+
 // ── 4. Token refresh when expired ────────────────────────────────────────────
 
 describe('getXAPIToken — token refresh', () => {
