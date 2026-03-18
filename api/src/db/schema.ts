@@ -7,6 +7,7 @@ import {
   integer,
   uniqueIndex,
   index,
+  jsonb,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -114,6 +115,8 @@ export const runners = pgTable(
     createdBy:        text('created_by').notNull(),
     createdAt:        timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt:        timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    outboundCallerId: text('outbound_caller_id'),
+    deptCallerIds:    jsonb('dept_caller_ids').$type<Record<string, string>>(),
   },
   (t) => [
     uniqueIndex('idx_runners_email_cred_unique').on(t.entraEmail, t.pbxCredentialId),
