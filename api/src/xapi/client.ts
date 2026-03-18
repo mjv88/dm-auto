@@ -36,6 +36,21 @@ export interface XAPIUserExtension {
   outboundCallerId: string | null;
 }
 
+export interface XAPIRingGroupMember {
+  id?:    number;       // present on existing members; omit when adding new
+  number: string;       // extension number — used to identify the runner
+  name?:  string | null;
+  tags?:  unknown[];
+}
+
+export interface XAPIRingGroup {
+  id:       number;
+  name:     string;
+  number:   string;
+  groupIds: number[];   // department IDs this ring group belongs to
+  members:  XAPIRingGroupMember[];
+}
+
 // ── Retry configuration ───────────────────────────────────────────────────────
 
 /** Milliseconds to wait before each successive attempt (index = attempt - 1). */
@@ -242,6 +257,48 @@ export class XAPIClient {
       Id:     userId,
       ...(outboundCallerId ? { OutboundCallerID: outboundCallerId } : {}),
     });
+  }
+
+  /**
+   * Fetches all ring groups with their department associations and current
+   * member lists. Used by the switch route to compute ring group deltas.
+   *
+   * GET /xapi/v1/RingGroups
+   *   ?$select=Id,Name,Number
+   *   &$expand=Members,Groups($select=GroupId,Name;$filter=not startsWith(Name,'___FAVORITES___'))
+   *
+   * Client-side fallback: any Group entry whose Name starts with ___FAVORITES___
+   * is filtered out in case the PBX ignores the nested $filter.
+   */
+  async getRingGroups(): Promise<XAPIRingGroup[]> {
+    const path =
+      `/RingGroups?$select=Id,Name,Number` +
+      `&$expand=Members,Groups($select=GroupId,Name;$filter=not startsWith(Name,'___FAVORITES___'))`;
+
+    const data = (await this.get(path)) as {
+      value: Array<{
+        Id:      number;
+        Name:    string;
+        Number:  string;
+        Groups:  Array<{ GroupId: number; Name: string }> | null;
+        Members: Array<{ Id?: number; Number: string; Name?: string | null; Tags?: unknown[] }> | null;
+      }>;
+    };
+
+    return data.value.map(rg => ({
+      id:      rg.Id,
+      name:    rg.Name,
+      number:  rg.Number,
+      groupIds: (rg.Groups ?? [])
+        .filter(g => !g.Name.startsWith('___FAVORITES___'))
+        .map(g => g.GroupId),
+      members: (rg.Members ?? []).map(m => ({
+        id:     m.Id,
+        number: m.Number,
+        name:   m.Name ?? null,
+        tags:   m.Tags ?? [],
+      })),
+    }));
   }
 
   // ── Private helpers ─────────────────────────────────────────────────────────

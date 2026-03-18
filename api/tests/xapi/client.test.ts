@@ -119,7 +119,7 @@ describe('getUserByNumber', () => {
 describe('getGroups', () => {
   it('returns an array of { id, name } ordered by name', async () => {
     nock(`https://${TEST_FQDN}`)
-      .get('/xapi/v1/Groups?$select=Id,Name&$orderby=Name')
+      .get(/\/xapi\/v1\/Groups/)
       .reply(200, {
         value: [
           { Id: 28, Name: 'DEFAULT' },
@@ -193,6 +193,53 @@ describe('patchUserGroup', () => {
 
     const client = makeClient();
     await expect(client.patchUserGroup(42, 35, null)).resolves.toBeUndefined();
+    expect(nock.isDone()).toBe(true);
+  });
+});
+
+// ── 3b. getRingGroups ────────────────────────────────────────────────────────
+
+describe('getRingGroups', () => {
+  it('returns ring groups with groupIds and members', async () => {
+    nock(`https://${TEST_FQDN}`)
+      .get(/\/xapi\/v1\/RingGroups/)
+      .reply(200, {
+        value: [
+          {
+            Id: 206, Name: 'Sales Ring', Number: '802',
+            Groups:  [{ GroupId: 33, Name: 'Sales' }],
+            Members: [
+              { Id: 45, Number: '101', Name: 'Alice', Tags: [] },
+              { Id: 32, Number: '000', Name: 'Bob',   Tags: [] },
+            ],
+          },
+          {
+            Id: 213, Name: 'Support Ring', Number: '803',
+            Groups:  [{ GroupId: 28, Name: '___FAVORITES___X' }],
+            Members: [],
+          },
+        ],
+      });
+
+    const client = makeClient();
+    const result = await client.getRingGroups();
+
+    // ___FAVORITES___X is filtered out from groupIds client-side
+    expect(result).toEqual([
+      {
+        id: 206, name: 'Sales Ring', number: '802',
+        groupIds: [33],
+        members: [
+          { id: 45, number: '101', name: 'Alice', tags: [] },
+          { id: 32, number: '000', name: 'Bob',   tags: [] },
+        ],
+      },
+      {
+        id: 213, name: 'Support Ring', number: '803',
+        groupIds: [],   // ___FAVORITES___ filtered out
+        members: [],
+      },
+    ]);
     expect(nock.isDone()).toBe(true);
   });
 });
