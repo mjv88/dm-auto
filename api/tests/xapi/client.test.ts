@@ -133,6 +133,33 @@ describe('patchUserGroup', () => {
     await expect(client.patchUserGroup(42, 35)).resolves.toBeUndefined();
     expect(nock.isDone()).toBe(true);
   });
+
+  it('includes OutboundCallerID in the body when provided', async () => {
+    nock(`https://${TEST_FQDN}`)
+      .patch('/xapi/v1/Users(42)', {
+        Groups: [{ GroupId: 35, Rights: { RoleName: 'users' } }],
+        Id: 42,
+        OutboundCallerID: '+49111222333',
+      })
+      .reply(204);
+
+    const client = makeClient();
+    await expect(client.patchUserGroup(42, 35, '+49111222333')).resolves.toBeUndefined();
+    expect(nock.isDone()).toBe(true);
+  });
+
+  it('omits OutboundCallerID from the body when null is passed', async () => {
+    nock(`https://${TEST_FQDN}`)
+      .patch('/xapi/v1/Users(42)', {
+        Groups: [{ GroupId: 35, Rights: { RoleName: 'users' } }],
+        Id: 42,
+      })
+      .reply(204);
+
+    const client = makeClient();
+    await expect(client.patchUserGroup(42, 35, null)).resolves.toBeUndefined();
+    expect(nock.isDone()).toBe(true);
+  });
 });
 
 // ── 4. Token refresh when expired ────────────────────────────────────────────

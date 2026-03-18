@@ -218,10 +218,15 @@ export class XAPIClient {
    *
    * @throws PBXUnavailableError on any non-204 response or network failure.
    */
-  async patchUserGroup(userId: number, targetGroupId: number): Promise<void> {
+  async patchUserGroup(
+    userId: number,
+    targetGroupId: number,
+    outboundCallerId?: string | null,
+  ): Promise<void> {
     await this.patch(`/Users(${userId})`, {
       Groups: [{ GroupId: targetGroupId, Rights: { RoleName: 'users' } }],
       Id:     userId,
+      ...(outboundCallerId ? { OutboundCallerID: outboundCallerId } : {}),
     });
   }
 
