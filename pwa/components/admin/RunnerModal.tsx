@@ -4,6 +4,23 @@ import { useState, useEffect, useMemo } from 'react';
 import type { PBXCredential } from '@/types/auth';
 import { adminGet } from '@/lib/adminApi';
 
+// ── Caller ID helpers ─────────────────────────────────────────────────────────
+
+/** Strips any character that is not + or a digit; + is only kept at index 0. */
+function sanitizeCallerId(raw: string): string {
+  const first = raw.startsWith('+') ? '+' : '';
+  const digits = raw.replace(/\D/g, '');
+  return first + digits;
+}
+
+const CALLER_ID_REGEX = /^\+?\d{1,20}$/;
+
+function isValidCallerId(v: string): boolean {
+  return v === '' || CALLER_ID_REGEX.test(v);
+}
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
 interface PbxExtension {
   extensionNumber: string;
   email: string | null;
@@ -16,6 +33,8 @@ interface RunnerForm {
   extension: string;
   pbxId: string;
   allowedDeptIds: number[];
+  outboundCallerId: string;
+  deptCallerIds: Record<string, string>;
 }
 
 interface RunnerData {
@@ -25,6 +44,8 @@ interface RunnerData {
   pbxFqdn: string;
   pbxCredentialId?: string;
   allowedDeptIds: number[];
+  outboundCallerId?: string | null;
+  deptCallerIds?: Record<string, string> | null;
   isActive: boolean;
 }
 
@@ -41,28 +62,35 @@ interface RunnerModalProps {
   onClose: () => void;
 }
 
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export default function RunnerModal({ runner, pbxList, departments, onSave, onClose }: RunnerModalProps) {
   const [form, setForm] = useState<RunnerForm>({
     email: '',
     extension: '',
     pbxId: pbxList[0]?.id ?? '',
     allowedDeptIds: [],
+    outboundCallerId: '',
+    deptCallerIds: {},
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // PBX extension picker (add mode only)
+  // PBX extension picker state (add mode only)
   const [extensions, setExtensions] = useState<PbxExtension[]>([]);
   const [extSearch, setExtSearch] = useState('');
   const [extLoading, setExtLoading] = useState(false);
 
+  // Pre-fill in edit mode
   useEffect(() => {
     if (runner) {
       setForm({
-        email: runner.entraEmail,
-        extension: runner.extensionNumber,
-        pbxId: runner.pbxCredentialId ?? pbxList.find((p) => p.pbxFqdn === runner.pbxFqdn)?.id ?? '',
-        allowedDeptIds: runner.allowedDeptIds,
+        email:            runner.entraEmail,
+        extension:        runner.extensionNumber,
+        pbxId:            runner.pbxCredentialId ?? pbxList.find((p) => p.pbxFqdn === runner.pbxFqdn)?.id ?? '',
+        allowedDeptIds:   runner.allowedDeptIds,
+        outboundCallerId: runner.outboundCallerId ?? '',
+        deptCallerIds:    runner.deptCallerIds ?? {},
       });
     }
   }, [runner, pbxList]);
@@ -109,18 +137,57 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
     }));
   }
 
+  function setDeptCallerId(deptId: number, value: string) {
+    const sanitized = sanitizeCallerId(value);
+    setForm((prev) => ({
+      ...prev,
+      deptCallerIds: { ...prev.deptCallerIds, [String(deptId)]: sanitized },
+    }));
+  }
+
+  function validate(): string | null {
+    if (form.outboundCallerId && !isValidCallerId(form.outboundCallerId)) {
+      return 'Default Caller ID must be digits, optionally starting with +';
+    }
+    for (const [deptId, callerId] of Object.entries(form.deptCallerIds)) {
+      if (callerId && !isValidCallerId(callerId)) {
+        const dept = departments.find((d) => String(d.id) === deptId);
+        return `Caller ID for "${dept?.name ?? deptId}" must be digits, optionally starting with +`;
+      }
+    }
+    return null;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const validationError = validate();
+    if (validationError) { setError(validationError); return; }
+
     setSaving(true);
     setError(null);
+
+    // Strip empty-string values before sending to API
+    const payload: RunnerForm = {
+      ...form,
+      outboundCallerId: form.outboundCallerId.trim(),
+      deptCallerIds: Object.fromEntries(
+        Object.entries(form.deptCallerIds).filter(([, v]) => v.trim() !== ''),
+      ),
+    };
+
     try {
-      await onSave(form);
+      await onSave(payload);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Save failed');
     } finally {
       setSaving(false);
     }
   }
+
+  const checkedDepts = useMemo(
+    () => departments.filter((d) => form.allowedDeptIds.includes(d.id)),
+    [departments, form.allowedDeptIds],
+  );
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -129,8 +196,10 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
           {runner ? 'Edit Runner' : 'Add Runner'}
         </h2>
         {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
+
         <form onSubmit={handleSubmit} className="space-y-3">
-          {/* PBX selector */}
+
+          {/* PBX — first, drives the extension list */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">PBX</label>
             <select
@@ -202,6 +271,7 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
             </div>
           )}
 
+          {/* Email */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
@@ -213,6 +283,8 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
+          {/* Extension */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Extension</label>
             <input
@@ -224,24 +296,62 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
+          {/* Default Caller ID */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Default Caller ID
+              <span className="ml-1 text-xs font-normal text-gray-400">— optional · + and digits only</span>
+            </label>
+            <input
+              type="text"
+              value={form.outboundCallerId}
+              onChange={(e) => setForm({ ...form, outboundCallerId: sanitizeCallerId(e.target.value) })}
+              placeholder="+49123456789"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Departments with inline per-dept Caller ID */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Departments</label>
-            <div className="border border-gray-300 rounded-md p-2 max-h-40 overflow-y-auto space-y-1">
+            <div className="border border-gray-300 rounded-md p-2 max-h-52 overflow-y-auto space-y-1">
               {departments.length === 0 && (
                 <p className="text-xs text-gray-400">No departments available</p>
               )}
-              {departments.map((dept) => (
-                <label key={dept.id} className="flex items-center gap-2 text-sm text-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={form.allowedDeptIds.includes(dept.id)}
-                    onChange={() => toggleDept(dept.id)}
-                    className="rounded border-gray-300"
-                  />
-                  {dept.name}
-                </label>
-              ))}
+              {departments.map((dept) => {
+                const checked = form.allowedDeptIds.includes(dept.id);
+                return (
+                  <div key={dept.id}>
+                    <label className="flex items-center gap-2 text-sm text-gray-700 py-0.5">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleDept(dept.id)}
+                        className="rounded border-gray-300"
+                      />
+                      <span className="flex-1">{dept.name}</span>
+                    </label>
+                    {checked && (
+                      <div className="ml-6 mt-0.5 mb-1">
+                        <input
+                          type="text"
+                          value={form.deptCallerIds[String(dept.id)] ?? ''}
+                          onChange={(e) => setDeptCallerId(dept.id, e.target.value)}
+                          placeholder={form.outboundCallerId || 'Caller ID (uses default if empty)'}
+                          className="w-full rounded border border-gray-200 px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-700 placeholder-gray-300"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
+            {checkedDepts.length > 0 && (
+              <p className="mt-1 text-xs text-gray-400">
+                Per-dept caller ID overrides the default. Leave blank to use the default.
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
