@@ -98,20 +98,27 @@ export const updatePbxSchema = z.object({
 
 // ── Admin runner schemas ───────────────────────────────────────────────────────
 
+/** Shared: valid caller ID — optional + prefix then 1–20 digits */
+const callerIdSchema = z.string().regex(/^\+?\d{1,20}$/, 'Caller ID must be digits, optionally prefixed with +');
+
 /** POST /admin/runners */
 export const createRunnerSchema = z.object({
-  email:          z.string().email(),
-  extension:      z.string().min(1).max(20).regex(/^\d+$/, 'Extension must be numeric'),
-  pbxId:          z.string().uuid(),
-  allowedDeptIds: z.array(z.string()).default([]),
+  email:            z.string().email(),
+  extension:        z.string().min(1).max(20).regex(/^\d+$/, 'Extension must be numeric'),
+  pbxId:            z.string().uuid(),
+  allowedDeptIds:   z.array(z.string()).default([]),
+  outboundCallerId: callerIdSchema.optional(),
+  deptCallerIds:    z.record(z.string(), callerIdSchema).optional(),
 });
 
 /** PUT /admin/runners/:id */
 export const updateRunnerSchema = z.object({
-  email:          z.string().email().optional(),
-  extension:      z.string().min(1).max(20).regex(/^\d+$/, 'Extension must be numeric').optional(),
-  allowedDeptIds: z.array(z.string()).optional(),
-  isActive:       z.boolean().optional(),
+  email:            z.string().email().optional(),
+  extension:        z.string().min(1).max(20).regex(/^\d+$/, 'Extension must be numeric').optional(),
+  allowedDeptIds:   z.array(z.string()).optional(),
+  isActive:         z.boolean().optional(),
+  outboundCallerId: callerIdSchema.optional(),
+  deptCallerIds:    z.record(z.string(), callerIdSchema).optional(),
 });
 
 // ── Admin tenant schemas ───────────────────────────────────────────────────────
