@@ -16,6 +16,8 @@ interface Runner {
   pbxName: string;
   allowedDeptIds: number[];
   isActive: boolean;
+  outboundCallerId?: string | null;
+  deptCallerIds?: Record<string, string> | null;
 }
 
 interface Department {
@@ -73,6 +75,8 @@ export default function RunnersPage() {
     extension: string;
     pbxId: string;
     allowedDeptIds: number[];
+    outboundCallerId: string;
+    deptCallerIds: Record<string, string>;
   }) {
     if (modalRunner) {
       await adminPut(`/admin/runners/${modalRunner.id}`, data);
