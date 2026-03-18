@@ -18,6 +18,7 @@ interface Runner {
   isActive: boolean;
   outboundCallerId?: string | null;
   deptCallerIds?: Record<string, string> | null;
+  deptRingGroups?: Record<string, number[]> | null;
 }
 
 interface Department {
@@ -77,6 +78,7 @@ export default function RunnersPage() {
     allowedDeptIds: number[];
     outboundCallerId: string;
     deptCallerIds: Record<string, string>;
+    deptRingGroups: Record<string, number[]>;
   }) {
     // Build API body — strip empty outboundCallerId to null so Zod doesn't reject
     // it as "" and so the PUT handler writes null to DB (clearing an existing value)
