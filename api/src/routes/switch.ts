@@ -153,7 +153,49 @@ export async function switchRoutes(fastify: FastifyInstance): Promise<void> {
         return reply.code(503).send({ error: 'PBX_UNAVAILABLE' });
       }
 
-      // 9. Audit: success
+      // 9. Ring group re-assignment (non-fatal — dept switch already committed)
+      try {
+        const ringGroups = await xapiClient.getRingGroups();
+        const ext = session.extensionNumber!;
+
+        // Ring groups for old dept and new dept
+        const toLeave = ringGroups.filter(rg => rg.groupIds.includes(currentGroupId));
+        const toJoin  = ringGroups.filter(rg => rg.groupIds.includes(targetDeptId));
+
+        // Avoid touching ring groups that belong to both (no net change needed)
+        const toJoinIds  = new Set(toJoin.map(rg => rg.id));
+        const toLeaveIds = new Set(toLeave.map(rg => rg.id));
+
+        const actuallyLeaving = toLeave.filter(rg => !toJoinIds.has(rg.id));
+        const actuallyJoining = toJoin.filter(rg => !toLeaveIds.has(rg.id));
+
+        // Remove runner from old ring groups
+        for (const rg of actuallyLeaving) {
+          const newMembers = rg.members.filter(m => m.number !== ext);
+          if (newMembers.length === rg.members.length) continue; // not a member — skip
+          try {
+            await xapiClient.updateRingGroupMembers(rg.id, newMembers);
+          } catch (err) {
+            fastify.log.warn({ ringGroupId: rg.id, err }, 'Failed to remove runner from ring group');
+          }
+        }
+
+        // Add runner to new ring groups
+        for (const rg of actuallyJoining) {
+          if (rg.members.some(m => m.number === ext)) continue; // already a member — skip
+          const newMembers = [...rg.members, { number: ext }];
+          try {
+            await xapiClient.updateRingGroupMembers(rg.id, newMembers);
+          } catch (err) {
+            fastify.log.warn({ ringGroupId: rg.id, err }, 'Failed to add runner to ring group');
+          }
+        }
+      } catch (err) {
+        // getRingGroups() failed — log and continue, dept switch already succeeded
+        fastify.log.warn({ err }, 'Failed to fetch ring groups for re-assignment');
+      }
+
+      // 10. Audit: success
       await writeAuditLog(request, {
         runnerId:        runner.id,
         entraEmail:      session.entraEmail ?? '',
