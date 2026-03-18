@@ -72,6 +72,66 @@ interface RunnerModalProps {
   onClose: () => void;
 }
 
+// ── AddRingGroupDropdown ──────────────────────────────────────────────────────
+
+function AddRingGroupDropdown({ deptId, options, onAdd }: {
+  deptId: number;
+  options: PbxRingGroup[];
+  onAdd: (deptId: number, rgId: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const filtered = options.filter(rg =>
+    rg.name.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => { setOpen(o => !o); setSearch(''); }}
+        className="inline-flex items-center px-1.5 py-0.5 rounded text-xs border border-dashed border-gray-300 text-gray-500 hover:text-gray-700 hover:border-gray-400 cursor-pointer"
+        title="Add ring group"
+      >
+        +
+      </button>
+      {open && (
+        <div className="absolute z-10 left-0 top-6 bg-white border border-gray-200 rounded shadow-lg min-w-[160px]">
+          {options.length > 4 && (
+            <div className="px-2 pt-2">
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search…"
+                autoFocus
+                className="w-full text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              />
+            </div>
+          )}
+          <ul className="py-1 max-h-48 overflow-y-auto">
+            {filtered.length === 0 && (
+              <li className="px-3 py-1 text-xs text-gray-400">No matches</li>
+            )}
+            {filtered.map(rg => (
+              <li key={rg.id}>
+                <button
+                  type="button"
+                  onClick={() => { onAdd(deptId, rg.id); setOpen(false); setSearch(''); }}
+                  className="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                >
+                  {rg.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function RunnerModal({ runner, pbxList, departments, onSave, onClose }: RunnerModalProps) {
@@ -412,49 +472,40 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
                         />
                       )}
                     </div>
-                    {checked && pbxRingGroups.length > 0 && (
-                      <div className="ml-5 mb-1 flex flex-wrap gap-1 items-center">
-                        {pbxRingGroups.map(rg => {
-                          const isPbx     = rg.groupIds.includes(Number(dept.id));
-                          const isSelected = (form.deptRingGroups[String(dept.id)] ?? []).includes(rg.id);
-
-                          if (isPbx && isSelected) {
-                            // PBX-associated + selected → green with ×
-                            return (
-                              <span key={rg.id} className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded text-xs bg-green-50 text-green-700 border border-green-200">
-                                ✓ {rg.name}
-                                <button type="button" onClick={() => removeRingGroupFromDept(dept.id, rg.id)} className="hover:text-green-900 leading-none" title="Remove">×</button>
-                              </span>
-                            );
-                          }
-                          if (isPbx && !isSelected) {
-                            // PBX-associated but removed → green dashed, click to re-add
-                            return (
-                              <button key={rg.id} type="button" onClick={() => addRingGroupToDept(dept.id, rg.id)}
-                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs bg-green-50 text-green-400 border border-dashed border-green-300 hover:text-green-700 cursor-pointer" title="Re-add">
-                                + {rg.name}
-                              </button>
-                            );
-                          }
-                          if (!isPbx && isSelected) {
-                            // Admin-added (not PBX) → blue with ×
-                            return (
-                              <span key={rg.id} className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded text-xs bg-blue-50 text-blue-700 border border-blue-200">
-                                {rg.name}
-                                <button type="button" onClick={() => removeRingGroupFromDept(dept.id, rg.id)} className="hover:text-blue-900 leading-none" title="Remove">×</button>
-                              </span>
-                            );
-                          }
-                          // Not PBX, not selected → grey, click to add
-                          return (
+                    {checked && pbxRingGroups.length > 0 && (() => {
+                      const deptIdNum  = Number(dept.id);
+                      const deptKey    = String(dept.id);
+                      const selected   = form.deptRingGroups[deptKey] ?? [];
+                      const pbxForDept = pbxRingGroups.filter(rg => rg.groupIds.includes(deptIdNum));
+                      const nonPbx     = pbxRingGroups.filter(rg => !rg.groupIds.includes(deptIdNum) && !selected.includes(rg.id));
+                      return (
+                        <div className="ml-5 mb-1 flex flex-wrap gap-1 items-center">
+                          {/* PBX-associated ring groups — green, always visible */}
+                          {pbxForDept.map(rg => selected.includes(rg.id) ? (
+                            <span key={rg.id} className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded text-xs bg-green-50 text-green-700 border border-green-200">
+                              ✓ {rg.name}
+                              <button type="button" onClick={() => removeRingGroupFromDept(dept.id, rg.id)} className="hover:text-green-900 leading-none" title="Remove">×</button>
+                            </span>
+                          ) : (
                             <button key={rg.id} type="button" onClick={() => addRingGroupToDept(dept.id, rg.id)}
-                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs bg-gray-50 text-gray-400 border border-gray-200 hover:bg-gray-100 hover:text-gray-600 cursor-pointer" title="Add">
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs bg-green-50 text-green-400 border border-dashed border-green-300 hover:text-green-700 cursor-pointer" title="Re-add">
                               + {rg.name}
                             </button>
-                          );
-                        })}
-                      </div>
-                    )}
+                          ))}
+
+                          {/* Admin-added extras (non-PBX, selected) — blue with × */}
+                          {pbxRingGroups.filter(rg => !rg.groupIds.includes(deptIdNum) && selected.includes(rg.id)).map(rg => (
+                            <span key={rg.id} className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded text-xs bg-blue-50 text-blue-700 border border-blue-200">
+                              {rg.name}
+                              <button type="button" onClick={() => removeRingGroupFromDept(dept.id, rg.id)} className="hover:text-blue-900 leading-none" title="Remove">×</button>
+                            </span>
+                          ))}
+
+                          {/* + dropdown for non-PBX ring groups */}
+                          {nonPbx.length > 0 && <AddRingGroupDropdown deptId={dept.id} options={nonPbx} onAdd={addRingGroupToDept} />}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
