@@ -175,8 +175,25 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
     if (!form.pbxId) return;
     setPbxRingGroups([]);
     adminGet<{ ringGroups: PbxRingGroup[] }>(`/admin/pbx/${form.pbxId}/ring-groups`)
-      .then(data => setPbxRingGroups(data.ringGroups))
+      .then(data => {
+        setPbxRingGroups(data.ringGroups);
+        // Auto-populate deptRingGroups for all already-checked departments
+        // that have no stored config yet (e.g. existing runners before this feature).
+        setForm(prev => {
+          let updated = prev.deptRingGroups;
+          for (const deptId of prev.allowedDeptIds) {
+            if (prev.deptRingGroups[String(deptId)] === undefined) {
+              const pbxDriven = data.ringGroups
+                .filter(rg => rg.groupIds.includes(Number(deptId)))
+                .map(rg => rg.id);
+              updated = { ...updated, [String(deptId)]: pbxDriven };
+            }
+          }
+          return { ...prev, deptRingGroups: updated };
+        });
+      })
       .catch(() => { /* silently fail */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.pbxId]);
 
   // Live-fetch PBX users whenever the selected PBX changes (add mode only)
@@ -229,7 +246,7 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
       let newDeptRingGroups = prev.deptRingGroups;
       if (nowChecked && prev.deptRingGroups[String(id)] === undefined && pbxRingGroups.length > 0) {
         const pbxDriven = pbxRingGroups
-          .filter(rg => rg.groupIds.includes(id))
+          .filter(rg => rg.groupIds.includes(Number(id)))
           .map(rg => rg.id);
         newDeptRingGroups = { ...prev.deptRingGroups, [String(id)]: pbxDriven };
       }
