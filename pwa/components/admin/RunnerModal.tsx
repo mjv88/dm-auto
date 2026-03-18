@@ -162,9 +162,12 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
         : prev.allowedDeptIds.filter((d) => d !== id);
 
       // When checking a dept for the first time (no stored config), pre-populate
-      // with the PBX-driven ring groups for that dept
+      // with the PBX-driven ring groups for that dept — only when ring groups
+      // have loaded. If still loading (pbxRingGroups empty), leave the key
+      // absent so the PBX-auto fallback stays active and pre-population retries
+      // on the next check event.
       let newDeptRingGroups = prev.deptRingGroups;
-      if (nowChecked && prev.deptRingGroups[String(id)] === undefined) {
+      if (nowChecked && prev.deptRingGroups[String(id)] === undefined && pbxRingGroups.length > 0) {
         const pbxDriven = pbxRingGroups
           .filter(rg => rg.groupIds.includes(id))
           .map(rg => rg.id);
