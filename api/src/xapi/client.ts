@@ -26,12 +26,13 @@ export interface XAPIGroup {
 }
 
 export interface XAPIUserExtension {
-  userId:          number;
-  number:          string;
-  email:           string;
+  userId:           number;
+  number:           string;
+  email:            string;
   currentGroupName: string;
-  displayName:    string;
-  currentGroupId: number;
+  displayName:      string;
+  currentGroupId:   number;
+  outboundCallerId: string | null;
 }
 
 // ── Retry configuration ───────────────────────────────────────────────────────
@@ -173,7 +174,7 @@ export class XAPIClient {
     while (hasMore) {
       const path =
         `/Users?$top=${PAGE_SIZE}&$skip=${skip}` +
-        `&$select=DisplayName,EmailAddress,PrimaryGroupId` +
+        `&$select=DisplayName,EmailAddress,PrimaryGroupId,OutboundCallerID` +
         `&$expand=Groups($select=GroupId,Name)`;
 
       const data = (await this.get(path)) as {
@@ -183,6 +184,7 @@ export class XAPIClient {
           DisplayName: string;
           EmailAddress: string;
           PrimaryGroupId: number;
+          OutboundCallerID: string | null;
           Groups: Array<{ GroupId: number; Name: string }>;
         }>;
       };
@@ -197,6 +199,7 @@ export class XAPIClient {
           displayName: u.DisplayName ?? '',
           currentGroupId: u.PrimaryGroupId ?? 0,
           currentGroupName: primaryGroup?.Name ?? '',
+          outboundCallerId: u.OutboundCallerID ?? null,
         });
       }
       hasMore = data.value.length === PAGE_SIZE;

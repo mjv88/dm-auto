@@ -220,10 +220,11 @@ export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
       const users = await client.getAllUsers();
       return reply.send({
         users: users.map(u => ({
-          extensionNumber: u.number,
-          email: u.email,
-          displayName: u.displayName,
+          extensionNumber:  u.number,
+          email:            u.email,
+          displayName:      u.displayName,
           currentGroupName: u.currentGroupName,
+          outboundCallerId: u.outboundCallerId,
         })),
       });
     } catch {

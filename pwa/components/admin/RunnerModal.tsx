@@ -22,10 +22,11 @@ function isValidCallerId(v: string): boolean {
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface PbxExtension {
-  extensionNumber: string;
-  email: string | null;
-  displayName: string | null;
+  extensionNumber:  string;
+  email:            string | null;
+  displayName:      string | null;
   currentGroupName: string | null;
+  outboundCallerId: string | null;
 }
 
 interface RunnerForm {
@@ -122,8 +123,10 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
   function pickExtension(ext: PbxExtension) {
     setForm(prev => ({
       ...prev,
-      email: ext.email ?? prev.email,
-      extension: ext.extensionNumber,
+      email:            ext.email ?? prev.email,
+      extension:        ext.extensionNumber,
+      // Auto-fill default caller ID from PBX if not already set
+      outboundCallerId: prev.outboundCallerId || ext.outboundCallerId || '',
     }));
     setExtSearch('');
   }
@@ -301,7 +304,7 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Default Caller ID
-              <span className="ml-1 text-xs font-normal text-gray-400">— optional · + and digits only</span>
+              <span className="ml-1 text-xs font-normal text-gray-400">— used when no per-department override is set</span>
             </label>
             <input
               type="text"
@@ -310,6 +313,11 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
               placeholder="+49123456789"
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            {!form.outboundCallerId && (
+              <p className="mt-1 text-xs text-amber-600">
+                No default caller ID set — without this, the PBX will retain the previously applied caller ID when switching to a department with no override.
+              </p>
+            )}
           </div>
 
           {/* Departments with inline per-dept Caller ID */}
