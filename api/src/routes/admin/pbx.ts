@@ -231,4 +231,38 @@ export async function adminPbxRoutes(fastify: FastifyInstance): Promise<void> {
       return reply.code(502).send({ error: 'PBX_UNAVAILABLE', message: 'Could not reach the PBX.' });
     }
   });
+
+  // ── GET /admin/pbx/:id/ring-groups ────────────────────────────────────────
+  // Live fetch of ring groups with their department associations.
+  // Used by the RunnerModal to show which ring groups belong to each department.
+
+  fastify.get('/admin/pbx/:id/ring-groups', { preHandler: [requireRole('manager')] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const db = getDb();
+
+    const rows = await db
+      .select({ pbxFqdn: pbxCredentials.pbxFqdn })
+      .from(pbxCredentials)
+      .where(eq(pbxCredentials.id, id))
+      .limit(1);
+
+    if (!rows[0]) {
+      return reply.code(404).send({ error: 'PBX_NOT_FOUND' });
+    }
+
+    try {
+      const client = await XAPIClient.create(rows[0].pbxFqdn);
+      const ringGroups = await client.getRingGroups();
+      return reply.send({
+        ringGroups: ringGroups.map(rg => ({
+          id:       rg.id,
+          name:     rg.name,
+          number:   rg.number,
+          groupIds: rg.groupIds,
+        })),
+      });
+    } catch {
+      return reply.code(502).send({ error: 'PBX_UNAVAILABLE', message: 'Could not reach the PBX.' });
+    }
+  });
 }

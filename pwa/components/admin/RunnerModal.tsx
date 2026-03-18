@@ -29,6 +29,13 @@ interface PbxExtension {
   outboundCallerId: string | null;
 }
 
+interface PbxRingGroup {
+  id:       number;
+  name:     string;
+  number:   string;
+  groupIds: number[];
+}
+
 interface RunnerForm {
   email: string;
   extension: string;
@@ -82,6 +89,9 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
   const [extSearch, setExtSearch] = useState('');
   const [extLoading, setExtLoading] = useState(false);
 
+  // Ring groups for the selected PBX (always loaded for dept display)
+  const [pbxRingGroups, setPbxRingGroups] = useState<PbxRingGroup[]>([]);
+
   // Pre-fill in edit mode
   useEffect(() => {
     if (runner) {
@@ -95,6 +105,15 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
       });
     }
   }, [runner, pbxList]);
+
+  // Fetch ring groups whenever PBX changes (always — used for dept display)
+  useEffect(() => {
+    if (!form.pbxId) return;
+    setPbxRingGroups([]);
+    adminGet<{ ringGroups: PbxRingGroup[] }>(`/admin/pbx/${form.pbxId}/ring-groups`)
+      .then(data => setPbxRingGroups(data.ringGroups))
+      .catch(() => { /* silently fail */ });
+  }, [form.pbxId]);
 
   // Live-fetch PBX users whenever the selected PBX changes (add mode only)
   useEffect(() => {
@@ -330,23 +349,33 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
               {departments.map((dept) => {
                 const checked = form.allowedDeptIds.includes(dept.id);
                 return (
-                  <div key={dept.id} className="flex items-center gap-2 py-0.5">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleDept(dept.id)}
-                      className="rounded border-gray-300 shrink-0"
-                    />
-                    <span className="flex-1 text-sm text-gray-700">{dept.name}</span>
-                    {checked && (
+                  <div key={dept.id}>
+                    <div className="flex items-center gap-2 py-0.5">
                       <input
-                        type="text"
-                        value={form.deptCallerIds[String(dept.id)] ?? ''}
-                        onChange={(e) => setDeptCallerId(dept.id, e.target.value)}
-                        placeholder={form.outboundCallerId || 'Caller ID'}
-                        className="w-48 rounded border border-gray-200 px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-700 placeholder-gray-300"
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleDept(dept.id)}
+                        className="rounded border-gray-300 shrink-0"
                       />
-                    )}
+                      <span className="flex-1 text-sm text-gray-700">{dept.name}</span>
+                      {checked && (
+                        <input
+                          type="text"
+                          value={form.deptCallerIds[String(dept.id)] ?? ''}
+                          onChange={(e) => setDeptCallerId(dept.id, e.target.value)}
+                          placeholder={form.outboundCallerId || 'Caller ID'}
+                          className="w-48 rounded border border-gray-200 px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-700 placeholder-gray-300"
+                        />
+                      )}
+                    </div>
+                    {checked && (() => {
+                      const rings = pbxRingGroups.filter(rg => rg.groupIds.includes(dept.id));
+                      return rings.length > 0 ? (
+                        <p className="ml-5 mb-0.5 text-xs text-blue-500">
+                          ↳ Ring groups: {rings.map(rg => rg.name).join(', ')}
+                        </p>
+                      ) : null;
+                    })()}
                   </div>
                 );
               })}
