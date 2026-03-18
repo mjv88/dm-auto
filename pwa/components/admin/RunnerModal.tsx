@@ -409,27 +409,57 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
                         />
                       )}
                     </div>
-                    {checked && pbxRingGroups.length > 0 && (() => {
-                      const deptIdNum = Number(dept.id);
-                      const forDept = pbxRingGroups.filter(rg => rg.groupIds.includes(deptIdNum));
-                      const notDept  = pbxRingGroups.filter(rg => !rg.groupIds.includes(deptIdNum));
-                      if (forDept.length === 0 && notDept.length === 0) return null;
-                      return (
-                        <div className="ml-5 mb-1 flex flex-wrap gap-1 items-center">
-                          <span className="text-xs text-gray-400 mr-0.5">↳</span>
-                          {forDept.map(rg => (
-                            <span key={rg.id} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs bg-green-50 text-green-700 border border-green-200">
-                              <span>✓</span> {rg.name}
+                    {checked && (
+                      <div className="ml-5 mb-1 flex flex-wrap gap-1 items-center">
+                        {/* Selected ring groups — removable */}
+                        {(form.deptRingGroups[String(dept.id)] ?? []).map(rgId => {
+                          const rg = pbxRingGroups.find(r => r.id === rgId);
+                          if (!rg) return null;
+                          return (
+                            <span
+                              key={rgId}
+                              className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded text-xs bg-blue-50 text-blue-700 border border-blue-200"
+                            >
+                              {rg.name}
+                              <button
+                                type="button"
+                                onClick={() => removeRingGroupFromDept(dept.id, rgId)}
+                                className="hover:text-blue-900 leading-none"
+                              >
+                                ×
+                              </button>
                             </span>
-                          ))}
-                          {notDept.map(rg => (
-                            <span key={rg.id} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs bg-gray-50 text-gray-400 border border-gray-200">
-                              <span>✕</span> {rg.name}
-                            </span>
-                          ))}
-                        </div>
-                      );
-                    })()}
+                          );
+                        })}
+
+                        {/* Add ring group dropdown */}
+                        {(() => {
+                          const selected = form.deptRingGroups[String(dept.id)] ?? [];
+                          const available = pbxRingGroups.filter(rg => !selected.includes(rg.id));
+                          if (available.length === 0) return null;
+                          return (
+                            <select
+                              value=""
+                              onChange={e => {
+                                const id = Number(e.target.value);
+                                if (id) addRingGroupToDept(dept.id, id);
+                              }}
+                              className="text-xs border border-dashed border-blue-300 rounded px-1.5 py-0.5 text-blue-500 bg-white focus:outline-none cursor-pointer"
+                            >
+                              <option value="">+ Add ring group</option>
+                              {available.map(rg => (
+                                <option key={rg.id} value={rg.id}>{rg.name}</option>
+                              ))}
+                            </select>
+                          );
+                        })()}
+
+                        {/* Show message if no ring groups loaded yet */}
+                        {pbxRingGroups.length === 0 && (
+                          <span className="text-xs text-gray-300 italic">Loading ring groups…</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
