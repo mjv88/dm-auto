@@ -191,7 +191,7 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
           {runner ? 'Edit Runner' : 'Add Runner'}
         </h2>
@@ -322,26 +322,22 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
               {departments.map((dept) => {
                 const checked = form.allowedDeptIds.includes(dept.id);
                 return (
-                  <div key={dept.id}>
-                    <label className="flex items-center gap-2 text-sm text-gray-700 py-0.5">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleDept(dept.id)}
-                        className="rounded border-gray-300"
-                      />
-                      <span className="flex-1">{dept.name}</span>
-                    </label>
+                  <div key={dept.id} className="flex items-center gap-2 py-0.5">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleDept(dept.id)}
+                      className="rounded border-gray-300 shrink-0"
+                    />
+                    <span className="flex-1 text-sm text-gray-700">{dept.name}</span>
                     {checked && (
-                      <div className="ml-6 mt-0.5 mb-1">
-                        <input
-                          type="text"
-                          value={form.deptCallerIds[String(dept.id)] ?? ''}
-                          onChange={(e) => setDeptCallerId(dept.id, e.target.value)}
-                          placeholder={form.outboundCallerId || 'Caller ID (uses default if empty)'}
-                          className="w-full rounded border border-gray-200 px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-700 placeholder-gray-300"
-                        />
-                      </div>
+                      <input
+                        type="text"
+                        value={form.deptCallerIds[String(dept.id)] ?? ''}
+                        onChange={(e) => setDeptCallerId(dept.id, e.target.value)}
+                        placeholder={form.outboundCallerId || 'Caller ID'}
+                        className="w-48 rounded border border-gray-200 px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-700 placeholder-gray-300"
+                      />
                     )}
                   </div>
                 );
