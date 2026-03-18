@@ -195,12 +195,14 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
           .where(eq(users.id, user.id));
       }
 
-      // Look up linked runner (if any) to populate session fields
+      // Look up linked runner (if any) to populate session fields.
+      // Primary: match by users.id (explicit link set at registration time).
+      // Fallback: match by entraEmail (for runners added by admin before the user registered).
       let runnerId: string | null = null;
       let pbxFqdn: string | null = null;
       let extensionNumber: string | null = null;
       if (user.id) {
-        const runnerRows = await db
+        const byUserId = await db
           .select({
             id: runners.id,
             pbxFqdn: pbxCredentials.pbxFqdn,
@@ -210,11 +212,33 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
           .innerJoin(pbxCredentials, eq(runners.pbxCredentialId, pbxCredentials.id))
           .where(and(eq(runners.userId, user.id), eq(runners.isActive, true)))
           .limit(1);
-        const linkedRunner = runnerRows[0];
-        if (linkedRunner) {
-          runnerId = linkedRunner.id;
-          pbxFqdn = linkedRunner.pbxFqdn;
-          extensionNumber = linkedRunner.extensionNumber;
+
+        const linked = byUserId[0] ?? null;
+
+        if (linked) {
+          runnerId       = linked.id;
+          pbxFqdn        = linked.pbxFqdn;
+          extensionNumber = linked.extensionNumber;
+        } else {
+          // Fallback: runner was added by admin before user registered — match by email
+          const byEmail = await db
+            .select({
+              id: runners.id,
+              pbxFqdn: pbxCredentials.pbxFqdn,
+              extensionNumber: runners.extensionNumber,
+            })
+            .from(runners)
+            .innerJoin(pbxCredentials, eq(runners.pbxCredentialId, pbxCredentials.id))
+            .where(and(eq(runners.entraEmail, normalizedEmail), eq(runners.isActive, true)))
+            .limit(1);
+
+          if (byEmail[0]) {
+            runnerId        = byEmail[0].id;
+            pbxFqdn         = byEmail[0].pbxFqdn;
+            extensionNumber = byEmail[0].extensionNumber;
+            // Persist the link so future logins use the fast path
+            await db.update(runners).set({ userId: user.id }).where(eq(runners.id, runnerId));
+          }
         }
       }
 
