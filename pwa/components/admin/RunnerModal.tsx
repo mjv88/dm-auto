@@ -415,31 +415,40 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
                     {checked && pbxRingGroups.length > 0 && (
                       <div className="ml-5 mb-1 flex flex-wrap gap-1 items-center">
                         {pbxRingGroups.map(rg => {
-                          const selected = (form.deptRingGroups[String(dept.id)] ?? []).includes(rg.id);
-                          return selected ? (
-                            // Selected — blue badge with × to remove
-                            <span
-                              key={rg.id}
-                              className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded text-xs bg-blue-50 text-blue-700 border border-blue-200"
-                            >
-                              {rg.name}
-                              <button
-                                type="button"
-                                onClick={() => removeRingGroupFromDept(dept.id, rg.id)}
-                                className="hover:text-blue-900 leading-none"
-                              >
-                                ×
+                          const isPbx     = rg.groupIds.includes(Number(dept.id));
+                          const isSelected = (form.deptRingGroups[String(dept.id)] ?? []).includes(rg.id);
+
+                          if (isPbx && isSelected) {
+                            // PBX-associated + selected → green with ×
+                            return (
+                              <span key={rg.id} className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded text-xs bg-green-50 text-green-700 border border-green-200">
+                                ✓ {rg.name}
+                                <button type="button" onClick={() => removeRingGroupFromDept(dept.id, rg.id)} className="hover:text-green-900 leading-none" title="Remove">×</button>
+                              </span>
+                            );
+                          }
+                          if (isPbx && !isSelected) {
+                            // PBX-associated but removed → green dashed, click to re-add
+                            return (
+                              <button key={rg.id} type="button" onClick={() => addRingGroupToDept(dept.id, rg.id)}
+                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs bg-green-50 text-green-400 border border-dashed border-green-300 hover:text-green-700 cursor-pointer" title="Re-add">
+                                + {rg.name}
                               </button>
-                            </span>
-                          ) : (
-                            // Not selected — grey badge, click to add
-                            <button
-                              key={rg.id}
-                              type="button"
-                              onClick={() => addRingGroupToDept(dept.id, rg.id)}
-                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs bg-gray-50 text-gray-400 border border-gray-200 hover:bg-gray-100 hover:text-gray-600 cursor-pointer"
-                              title="Click to add"
-                            >
+                            );
+                          }
+                          if (!isPbx && isSelected) {
+                            // Admin-added (not PBX) → blue with ×
+                            return (
+                              <span key={rg.id} className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded text-xs bg-blue-50 text-blue-700 border border-blue-200">
+                                {rg.name}
+                                <button type="button" onClick={() => removeRingGroupFromDept(dept.id, rg.id)} className="hover:text-blue-900 leading-none" title="Remove">×</button>
+                              </span>
+                            );
+                          }
+                          // Not PBX, not selected → grey, click to add
+                          return (
+                            <button key={rg.id} type="button" onClick={() => addRingGroupToDept(dept.id, rg.id)}
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs bg-gray-50 text-gray-400 border border-gray-200 hover:bg-gray-100 hover:text-gray-600 cursor-pointer" title="Add">
                               + {rg.name}
                             </button>
                           );
