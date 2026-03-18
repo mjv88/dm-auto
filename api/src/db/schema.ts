@@ -117,6 +117,7 @@ export const runners = pgTable(
     updatedAt:        timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     outboundCallerId: text('outbound_caller_id'),
     deptCallerIds:    jsonb('dept_caller_ids').$type<Record<string, string>>(),
+    deptRingGroups:   jsonb('dept_ring_groups').$type<Record<string, number[]>>(),
   },
   (t) => [
     uniqueIndex('idx_runners_email_cred_unique').on(t.entraEmail, t.pbxCredentialId),

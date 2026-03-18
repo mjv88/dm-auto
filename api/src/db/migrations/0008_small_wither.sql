@@ -1,0 +1,1 @@
+ALTER TABLE "runners" ADD COLUMN "dept_ring_groups" jsonb;
