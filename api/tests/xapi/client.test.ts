@@ -66,16 +66,17 @@ afterAll(() => {
 // ── 1. Successful user lookup by extension number ─────────────────────────────
 
 describe('getUserByNumber', () => {
-  it('returns { userId, currentGroupId, emailAddress } on success', async () => {
+  it('returns { userId, currentGroupId, emailAddress, roleName } on success', async () => {
     nock(`https://${TEST_FQDN}`)
       .get(/\/xapi\/v1\/Users/)
       .reply(200, {
         value: [
           {
-            Id:           42,
-            Number:       '101',
-            EmailAddress: 'maria@customer.de',
-            Groups:       [{ GroupId: 28, Name: 'DEFAULT', Type: 'Extension' }],
+            Id:             42,
+            Number:         '101',
+            EmailAddress:   'maria@customer.de',
+            PrimaryGroupId: 28,
+            Groups:         [{ GroupId: 28, Rights: { RoleName: 'supervisors' } }],
           },
         ],
       });
@@ -87,7 +88,28 @@ describe('getUserByNumber', () => {
       userId:         42,
       currentGroupId: 28,
       emailAddress:   'maria@customer.de',
+      roleName:       'supervisors',
     });
+    expect(nock.isDone()).toBe(true);
+  });
+
+  it('falls back to "users" role when Rights are absent', async () => {
+    nock(`https://${TEST_FQDN}`)
+      .get(/\/xapi\/v1\/Users/)
+      .reply(200, {
+        value: [
+          {
+            Id:             7,
+            EmailAddress:   'tom@example.com',
+            PrimaryGroupId: 5,
+            Groups:         [{ GroupId: 5 }],
+          },
+        ],
+      });
+
+    const client = makeClient();
+    const result = await client.getUserByNumber('102');
+    expect(result.roleName).toBe('users');
     expect(nock.isDone()).toBe(true);
   });
 });
@@ -121,7 +143,7 @@ describe('getGroups', () => {
 // ── 3. Successful PATCH → 204 → no error thrown ───────────────────────────────
 
 describe('patchUserGroup', () => {
-  it('resolves without error when the PBX responds with 204', async () => {
+  it('resolves without error when the PBX responds with 204 (defaults to "users" role)', async () => {
     nock(`https://${TEST_FQDN}`)
       .patch('/xapi/v1/Users(42)', {
         Groups: [{ GroupId: 35, Rights: { RoleName: 'users' } }],
@@ -131,6 +153,19 @@ describe('patchUserGroup', () => {
 
     const client = makeClient();
     await expect(client.patchUserGroup(42, 35)).resolves.toBeUndefined();
+    expect(nock.isDone()).toBe(true);
+  });
+
+  it('preserves the provided roleName in the PATCH body', async () => {
+    nock(`https://${TEST_FQDN}`)
+      .patch('/xapi/v1/Users(42)', {
+        Groups: [{ GroupId: 35, Rights: { RoleName: 'system_admins' } }],
+        Id: 42,
+      })
+      .reply(204);
+
+    const client = makeClient();
+    await expect(client.patchUserGroup(42, 35, null, 'system_admins')).resolves.toBeUndefined();
     expect(nock.isDone()).toBe(true);
   });
 

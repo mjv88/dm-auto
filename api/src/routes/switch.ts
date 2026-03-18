@@ -96,10 +96,12 @@ export async function switchRoutes(fastify: FastifyInstance): Promise<void> {
       // 5. Get current user info
       let userId: number;
       let currentGroupId: number;
+      let roleName: string;
       try {
         const userResult = await xapiClient.getUserByNumber(session.extensionNumber!);
-        userId = userResult.userId;
+        userId         = userResult.userId;
         currentGroupId = userResult.currentGroupId;
+        roleName       = userResult.roleName;
       } catch {
         return reply.code(503).send({ error: 'PBX_UNAVAILABLE' });
       }
@@ -131,7 +133,7 @@ export async function switchRoutes(fastify: FastifyInstance): Promise<void> {
 
       // 8. Perform the switch
       try {
-        await xapiClient.patchUserGroup(userId, targetDeptId, callerIdOverride);
+        await xapiClient.patchUserGroup(userId, targetDeptId, callerIdOverride, roleName);
       } catch (err) {
         const errorCode =
           err instanceof PBXUnavailableError ? 'PBX_UNAVAILABLE' : 'INTERNAL_ERROR';

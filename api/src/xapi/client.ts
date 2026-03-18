@@ -18,6 +18,7 @@ export interface XAPIUserResult {
   userId:         number;
   currentGroupId: number;
   emailAddress:   string;
+  roleName:       string;   // RoleName from the user's primary group Rights
 }
 
 export interface XAPIGroup {
@@ -120,14 +121,15 @@ export class XAPIClient {
   async getUserByNumber(extensionNumber: string): Promise<XAPIUserResult> {
     const path =
       `/Users?$filter=Number eq '${extensionNumber}'` +
-      `&$expand=Groups` +
-      `&$select=Id,Number,FirstName,LastName,EmailAddress`;
+      `&$expand=Groups($expand=Rights)` +
+      `&$select=Id,Number,EmailAddress,PrimaryGroupId`;
 
     const data = (await this.get(path)) as {
       value: Array<{
-        Id:           number;
-        EmailAddress: string;
-        Groups:       Array<{ GroupId: number }>;
+        Id:             number;
+        EmailAddress:   string;
+        PrimaryGroupId: number;
+        Groups:         Array<{ GroupId: number; Rights?: { RoleName?: string } }>;
       }>;
     };
 
@@ -138,10 +140,16 @@ export class XAPIClient {
       );
     }
 
+    // Preserve the user's role from their primary group — fall back to 'users'
+    const primaryGroup = user.Groups?.find(g => g.GroupId === user.PrimaryGroupId)
+      ?? user.Groups?.[0];
+    const roleName = primaryGroup?.Rights?.RoleName ?? 'users';
+
     return {
       userId:         user.Id,
-      currentGroupId: user.Groups[0]?.GroupId ?? 0,
+      currentGroupId: user.PrimaryGroupId ?? user.Groups?.[0]?.GroupId ?? 0,
       emailAddress:   user.EmailAddress,
+      roleName,
     };
   }
 
@@ -225,9 +233,10 @@ export class XAPIClient {
     userId: number,
     targetGroupId: number,
     outboundCallerId?: string | null,
+    roleName = 'users',
   ): Promise<void> {
     await this.patch(`/Users(${userId})`, {
-      Groups: [{ GroupId: targetGroupId, Rights: { RoleName: 'users' } }],
+      Groups: [{ GroupId: targetGroupId, Rights: { RoleName: roleName } }],
       Id:     userId,
       ...(outboundCallerId ? { OutboundCallerID: outboundCallerId } : {}),
     });
