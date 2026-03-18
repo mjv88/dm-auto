@@ -15,6 +15,9 @@
  *   - 503 PBX_UNAVAILABLE: getUserByNumber fails
  *   - 503 PBX_UNAVAILABLE: patchUserGroup fails
  *   - Cross-tenant leakage: DB query always filters by tenantId
+ *   - Ring group re-assignment: removed from old dept's ring groups, added to new dept's
+ *   - Ring group shared by both depts: no PATCH issued
+ *   - Ring group fetch fails: switch still returns 200 (non-fatal)
  */
 
 import Fastify from 'fastify';
@@ -93,16 +96,18 @@ function makeDbMock(runnerRow: unknown = mockRunner) {
 }
 
 function makeXapiMock(overrides: {
-  getUserFails?:  boolean;
-  patchFails?:    boolean;
-  currentGroupId?: number;
+  getUserFails?:       boolean;
+  patchFails?:         boolean;
+  currentGroupId?:     number;
+  ringGroupsFail?:     boolean;
+  ringGroups?:         unknown[];
 } = {}) {
-  const { getUserFails, patchFails, currentGroupId = 3 } = overrides;
+  const { getUserFails, patchFails, currentGroupId = 3, ringGroupsFail, ringGroups = [] } = overrides;
   return {
     getUserByNumber: jest.fn().mockImplementation(() =>
       getUserFails
         ? Promise.reject(new Error('PBX unreachable'))
-        : Promise.resolve({ userId: 42, currentGroupId, emailAddress: EMAIL }),
+        : Promise.resolve({ userId: 42, currentGroupId, emailAddress: EMAIL, roleName: 'users' }),
     ),
     getGroups: jest.fn().mockResolvedValue([
       { id: 3, name: 'Sales' },
@@ -114,6 +119,12 @@ function makeXapiMock(overrides: {
         ? Promise.reject(new Error('PBX unreachable'))
         : Promise.resolve(),
     ),
+    getRingGroups: jest.fn().mockImplementation(() =>
+      ringGroupsFail
+        ? Promise.reject(new Error('PBX unreachable'))
+        : Promise.resolve(ringGroups),
+    ),
+    updateRingGroupMembers: jest.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -398,6 +409,101 @@ describe('POST /runner/switch', () => {
 
     // Verify select was called; the where clause receives eq(runners.tenantId, ...) conditions
     expect(mockDb.select).toHaveBeenCalled();
+  });
+
+  // ── Ring group re-assignment ──────────────────────────────────────────────
+
+  it('removes runner from old dept ring groups and adds to new dept ring groups', async () => {
+    const ringGroups = [
+      // ring group for old dept (3) — runner is a member
+      {
+        id: 50, name: 'Sales Ring', number: '800', groupIds: [3],
+        members: [
+          { id: 11, number: EXT,   name: 'Runner', tags: [] },
+          { id: 22, number: '102', name: 'Alice',  tags: [] },
+        ],
+      },
+      // ring group for new dept (7) — runner is not yet a member
+      {
+        id: 51, name: 'Support Ring', number: '801', groupIds: [7],
+        members: [
+          { id: 33, number: '103', name: 'Bob', tags: [] },
+        ],
+      },
+    ];
+
+    const xapiMock = makeXapiMock({ currentGroupId: 3, ringGroups });
+    (getDb as jest.Mock).mockReturnValue(makeDbMock());
+    (XAPIClient.create as jest.Mock).mockResolvedValue(xapiMock);
+
+    const app  = await buildApp();
+    const resp = await app.inject({
+      method:  'POST',
+      url:     '/runner/switch',
+      headers: { authorization: `Bearer ${makeToken()}` },
+      payload: { targetDeptId: 7 },
+    });
+
+    expect(resp.statusCode).toBe(200);
+
+    // Runner removed from ring group 50 — only Alice remains
+    expect(xapiMock.updateRingGroupMembers).toHaveBeenCalledWith(
+      50,
+      [{ id: 22, number: '102', name: 'Alice', tags: [] }],
+    );
+
+    // Runner added to ring group 51 — Bob stays, runner appended with only Number
+    expect(xapiMock.updateRingGroupMembers).toHaveBeenCalledWith(
+      51,
+      [{ id: 33, number: '103', name: 'Bob', tags: [] }, { number: EXT }],
+    );
+
+    expect(xapiMock.updateRingGroupMembers).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not PATCH ring groups shared by both old and new departments', async () => {
+    const ringGroups = [
+      // shared ring group — belongs to both dept 3 (old) and dept 7 (new)
+      {
+        id: 60, name: 'Shared Ring', number: '802', groupIds: [3, 7],
+        members: [{ id: 11, number: EXT, name: 'Runner', tags: [] }],
+      },
+    ];
+
+    const xapiMock = makeXapiMock({ currentGroupId: 3, ringGroups });
+    (getDb as jest.Mock).mockReturnValue(makeDbMock());
+    (XAPIClient.create as jest.Mock).mockResolvedValue(xapiMock);
+
+    const app  = await buildApp();
+    const resp = await app.inject({
+      method:  'POST',
+      url:     '/runner/switch',
+      headers: { authorization: `Bearer ${makeToken()}` },
+      payload: { targetDeptId: 7 },
+    });
+
+    expect(resp.statusCode).toBe(200);
+    // No PATCH issued — ring group is in both depts, no net change
+    expect(xapiMock.updateRingGroupMembers).not.toHaveBeenCalled();
+  });
+
+  it('returns 200 even when getRingGroups throws (ring group logic is non-fatal)', async () => {
+    const xapiMock = makeXapiMock({ currentGroupId: 3, ringGroupsFail: true });
+    (getDb as jest.Mock).mockReturnValue(makeDbMock());
+    (XAPIClient.create as jest.Mock).mockResolvedValue(xapiMock);
+
+    const app  = await buildApp();
+    const resp = await app.inject({
+      method:  'POST',
+      url:     '/runner/switch',
+      headers: { authorization: `Bearer ${makeToken()}` },
+      payload: { targetDeptId: 7 },
+    });
+
+    // Dept switch succeeded — ring group failure must not affect the response
+    expect(resp.statusCode).toBe(200);
+    expect(resp.json().success).toBe(true);
+    expect(xapiMock.updateRingGroupMembers).not.toHaveBeenCalled();
   });
 
   it('rejects token signed with a different secret (wrong tenant token cannot be replayed)', async () => {
