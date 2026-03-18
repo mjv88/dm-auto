@@ -61,6 +61,12 @@ export async function switchRoutes(fastify: FastifyInstance): Promise<void> {
       }
       const runner = runnerRows[0];
 
+      // Resolve caller ID: dept override → runner default → null (3CX keeps existing)
+      const callerIdOverride =
+        (runner.deptCallerIds as Record<string, string> | null)?.[String(targetDeptId)] ??
+        runner.outboundCallerId ??
+        null;
+
       // 3. Confirm targetDeptId is in runner.allowedDeptIds (stored as strings)
       if (!runner.allowedDeptIds.includes(String(targetDeptId))) {
         await writeAuditLog(request, {
@@ -125,7 +131,7 @@ export async function switchRoutes(fastify: FastifyInstance): Promise<void> {
 
       // 8. Perform the switch
       try {
-        await xapiClient.patchUserGroup(userId, targetDeptId);
+        await xapiClient.patchUserGroup(userId, targetDeptId, callerIdOverride);
       } catch (err) {
         const errorCode =
           err instanceof PBXUnavailableError ? 'PBX_UNAVAILABLE' : 'INTERNAL_ERROR';
