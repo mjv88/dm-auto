@@ -1,14 +1,17 @@
+# syntax=docker/dockerfile:1
 FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package*.json ./
-RUN NODE_ENV=development npm ci
+RUN --mount=type=cache,target=/root/.npm \
+    NODE_ENV=development npm ci
 
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build
+RUN --mount=type=cache,target=/app/.next/cache \
+    npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
