@@ -78,10 +78,17 @@ export default function RunnersPage() {
     outboundCallerId: string;
     deptCallerIds: Record<string, string>;
   }) {
+    // Build API body — strip empty outboundCallerId to null so Zod doesn't reject
+    // it as "" and so the PUT handler writes null to DB (clearing an existing value)
+    const apiBody = {
+      ...data,
+      outboundCallerId: data.outboundCallerId || null,
+    };
+
     if (modalRunner) {
-      await adminPut(`/admin/runners/${modalRunner.id}`, data);
+      await adminPut(`/admin/runners/${modalRunner.id}`, apiBody);
     } else {
-      await adminPost('/admin/runners', data);
+      await adminPost('/admin/runners', apiBody);
     }
     setModalRunner(undefined);
     load();

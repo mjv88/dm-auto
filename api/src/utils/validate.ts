@@ -107,7 +107,7 @@ export const createRunnerSchema = z.object({
   extension:        z.string().min(1).max(20).regex(/^\d+$/, 'Extension must be numeric'),
   pbxId:            z.string().uuid(),
   allowedDeptIds:   z.array(z.string()).default([]),
-  outboundCallerId: callerIdSchema.optional(),
+  outboundCallerId: callerIdSchema.nullable().optional(),
   deptCallerIds:    z.record(z.string(), callerIdSchema).optional(),
 });
 
@@ -117,7 +117,7 @@ export const updateRunnerSchema = z.object({
   extension:        z.string().min(1).max(20).regex(/^\d+$/, 'Extension must be numeric').optional(),
   allowedDeptIds:   z.array(z.string()).optional(),
   isActive:         z.boolean().optional(),
-  outboundCallerId: callerIdSchema.optional(),
+  outboundCallerId: callerIdSchema.nullable().optional(),
   deptCallerIds:    z.record(z.string(), callerIdSchema).optional(),
 });
 
