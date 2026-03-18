@@ -109,6 +109,7 @@ export const createRunnerSchema = z.object({
   allowedDeptIds:   z.array(z.string()).default([]),
   outboundCallerId: callerIdSchema.nullable().optional(),
   deptCallerIds:    z.record(z.string(), callerIdSchema).optional(),
+  deptRingGroups: z.record(z.string(), z.array(z.number().int().positive())).optional(),
 });
 
 /** PUT /admin/runners/:id */
@@ -119,6 +120,7 @@ export const updateRunnerSchema = z.object({
   isActive:         z.boolean().optional(),
   outboundCallerId: callerIdSchema.nullable().optional(),
   deptCallerIds:    z.record(z.string(), callerIdSchema).optional(),
+  deptRingGroups: z.record(z.string(), z.array(z.number().int().positive())).optional(),
 });
 
 // ── Admin tenant schemas ───────────────────────────────────────────────────────
