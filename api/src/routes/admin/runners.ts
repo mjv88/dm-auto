@@ -70,6 +70,8 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
         pbxName: pbxCredentials.pbxName,
         pbxCredentialId: runners.pbxCredentialId,
         createdAt: runners.createdAt,
+        outboundCallerId: runners.outboundCallerId,
+        deptCallerIds:    runners.deptCallerIds,
       })
       .from(runners)
       .innerJoin(pbxCredentials, eq(runners.pbxCredentialId, pbxCredentials.id))
@@ -96,7 +98,7 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
     if (!parseResult.success) {
       return reply.code(400).send({ error: 'VALIDATION_ERROR', message: parseResult.error.message });
     }
-    const { email, extension, pbxId, allowedDeptIds } = parseResult.data;
+    const { email, extension, pbxId, allowedDeptIds, outboundCallerId, deptCallerIds } = parseResult.data;
 
     const db = getDb();
 
@@ -160,6 +162,8 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
         isActive: true,
         createdBy: session.email,
         userId,
+        outboundCallerId: outboundCallerId ?? null,
+        deptCallerIds:    deptCallerIds ?? null,
       })
       .returning();
 
@@ -203,6 +207,8 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
     if (updates.extension !== undefined) setValues.extensionNumber = updates.extension;
     if (updates.allowedDeptIds !== undefined) setValues.allowedDeptIds = updates.allowedDeptIds;
     if (updates.isActive !== undefined) setValues.isActive = updates.isActive;
+    if (updates.outboundCallerId !== undefined) setValues.outboundCallerId = updates.outboundCallerId;
+    if (updates.deptCallerIds    !== undefined) setValues.deptCallerIds    = updates.deptCallerIds as Record<string, string>;
 
     const updated = await db
       .update(runners)
