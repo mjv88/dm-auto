@@ -15,6 +15,7 @@ const BASE_LINKS = [
 
 const SUPER_ADMIN_LINKS: { href: string; label: string; exact?: boolean }[] = [
   { href: '/admin/companies', label: 'Companies' },
+  { href: '/admin/system',    label: 'System' },
 ];
 
 export default function AdminNav() {

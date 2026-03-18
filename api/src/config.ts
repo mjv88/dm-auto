@@ -44,6 +44,10 @@ const envSchema = z.object({
 
   // CORS — only requests from the Runner PWA are allowed
   NEXT_PUBLIC_APP_URL: z.string().url(),
+
+  // Coolify — for super_admin system management (optional)
+  COOLIFY_URL: z.string().url().optional(),
+  COOLIFY_API_TOKEN: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
