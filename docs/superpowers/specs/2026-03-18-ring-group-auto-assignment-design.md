@@ -22,9 +22,11 @@ Fully PBX-driven. One GET call at switch time fetches all ring groups with their
 
 ```
 GET /xapi/v1/RingGroups
-  ?$select=Id,Name,Number,IsRegistered,RingStrategy,ForwardNoAnswer,Groups
+  ?$select=Id,Name,Number,IsRegistered,RingStrategy,ForwardNoAnswer
   &$expand=Members,Groups($select=GroupId,Name;$filter=not startsWith(Name,'___FAVORITES___');)
 ```
+
+`Groups` is listed only in `$expand`, not in `$select` — navigation properties must not appear in both. The nested `$filter` inside the `$expand` is valid OData 4.0 but may be silently ignored by some 3CX builds. The implementation must apply a client-side fallback filter: after receiving the response, filter out any group entry where `Name` starts with `___FAVORITES___`.
 
 Response shape per ring group:
 ```json
@@ -95,6 +97,8 @@ Steps 1–3 (validate, load runner, dept PATCH) are unchanged. Ring group handli
        skip (already present — no-op)
 
 9. Any PATCH failure: log { ringGroupId, error } — do NOT throw, do NOT fail the switch
+
+**Placement note:** Steps 4–9 execute after `patchUserGroup` resolves (dept switch committed) and **before** `writeAuditLog` / `reply.send()`. This ensures ring group work happens while the request is still active. Placing it after `reply.send()` would be silently broken — Fastify closes the reply stream immediately on send.
 ```
 
 ---
@@ -110,21 +114,25 @@ Steps 1–3 (validate, load runner, dept PATCH) are unchanged. Ring group handli
 ### `getRingGroups(): Promise<XAPIRingGroup[]>`
 
 ```typescript
+interface XAPIRingGroupMember {
+  id?:    number;        // present on existing members, omit when adding new
+  number: string;        // extension number — used to identify the runner
+  name?:  string | null;
+  tags?:  unknown[];
+}
+
 interface XAPIRingGroup {
-  id:      number;
-  name:    string;
-  number:  string;
-  groupIds: number[];   // department IDs this ring group belongs to
-  members: Array<{
-    id:     number;
-    number: string;
-    name:   string | null;
-    tags:   unknown[];
-  }>;
+  id:       number;
+  name:     string;
+  number:   string;
+  groupIds: number[];    // department IDs this ring group belongs to (from Groups[].GroupId)
+  members:  XAPIRingGroupMember[];
 }
 ```
 
-Fetches all ring groups using the confirmed GET query above. Filters out `___FAVORITES___` via the query itself.
+Fetches all ring groups using the confirmed GET query above. After receiving the response, client-side filters out any group where `Name` starts with `___FAVORITES___` as a defensive fallback.
+
+**PrimaryGroupId assumption:** `groupIds` is derived from the ring group's `Groups` array, which lists departments a ring group belongs to — not individual user memberships. During the switch, `currentGroupId` is the runner's `PrimaryGroupId` from `getUserByNumber`. Only the primary department drives which ring groups are considered "old". Non-primary group memberships are out of scope.
 
 ### `updateRingGroupMembers(ringGroupId: number, members: XAPIRingGroupMember[]): Promise<void>`
 
@@ -133,7 +141,7 @@ PATCH /xapi/v1/RingGroups({ringGroupId})
 Body: { Members: members }
 ```
 
-Expected response: 204 No Content. Same retry + error handling pattern as `patchUserGroup`.
+Expected response: 204 No Content. Same retry + error handling pattern as `patchUserGroup`, including the automatic PATCH → PUT fallback for 3CX v18 that the `request()` private method already provides.
 
 ---
 
