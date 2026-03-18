@@ -43,6 +43,7 @@ interface RunnerForm {
   allowedDeptIds: number[];
   outboundCallerId: string;
   deptCallerIds: Record<string, string>;
+  deptRingGroups: Record<string, number[]>;
 }
 
 interface RunnerData {
@@ -54,6 +55,7 @@ interface RunnerData {
   allowedDeptIds: number[];
   outboundCallerId?: string | null;
   deptCallerIds?: Record<string, string> | null;
+  deptRingGroups?: Record<string, number[]> | null;
   isActive: boolean;
 }
 
@@ -80,6 +82,7 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
     allowedDeptIds: [],
     outboundCallerId: '',
     deptCallerIds: {},
+    deptRingGroups: {},
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +105,7 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
         allowedDeptIds:   runner.allowedDeptIds,
         outboundCallerId: runner.outboundCallerId ?? '',
         deptCallerIds:    runner.deptCallerIds ?? {},
+        deptRingGroups:   runner.deptRingGroups ?? {},
       });
     }
   }, [runner, pbxList]);
@@ -151,11 +155,43 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
   }
 
   function toggleDept(id: number) {
-    setForm((prev) => ({
+    setForm((prev) => {
+      const nowChecked = !prev.allowedDeptIds.includes(id);
+      const newAllowed = nowChecked
+        ? [...prev.allowedDeptIds, id]
+        : prev.allowedDeptIds.filter((d) => d !== id);
+
+      // When checking a dept for the first time (no stored config), pre-populate
+      // with the PBX-driven ring groups for that dept
+      let newDeptRingGroups = prev.deptRingGroups;
+      if (nowChecked && prev.deptRingGroups[String(id)] === undefined) {
+        const pbxDriven = pbxRingGroups
+          .filter(rg => rg.groupIds.includes(id))
+          .map(rg => rg.id);
+        newDeptRingGroups = { ...prev.deptRingGroups, [String(id)]: pbxDriven };
+      }
+
+      return { ...prev, allowedDeptIds: newAllowed, deptRingGroups: newDeptRingGroups };
+    });
+  }
+
+  function addRingGroupToDept(deptId: number, ringGroupId: number) {
+    setForm(prev => ({
       ...prev,
-      allowedDeptIds: prev.allowedDeptIds.includes(id)
-        ? prev.allowedDeptIds.filter((d) => d !== id)
-        : [...prev.allowedDeptIds, id],
+      deptRingGroups: {
+        ...prev.deptRingGroups,
+        [String(deptId)]: [...(prev.deptRingGroups[String(deptId)] ?? []), ringGroupId],
+      },
+    }));
+  }
+
+  function removeRingGroupFromDept(deptId: number, ringGroupId: number) {
+    setForm(prev => ({
+      ...prev,
+      deptRingGroups: {
+        ...prev.deptRingGroups,
+        [String(deptId)]: (prev.deptRingGroups[String(deptId)] ?? []).filter(id => id !== ringGroupId),
+      },
     }));
   }
 
@@ -195,6 +231,11 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
       deptCallerIds: Object.fromEntries(
         Object.entries(form.deptCallerIds).filter(([, v]) => v.trim() !== ''),
       ),
+      // Keep deptRingGroups as-is. Note: unchecking a dept does NOT wipe its entry
+      // from deptRingGroups — this is intentional so the config is preserved if
+      // the admin re-checks the dept later. On switch, only the targetDept and
+      // currentGroupId keys are ever read, so orphaned entries are harmless.
+      deptRingGroups: form.deptRingGroups,
     };
 
     try {
