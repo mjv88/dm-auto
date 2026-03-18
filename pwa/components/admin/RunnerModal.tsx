@@ -368,13 +368,26 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
                         />
                       )}
                     </div>
-                    {checked && (() => {
-                      const rings = pbxRingGroups.filter(rg => rg.groupIds.includes(dept.id));
-                      return rings.length > 0 ? (
-                        <p className="ml-5 mb-0.5 text-xs text-blue-500">
-                          ↳ Ring groups: {rings.map(rg => rg.name).join(', ')}
-                        </p>
-                      ) : null;
+                    {checked && pbxRingGroups.length > 0 && (() => {
+                      const deptIdNum = Number(dept.id);
+                      const forDept = pbxRingGroups.filter(rg => rg.groupIds.includes(deptIdNum));
+                      const notDept  = pbxRingGroups.filter(rg => !rg.groupIds.includes(deptIdNum));
+                      if (forDept.length === 0 && notDept.length === 0) return null;
+                      return (
+                        <div className="ml-5 mb-1 flex flex-wrap gap-1 items-center">
+                          <span className="text-xs text-gray-400 mr-0.5">↳</span>
+                          {forDept.map(rg => (
+                            <span key={rg.id} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs bg-green-50 text-green-700 border border-green-200">
+                              <span>✓</span> {rg.name}
+                            </span>
+                          ))}
+                          {notDept.map(rg => (
+                            <span key={rg.id} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs bg-gray-50 text-gray-400 border border-gray-200">
+                              <span>✕</span> {rg.name}
+                            </span>
+                          ))}
+                        </div>
+                      );
                     })()}
                   </div>
                 );
