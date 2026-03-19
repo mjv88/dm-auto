@@ -57,7 +57,7 @@ export default function SystemPage() {
   const [loading,      setLoading]      = useState(true);
   const [vacuuming,    setVacuuming]    = useState(false);
   const [pruning,      setPruning]      = useState(false);
-  const [pruneResult,  setPruneResult]  = useState<{ message: string; dashboardUrl?: string } | null>(null);
+  const [pruneResult,  setPruneResult]  = useState<{ message: string; output?: string; dashboardUrl?: string } | null>(null);
   const [msg,          setMsg]          = useState('');
 
   useEffect(() => {
@@ -93,7 +93,7 @@ export default function SystemPage() {
     setPruning(true);
     setPruneResult(null);
     try {
-      const r = await adminPost<{ message: string; dashboardUrl?: string }>('/admin/system/docker-prune', {});
+      const r = await adminPost<{ message: string; output?: string; dashboardUrl?: string }>('/admin/system/docker-prune', {});
       setPruneResult(r);
     } catch (err) {
       setPruneResult({ message: err instanceof Error ? err.message : 'Docker prune failed.' });
@@ -165,12 +165,12 @@ export default function SystemPage() {
                 {pruning ? 'Pruning…' : 'Docker Prune'}
               </button>
               {pruneResult && (
-                <p className="mt-2 text-xs text-gray-600">
-                  {pruneResult.message}
-                  {pruneResult.dashboardUrl && (
-                    <> — <a href={pruneResult.dashboardUrl} target="_blank" rel="noreferrer" className="text-blue-600 underline">Open Coolify</a></>
+                <div className="mt-2">
+                  <p className="text-xs text-gray-600">{pruneResult.message}</p>
+                  {pruneResult.output && (
+                    <pre className="mt-1 text-xs bg-gray-900 text-green-400 rounded p-2 max-h-32 overflow-y-auto whitespace-pre-wrap">{pruneResult.output}</pre>
                   )}
-                </p>
+                </div>
               )}
             </div>
           </div>

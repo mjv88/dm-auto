@@ -48,6 +48,10 @@ const envSchema = z.object({
   // Coolify — for super_admin system management (optional)
   COOLIFY_URL: z.string().url().optional(),
   COOLIFY_API_TOKEN: z.string().optional(),
+
+  // SSH — for direct server commands (docker prune etc.)
+  SERVER_SSH_HOST: z.string().optional(),
+  SERVER_SSH_KEY: z.string().optional(),   // PEM private key string
 });
 
 export type Env = z.infer<typeof envSchema>;

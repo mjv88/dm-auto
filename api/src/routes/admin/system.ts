@@ -12,9 +12,30 @@ import type { FastifyInstance } from 'fastify';
 import os from 'node:os';
 import { statfs } from 'node:fs/promises';
 import { sql } from 'drizzle-orm';
+import { Client as SshClient } from 'ssh2';
 import { getDb } from '../../db/index.js';
 import { requireAuth, requireRole } from '../../middleware/requireAuth.js';
 import { config } from '../../config.js';
+
+/** Runs a command over SSH and returns stdout. */
+function sshExec(host: string, privateKey: string, command: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const conn = new SshClient();
+    let output = '';
+    conn
+      .on('ready', () => {
+        conn.exec(command, (err, stream) => {
+          if (err) { conn.end(); return reject(err); }
+          stream
+            .on('close', () => { conn.end(); resolve(output.trim()); })
+            .on('data', (chunk: Buffer) => { output += chunk.toString(); })
+            .stderr.on('data', (chunk: Buffer) => { output += chunk.toString(); });
+        });
+      })
+      .on('error', reject)
+      .connect({ host, port: 22, username: 'root', privateKey });
+  });
+}
 
 export async function adminSystemRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.addHook('preHandler', requireAuth);
@@ -107,48 +128,27 @@ export async function adminSystemRoutes(fastify: FastifyInstance): Promise<void>
   // ── POST /admin/system/docker-prune ───────────────────────────────────────
 
   fastify.post('/admin/system/docker-prune', { preHandler: [requireRole('super_admin')] }, async (_request, reply) => {
-    const { COOLIFY_URL, COOLIFY_API_TOKEN } = config;
+    const { SERVER_SSH_HOST, SERVER_SSH_KEY } = config;
 
-    if (!COOLIFY_URL || !COOLIFY_API_TOKEN) {
+    if (!SERVER_SSH_HOST || !SERVER_SSH_KEY) {
       return reply.code(501).send({
         error: 'NOT_CONFIGURED',
-        message: 'COOLIFY_URL and COOLIFY_API_TOKEN env vars are not set.',
-        dashboardUrl: null,
+        message: 'SERVER_SSH_HOST and SERVER_SSH_KEY env vars are not set.',
       });
     }
 
-    // Discover server UUID from Coolify API
     try {
-      const serversResp = await fetch(`${COOLIFY_URL}/api/v1/servers`, {
-        headers: { Authorization: `Bearer ${COOLIFY_API_TOKEN}` },
-      });
-      const servers = await serversResp.json() as Array<{ uuid: string; name: string }>;
-      const server  = servers[0]; // first (and only) server
-
-      if (!server) throw new Error('No servers found');
-
-      // Trigger docker cleanup — Coolify v4 endpoint
-      const cleanupResp = await fetch(
-        `${COOLIFY_URL}/api/v1/servers/${server.uuid}/docker/cleanup`,
-        { method: 'POST', headers: { Authorization: `Bearer ${COOLIFY_API_TOKEN}` } },
+      const output = await sshExec(
+        SERVER_SSH_HOST,
+        SERVER_SSH_KEY,
+        'docker system prune -f 2>&1',
       );
-
-      if (cleanupResp.ok) {
-        return reply.send({ message: 'Docker cleanup triggered.' });
-      }
-
-      // Endpoint not supported — return dashboard URL for manual trigger
-      const dashboardUrl = `${COOLIFY_URL}/server/${server.uuid}/docker-cleanup`;
-      return reply.code(202).send({
-        message: 'Docker cleanup API not available. Use the dashboard.',
-        dashboardUrl,
-      });
+      return reply.send({ message: 'Docker prune completed.', output });
     } catch (err) {
-      fastify.log.warn({ err }, 'Docker prune via Coolify API failed');
+      fastify.log.error({ err }, 'Docker prune via SSH failed');
       return reply.code(502).send({
-        error: 'COOLIFY_UNAVAILABLE',
-        message: 'Could not reach Coolify.',
-        dashboardUrl: `${COOLIFY_URL}/servers`,
+        error: 'SSH_FAILED',
+        message: err instanceof Error ? err.message : 'SSH command failed.',
       });
     }
   });
