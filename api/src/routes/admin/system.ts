@@ -43,28 +43,41 @@ export async function adminSystemRoutes(fastify: FastifyInstance): Promise<void>
     }
 
     // ── DB stats ──────────────────────────────────────────────────────────────
-    const [dbSizeRow] = await db.execute(
-      sql`SELECT pg_database_size(current_database()) AS size`,
-    ) as unknown as [{ size: string }];
+    let dbSizeBytes   = 0;
+    let connections   = 0;
+    let tableStats: Array<{ name: string; liveRows: number; deadRows: number; totalSize: string }> = [];
 
-    const tableStats = await db.execute(sql`
-      SELECT
-        relname                                                     AS table_name,
-        n_live_tup                                                  AS live_rows,
-        n_dead_tup                                                  AS dead_rows,
-        pg_size_pretty(pg_total_relation_size('"' || relname || '"')) AS total_size
-      FROM pg_stat_user_tables
-      ORDER BY n_live_tup DESC
-    `) as unknown as Array<{
-      table_name: string;
-      live_rows: string;
-      dead_rows: string;
-      total_size: string;
-    }>;
+    try {
+      const sizeResult = await db.execute(
+        sql`SELECT pg_database_size(current_database())::bigint AS size`,
+      );
+      dbSizeBytes = Number((sizeResult as unknown as Array<{ size: string }>)[0]?.size ?? 0);
 
-    const [connRow] = await db.execute(
-      sql`SELECT count(*) AS count FROM pg_stat_activity WHERE state IS NOT NULL`,
-    ) as unknown as [{ count: string }];
+      const connResult = await db.execute(
+        sql`SELECT count(*)::int AS count FROM pg_stat_activity WHERE state IS NOT NULL`,
+      );
+      connections = Number((connResult as unknown as Array<{ count: string }>)[0]?.count ?? 0);
+
+      const tableResult = await db.execute(sql`
+        SELECT
+          relname::text                                  AS table_name,
+          n_live_tup::bigint                             AS live_rows,
+          n_dead_tup::bigint                             AS dead_rows,
+          pg_size_pretty(pg_total_relation_size(relid))  AS total_size
+        FROM pg_stat_user_tables
+        ORDER BY n_live_tup DESC
+      `);
+      tableStats = (tableResult as unknown as Array<{
+        table_name: string; live_rows: string; dead_rows: string; total_size: string;
+      }>).map(t => ({
+        name:      t.table_name,
+        liveRows:  Number(t.live_rows),
+        deadRows:  Number(t.dead_rows),
+        totalSize: t.total_size,
+      }));
+    } catch (err) {
+      fastify.log.warn({ err }, 'DB stats query failed');
+    }
 
     return reply.send({
       server: {
@@ -75,14 +88,9 @@ export async function adminSystemRoutes(fastify: FastifyInstance): Promise<void>
         uptimeSeconds: uptime,
       },
       database: {
-        sizeBytes:   Number(dbSizeRow?.size ?? 0),
-        connections: Number(connRow?.count ?? 0),
-        tables:      tableStats.map(t => ({
-          name:      t.table_name,
-          liveRows:  Number(t.live_rows),
-          deadRows:  Number(t.dead_rows),
-          totalSize: t.total_size,
-        })),
+        sizeBytes: dbSizeBytes,
+        connections,
+        tables: tableStats,
       },
     });
   });

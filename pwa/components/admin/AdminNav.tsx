@@ -5,12 +5,12 @@ import { usePathname } from 'next/navigation';
 import { useRunnerStore } from '@/lib/store';
 
 const BASE_LINKS = [
-  { href: '/admin', label: 'Dashboard', exact: true },
-  { href: '/admin/pbx', label: 'PBX' },
-  { href: '/admin/runners', label: 'Runners' },
-  { href: '/admin/users', label: 'Users' },
-  { href: '/admin/audit', label: 'Audit Log' },
-  { href: '/admin/settings', label: 'Settings' },
+  { href: '/admin',          label: 'Dashboard',  exact: true },
+  { href: '/admin/users',    label: 'Users' },
+  { href: '/admin/pbx',      label: 'PBX' },
+  { href: '/admin/runners',  label: 'Runners' },
+  { href: '/admin/settings', label: 'MS-Entra' },
+  { href: '/admin/audit',    label: 'Audit Log' },
 ];
 
 const SUPER_ADMIN_LINKS: { href: string; label: string; exact?: boolean }[] = [
@@ -22,8 +22,10 @@ export default function AdminNav() {
   const pathname = usePathname();
   const role = useRunnerStore((s) => s.role);
 
+  // Order: Dashboard | Companies* | Users | PBX | Runners | MS-Entra | Audit Log | System*
+  // (* super_admin only)
   const links = role === 'super_admin'
-    ? [...SUPER_ADMIN_LINKS, ...BASE_LINKS]
+    ? [BASE_LINKS[0], ...SUPER_ADMIN_LINKS.slice(0, 1), ...BASE_LINKS.slice(1), SUPER_ADMIN_LINKS[1]]
     : BASE_LINKS;
 
   return (
