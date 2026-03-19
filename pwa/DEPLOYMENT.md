@@ -18,6 +18,8 @@
 | `NEXT_PUBLIC_APP_URL` | Public URL of this PWA | `https://runner.tcx-hub.com` |
 | `NEXT_PUBLIC_SENTRY_DSN` | Sentry DSN for error tracking (optional) | `https://xxx@xxx.ingest.sentry.io/xxx` |
 
+No additional environment variables are required for the PWA beyond the above. System management features (VACUUM, Docker prune) are handled entirely by the API.
+
 ## Coolify Deployment
 
 1. **Create new resource** in Coolify → Docker Compose or Dockerfile
@@ -39,6 +41,11 @@
 - [ ] Department switch completes successfully
 - [ ] PWA install prompt appears / can be added to home screen
 - [ ] Offline page shows when network is unavailable
+- [ ] `/setup` redirects to `/admin` (setup wizard has been retired)
+
+## Setup Wizard
+
+The setup wizard (`/setup`) has been retired. Any requests to `/setup` are automatically redirected to `/admin`. First-time configuration is done directly through the admin panel.
 
 ## Intune Configuration (MDM)
 
@@ -58,3 +65,4 @@ For managed device deployment via Microsoft Intune:
 | SSO redirect fails | Wrong redirect URI in Entra | Add `https://runner.tcx-hub.com/callback` to Entra SPA redirects |
 | PWA won't install | Not served over HTTPS | Ensure Cloudflare proxy or SSL is active |
 | CSP blocks API calls | API domain not in CSP connect-src | Update `next.config.js` headers |
+| `/setup` not found | Setup wizard retired | Navigate to `/admin` directly |

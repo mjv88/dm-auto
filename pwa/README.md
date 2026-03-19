@@ -41,6 +41,47 @@ npm test              # Jest unit tests
 npm run test:e2e      # Playwright E2E tests
 ```
 
+## Admin Interface
+
+The admin panel is accessible at `/admin`. Tab availability depends on the user's role.
+
+### Tab order
+
+| Tab | Role required | Description |
+|---|---|---|
+| Dashboard | All admins | Overview and quick stats |
+| Companies | `super_admin` | Create/delete tenants, manage tenant admins |
+| Users | All admins | Manage runner users |
+| PBX | All admins | PBX configuration and connections |
+| Runners | All admins | Runner profiles and assignments |
+| MS-Entra | All admins | Microsoft Entra ID / Azure AD settings (formerly "Settings") |
+| Audit Log | All admins | Activity audit trail |
+| System | `super_admin` | Server metrics, maintenance operations |
+
+### Companies tab (super_admin)
+
+- Create new tenants
+- Delete existing tenants
+- View and reassign tenant admins
+
+### System tab (super_admin)
+
+- View live server metrics (CPU, memory, disk)
+- Trigger PostgreSQL VACUUM
+- Trigger Docker prune via SSH to reclaim disk space
+
+### Runner Modal
+
+The RunnerModal has been redesigned and includes:
+
+- **PBX user picker** — search and select the linked 3CX user from the PBX
+- **Caller ID fields** — set a default outbound caller ID and per-department overrides
+- **Ring group selector** — assign ring groups per department
+
+### Setup wizard
+
+The setup wizard has been retired. Navigating to `/setup` redirects to `/admin`.
+
 ## Deployment
 
 See [DEPLOYMENT.md](./DEPLOYMENT.md) for Coolify deployment steps, environment variables, and Intune configuration.

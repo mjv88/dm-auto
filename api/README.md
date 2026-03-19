@@ -45,6 +45,16 @@ Required vars:
 | `JWT_SECRET` | 64-char random string for session tokens. Generate: `openssl rand -hex 32` |
 | `NEXT_PUBLIC_APP_URL` | Runner PWA URL — used for CORS (e.g. `https://runner.customer.com`) |
 
+Optional vars (system management):
+
+| Variable | Description |
+|---|---|
+| `COOLIFY_URL` | Coolify base URL for system management (e.g. `https://coolify.tcx-hub.com`) |
+| `COOLIFY_API_TOKEN` | Coolify API token |
+| `SERVER_SSH_HOST` | Server IP address for Docker prune via SSH |
+| `SERVER_SSH_KEY` | PEM private key string for SSH access (stored as env var) |
+| `RATE_LIMIT_MAX` | Max switches per window per extension (default: `10`, set to `25` in prod) |
+
 > **Multi-tenant:** `ENTRA_TENANT_ID` and `ENTRA_RUNNERS_GROUP_ID` are stored per-tenant in the database (not required at server level). See [DEPLOYMENT.md](./DEPLOYMENT.md) for the full reference.
 
 ### 3. Start local dev with Docker
@@ -69,12 +79,32 @@ npm run dev
 
 ## API Endpoints
 
+### Runner (authenticated users)
+
 | Method | Path | Description |
 |---|---|---|
 | `POST` | `/runner/auth` | Resolve runner identity from SSO token |
 | `POST` | `/runner/switch` | Switch to a new department |
 | `GET` | `/runner/departments` | Get current state + allowed departments |
 | `GET` | `/health` | Health check |
+
+### Admin
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/admin/tenants` | List all tenants |
+| `POST` | `/admin/tenants` | Create a new tenant |
+| `DELETE` | `/admin/tenants/:id` | Delete a tenant |
+| `GET` | `/admin/tenants/:id/admins` | List admins for a tenant |
+| `POST` | `/admin/tenants/:id/admins/reassign` | Reassign tenant admin |
+| `PUT` | `/admin/users/:id/company` | Update a user's company assignment |
+| `GET` | `/admin/pbx/:id/users` | List users on a PBX |
+| `GET` | `/admin/pbx/:id/ring-groups` | List ring groups on a PBX |
+| `GET` | `/admin/system` | Server metrics and system status |
+| `POST` | `/admin/system/vacuum` | Run PostgreSQL VACUUM |
+| `POST` | `/admin/system/docker-prune` | Prune unused Docker resources via SSH |
+
+> **Setup wizard retired:** The `/setup` route has been removed. Requests to `/setup` redirect to `/admin`.
 
 Full contract in [RUNNER_APP_SPEC.md](./RUNNER_APP_SPEC.md) §5.
 
@@ -98,6 +128,20 @@ Coolify auto-deploys from `main` branch on push.
 
 For full Coolify setup instructions, environment variable checklist, first-run migration command, and smoke test checklist, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 
+## Database Schema Notes
+
+The `runners` table includes additional columns beyond the basic profile:
+
+| Column | Description |
+|---|---|
+| `outbound_caller_id` | Default outbound caller ID for the runner's extension |
+| `dept_caller_ids` | JSON map of department → caller ID overrides |
+| `dept_ring_groups` | JSON map of department → ring group assignments |
+
+## Rate Limiting
+
+Switches are rate-limited per extension per hour. The limit defaults to `10` and is configured via the `RATE_LIMIT_MAX` env var. Production deployments should set this to `25`.
+
 ## Project Structure
 
 ```
@@ -112,7 +156,8 @@ src/
 │   ├── auth.ts       POST /runner/auth
 │   ├── switch.ts     POST /runner/switch
 │   ├── departments.ts GET /runner/departments
-│   └── health.ts     GET /health
+│   ├── health.ts     GET /health
+│   └── admin/        Admin route handlers
 ├── middleware/
 │   ├── authenticate.ts JWT validation
 │   ├── audit.ts      Audit log writer

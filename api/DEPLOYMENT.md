@@ -41,8 +41,12 @@ In Coolify → Resource → Environment Variables, set **all** of the following:
 | `JWT_EXPIRES_IN` | No | Session duration (default: `8h`) |
 | `PORT` | No | HTTP port (default: `3001`) |
 | `LOG_LEVEL` | No | Pino log level (default: `info`) |
-| `RATE_LIMIT_MAX` | No | Max switches per window per extension (default: `10`) |
+| `RATE_LIMIT_MAX` | No | Max switches per window per extension (default: `10`, recommended: `25` in prod) |
 | `RATE_LIMIT_WINDOW` | No | Rate limit window in ms (default: `3600000` = 1 hour) |
+| `COOLIFY_URL` | No | Coolify base URL for system management (e.g. `https://coolify.tcx-hub.com`) |
+| `COOLIFY_API_TOKEN` | No | Coolify API token — required if `COOLIFY_URL` is set |
+| `SERVER_SSH_HOST` | No | Server IP address for Docker prune via SSH (used by `POST /admin/system/docker-prune`) |
+| `SERVER_SSH_KEY` | No | PEM private key string for SSH access — store the full key content as an env var |
 | `SENTRY_DSN` | No | Sentry DSN for error tracking |
 | `ENTRA_TENANT_ID` | No | Legacy single-tenant var (multi-tenant setup uses DB) |
 | `ENTRA_RUNNERS_GROUP_ID` | No | Legacy single-tenant var (multi-tenant setup uses DB) |
@@ -146,4 +150,13 @@ ENTRA_CLIENT_SECRET=<from Azure App Registration>
 JWT_SECRET=<openssl rand -hex 32>
 NEXT_PUBLIC_APP_URL=https://runner.<customer-domain>.com
 NODE_ENV=production
+
+# Recommended for production:
+RATE_LIMIT_MAX=25
+
+# Optional — system management (admin System tab):
+COOLIFY_URL=https://coolify.tcx-hub.com
+COOLIFY_API_TOKEN=<from Coolify profile>
+SERVER_SSH_HOST=<server IP>
+SERVER_SSH_KEY=<PEM private key string>
 ```
