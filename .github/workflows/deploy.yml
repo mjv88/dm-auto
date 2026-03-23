@@ -1,0 +1,25 @@
+name: Deploy to Coolify
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'api/**'
+      - 'pwa/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Deploy runner-api
+        run: |
+          curl -sf -X GET \
+            "http://46.224.229.119:8000/api/v1/deploy?uuid=v11gk4n5aa8jt3a7nsb7kgi5&force=false" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
+
+      - name: Deploy runner-pwa
+        run: |
+          curl -sf -X GET \
+            "http://46.224.229.119:8000/api/v1/deploy?uuid=ks21626vpo6js88uktyqnqcj&force=false" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
