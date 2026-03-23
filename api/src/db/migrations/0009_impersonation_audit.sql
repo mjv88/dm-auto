@@ -1,1 +1,1 @@
-ALTER TABLE "audit_log" ADD COLUMN "impersonated_by" uuid;
+ALTER TABLE "audit_log" ADD COLUMN IF NOT EXISTS "impersonated_by" uuid;
