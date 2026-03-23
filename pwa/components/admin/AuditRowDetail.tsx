@@ -5,6 +5,7 @@ interface AuditEntry {
   ipAddress?: string;
   userAgent?: string;
   deviceId?: string;
+  impersonatedBy?: string | null;
 }
 
 interface AuditRowDetailProps {
@@ -14,6 +15,12 @@ interface AuditRowDetailProps {
 export default function AuditRowDetail({ entry }: AuditRowDetailProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+      {entry.impersonatedBy && (
+        <div className="sm:col-span-2">
+          <span className="font-medium text-orange-500">Impersonated by: </span>
+          <span className="text-orange-600">{entry.impersonatedBy}</span>
+        </div>
+      )}
       {entry.errorMessage && (
         <div className="sm:col-span-2">
           <span className="font-medium text-gray-500">Error: </span>
@@ -38,7 +45,7 @@ export default function AuditRowDetail({ entry }: AuditRowDetailProps) {
           <span className="text-gray-700">{entry.deviceId}</span>
         </div>
       )}
-      {!entry.errorMessage && !entry.ipAddress && !entry.userAgent && !entry.deviceId && (
+      {!entry.impersonatedBy && !entry.errorMessage && !entry.ipAddress && !entry.userAgent && !entry.deviceId && (
         <div className="text-gray-400">No additional details available.</div>
       )}
     </div>

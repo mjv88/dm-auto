@@ -25,6 +25,7 @@ interface AuditEntry {
   userAgent?: string;
   deviceId?: string;
   durationMs?: number;
+  impersonatedBy?: string | null;
 }
 
 interface PaginatedAudit {
@@ -124,7 +125,17 @@ export default function AuditPage() {
       key: 'extensionNumber',
       header: 'Ext.',
       render: (row) => (
-        <span className="text-xs font-mono">{row.extensionNumber || '—'}</span>
+        <span className="text-xs font-mono inline-flex items-center gap-1">
+          {row.extensionNumber || '—'}
+          {row.impersonatedBy && (
+            <span
+              className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-100 text-orange-600"
+              title={`Impersonated by ${row.impersonatedBy}`}
+            >
+              IMP
+            </span>
+          )}
+        </span>
       ),
     },
     {
