@@ -22,7 +22,7 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply):
   const token = cookieToken || bearerToken;
 
   // Debug logging — remove after cookie auth is verified
-  request.log.debug({
+  request.log.warn({
     hasCookies: !!cookies,
     cookieKeys: cookies ? Object.keys(cookies) : [],
     hasCookieToken: !!cookieToken,
