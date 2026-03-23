@@ -13,7 +13,7 @@ import { tenants } from '../db/schema.js';
 export async function companyRoutes(fastify: FastifyInstance): Promise<void> {
   // ── GET /company/:tenantId/name ─────────────────────────────────────────────
 
-  fastify.get('/company/:tenantId/name', async (request, reply) => {
+  fastify.get('/company/:tenantId/name', { config: { rateLimit: { max: 30, timeWindow: 60_000 } } }, async (request, reply) => {
     const { tenantId } = request.params as { tenantId: string };
 
     const db = getDb();

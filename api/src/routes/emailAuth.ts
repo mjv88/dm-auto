@@ -44,7 +44,7 @@ function generateToken(): string {
 
 export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
   // ── POST /auth/register ─────────────────────────────────────────────────────
-  fastify.post('/auth/register', async (request, reply) => {
+  fastify.post('/auth/register', { config: { rateLimit: { max: 5, timeWindow: 3_600_000 } } }, async (request, reply) => {
     const parsed = registerSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.code(400).send({
