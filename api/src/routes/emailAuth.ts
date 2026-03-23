@@ -29,6 +29,7 @@ import {
   changePasswordSchema,
 } from '../utils/validate.js';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email.js';
+import { SESSION_COOKIE_OPTS } from '../utils/cookieOpts.js';
 
 // Pre-computed dummy hash so timing is consistent for non-existent users
 const DUMMY_HASH = bcrypt.hashSync('dummy-password-for-timing', 12);
@@ -37,15 +38,6 @@ const LOCKOUT_THRESHOLD = 10;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
-
-/** Cookie options shared by login/logout */
-const SESSION_COOKIE_OPTS = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'none' as const,
-  path: '/',
-  maxAge: 60 * 60 * 24,
-};
 
 function generateToken(): string {
   return crypto.randomBytes(32).toString('hex');

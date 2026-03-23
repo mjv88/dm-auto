@@ -108,21 +108,18 @@ export const useRunnerStore = create<RunnerStore>((set) => ({
     });
   },
   stopImpersonation: () => {
-    // TODO: replace with POST /admin/impersonate/stop once the API sets the
-    // original cookie server-side. For now, read originalToken from sessionStorage.
     if (typeof window !== 'undefined') {
       const original = sessionStorage.getItem('originalToken');
       sessionStorage.removeItem('originalToken');
       if (original) {
-        // Temporarily set the originalToken as a manual cookie until server-side support exists
-        // The page reload in the caller will trigger GET /auth/me to pick up the correct session
+        // Restore the admin's original session token
+        set({ sessionToken: original });
+        sessionStorage.setItem('sessionToken', original);
       }
     }
     set({
       originalToken: null,
       impersonatingEmail: null,
-      role: 'runner',
-      selectedAdminTenantId: null,
     });
   },
   reset: () => {

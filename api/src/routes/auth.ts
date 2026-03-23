@@ -29,6 +29,7 @@ import { createSessionToken } from '../middleware/session.js';
 import { writeAuditLog } from '../middleware/audit.js';
 import { authBodySchema } from '../utils/validate.js';
 import { XAPIClient } from '../xapi/client.js';
+import { SESSION_COOKIE_OPTS } from '../utils/cookieOpts.js';
 
 export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.post('/runner/auth', async (request, reply) => {
@@ -220,13 +221,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         tid: tid,
         oid: oid,
       });
-      reply.setCookie('runner_session', sessionToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'none',
-        path: '/',
-        maxAge: 60 * 60 * 24,
-      });
+      reply.setCookie('runner_session', sessionToken, SESSION_COOKIE_OPTS);
       request.log.info({ email, method: 'entra_sso', ip: request.ip }, 'Runner auth successful');
       return reply.send({
         mode: 'direct',
@@ -272,13 +267,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       oid: oid,
     });
 
-    reply.setCookie('runner_session', sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
-      path: '/',
-      maxAge: 60 * 60 * 24,
-    });
+    reply.setCookie('runner_session', sessionToken, SESSION_COOKIE_OPTS);
     request.log.info({ email, method: 'entra_sso', ip: request.ip }, 'Runner auth successful');
     return reply.send({
       mode: 'direct',

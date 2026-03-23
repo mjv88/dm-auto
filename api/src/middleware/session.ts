@@ -29,7 +29,6 @@ export interface UnifiedSession {
 // Legacy aliases for backward compat
 export type RunnerSession = UnifiedSession;
 export type AdminSession = UnifiedSession;
-export type AnySession = UnifiedSession;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

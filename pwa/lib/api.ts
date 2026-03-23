@@ -123,20 +123,6 @@ export interface SwitchResponse {
   switchedAt: string;
 }
 
-// ---------------------------------------------------------------------------
-// Backward-compatible public types (used by existing screen components)
-// ---------------------------------------------------------------------------
-
-export interface RunnerAuthResponse {
-  token: string;
-  runner: {
-    id: string;
-    name: string;
-    extension: string;
-    pbxList: Array<{ id: string; name: string; fqdn: string }>;
-  };
-}
-
 export interface Department {
   id: number;
   name: string;
@@ -337,11 +323,6 @@ export const apiClient = new RunnerAPIClient();
 // ---------------------------------------------------------------------------
 // Named exports — backward-compatible with existing screen components
 // ---------------------------------------------------------------------------
-
-/** @deprecated Use apiClient.auth() directly. */
-export async function authenticate(_msalToken: string): Promise<RunnerAuthResponse> {
-  throw new Error('Use apiClient.auth() instead of authenticate()');
-}
 
 /**
  * Returns the list of allowed departments.

@@ -2,7 +2,6 @@ import {
   PublicClientApplication,
   InteractionRequiredAuthError,
   type Configuration,
-  type AccountInfo,
 } from '@azure/msal-browser';
 import type { AuthResult } from '@/types/auth';
 
@@ -87,15 +86,6 @@ export async function signOut(): Promise<void> {
   }
 }
 
-export function getStoredAccount(): AccountInfo | null {
-  // Synchronous — reads from sessionStorage without initializing MSAL
-  if (typeof window === 'undefined') return null;
-  if (!_msalInstance) return null;
-  const accounts = _msalInstance.getAllAccounts();
-  return accounts.length > 0 ? accounts[0] : null;
-}
-
-export { msalConfig, loginRequest };
 
 // ---------------------------------------------------------------------------
 // Email / password authentication

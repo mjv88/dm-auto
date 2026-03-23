@@ -19,6 +19,7 @@ export type ErrorCode =
   | 'UNAUTHORIZED'
   | 'FORBIDDEN';
 
+// Available for future use — not currently thrown by any route
 export class RunnerError extends Error {
   public readonly code: ErrorCode;
   public readonly statusCode: number;
