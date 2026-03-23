@@ -3,12 +3,30 @@
  *
  * Admin audit log routes (tenant-scoped via runners join).
  *
- * GET /admin/audit        — paginated, filtered audit log
- * GET /admin/audit/export — CSV download of filtered audit log
+ * GET    /admin/audit        — paginated, filtered audit log
+ * GET    /admin/audit/export — CSV download of filtered audit log
+ * DELETE /admin/audit/purge  — delete entries older than N days (super_admin only)
+ *
+ * ─── Index strategy ───────────────────────────────────────────────────────────
+ * The audit_log table has a composite index (created_at, status) and a single
+ * index on created_at.  All date-range filters use `audit_log.created_at`
+ * directly (not a computed expression) so Postgres can use these indexes.
+ *
+ * For deployments exceeding ~1 M rows consider switching to monthly range
+ * partitioning on created_at:
+ *
+ *   CREATE TABLE audit_log (...) PARTITION BY RANGE (created_at);
+ *   CREATE TABLE audit_log_2026_03 PARTITION OF audit_log
+ *     FOR VALUES FROM ('2026-03-01') TO ('2026-04-01');
+ *
+ * Partitioning lets Postgres prune entire months from queries and makes the
+ * purge endpoint a near-instant `DROP TABLE audit_log_<old>` instead of a
+ * potentially long DELETE.
+ * ──────────────────────────────────────────────────────────────────────────────
  */
 
 import type { FastifyInstance } from 'fastify';
-import { eq, and, sql, gte, lte } from 'drizzle-orm';
+import { eq, and, sql, gte, lte, lt } from 'drizzle-orm';
 import { getDb } from '../../db/index.js';
 import { runners, auditLog } from '../../db/schema.js';
 import { requireAuth, requireRole } from '../../middleware/requireAuth.js';
@@ -28,6 +46,8 @@ function buildAuditConditions(tenantId: string | null, query: AuditQuery) {
   const conditions = [];
   if (tenantId) conditions.push(eq(runners.tenantId, tenantId));
 
+  // Date filters use the indexed created_at column directly — no wrapping
+  // functions — so the idx_audit_created_at B-tree index is used.
   if (query.from) {
     const fromDate = new Date(query.from);
     if (!isNaN(fromDate.getTime())) {
@@ -52,6 +72,9 @@ function buildAuditConditions(tenantId: string | null, query: AuditQuery) {
 
   return conditions;
 }
+
+/** Default retention period in days for the purge endpoint. */
+const DEFAULT_RETENTION_DAYS = 90;
 
 // ── Route plugin ──────────────────────────────────────────────────────────────
 
@@ -173,5 +196,36 @@ export async function adminAuditRoutes(fastify: FastifyInstance): Promise<void> 
       .header('Content-Type', 'text/csv')
       .header('Content-Disposition', 'attachment; filename="audit-log.csv"')
       .send(csv);
+  });
+
+  // ── DELETE /admin/audit/purge ───────────────────────────────────────────────
+  // Deletes audit_log entries older than `days` (query param, default 90).
+  // Super_admin only.
+  //
+  // The DELETE uses `created_at < cutoff` which hits idx_audit_created_at.
+  // For tables with monthly partitioning this can be replaced with
+  // `DROP TABLE audit_log_<month>` for near-instant cleanup.
+
+  fastify.delete('/admin/audit/purge', { preHandler: [requireRole('super_admin')] }, async (request, reply) => {
+    const query = request.query as { days?: string };
+    const days = Math.max(1, parseInt(query.days ?? String(DEFAULT_RETENTION_DAYS), 10));
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+
+    const db = getDb();
+
+    const result = await db
+      .delete(auditLog)
+      .where(lt(auditLog.createdAt, cutoff))
+      .returning({ id: auditLog.id });
+
+    const deleted = result.length;
+
+    return reply.send({
+      purged: deleted,
+      olderThanDays: days,
+      cutoffDate: cutoff.toISOString(),
+    });
   });
 }
