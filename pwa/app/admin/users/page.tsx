@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { adminGet, adminPost, adminPut, adminDelete } from '@/lib/adminApi';
 import { useRunnerStore } from '@/lib/store';
 import DataTable from '@/components/admin/DataTable';
@@ -29,6 +29,95 @@ interface UsersResponse {
   pages: number;
 }
 
+function UserActionsMenu({
+  row,
+  myRole,
+  tenantOptions,
+  onChangeRole,
+  onMove,
+  onImpersonate,
+  onDelete,
+}: {
+  row: UserRow;
+  myRole: string | null;
+  tenantOptions: TenantOption[];
+  onChangeRole: () => void;
+  onMove: (tenantId: string) => void;
+  onImpersonate: () => void;
+  onDelete: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const isSuperAdmin = row.role === 'super_admin';
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
+
+  if (isSuperAdmin) {
+    return <span className="text-xs text-gray-400">&mdash;</span>;
+  }
+
+  return (
+    <div className="relative inline-block" ref={menuRef}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="px-2 py-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded text-sm font-medium"
+        title="Actions"
+      >
+        &#x22EF;
+      </button>
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 text-sm">
+          <button
+            onClick={() => { setOpen(false); onChangeRole(); }}
+            className="w-full text-left px-3 py-1.5 hover:bg-gray-50 text-gray-700"
+          >
+            Change Role
+          </button>
+          {(myRole === 'admin' || myRole === 'super_admin') && tenantOptions.length > 1 && (
+            <div className="border-t border-gray-100">
+              <span className="block px-3 pt-1.5 pb-0.5 text-xs text-gray-400">Move to company</span>
+              {tenantOptions
+                .filter((t) => t.id !== row.tenantId)
+                .slice(0, 5)
+                .map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => { setOpen(false); onMove(t.id); }}
+                    className="w-full text-left px-3 py-1.5 hover:bg-gray-50 text-gray-700 truncate"
+                  >
+                    {t.name}
+                  </button>
+                ))}
+            </div>
+          )}
+          {myRole === 'super_admin' && (
+            <button
+              onClick={() => { setOpen(false); onImpersonate(); }}
+              className="w-full text-left px-3 py-1.5 hover:bg-gray-50 text-orange-600 border-t border-gray-100"
+            >
+              Impersonate
+            </button>
+          )}
+          <button
+            onClick={() => { setOpen(false); onDelete(); }}
+            className="w-full text-left px-3 py-1.5 hover:bg-gray-50 text-red-600 border-t border-gray-100"
+          >
+            Delete
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function UsersPage() {
   const [data, setData] = useState<UsersResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,7 +125,6 @@ export default function UsersPage() {
   const [filterRole, setFilterRole] = useState('');
   const [filterEmail, setFilterEmail] = useState('');
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
-  const [reassignTarget, setReassignTarget] = useState<Record<string, string>>({}); // userId → tenantId
   const [tenantOptions, setTenantOptions] = useState<TenantOption[]>([]);
   const selectedAdminTenantId = useRunnerStore((s) => s.selectedAdminTenantId);
   const myRole = useRunnerStore((s) => s.role);
@@ -79,14 +167,55 @@ export default function UsersPage() {
     if (myRole === 'admin' || myRole === 'super_admin') loadTenants();
   }, [myRole]);
 
+  async function handleMove(row: UserRow, tenantId: string) {
+    const tname = tenantOptions.find((t) => t.id === tenantId)?.name ?? tenantId;
+    if (!confirm(`Move ${row.email} to "${tname}"?`)) return;
+    try {
+      await adminPut(`/admin/users/${row.id}/company`, { tenantId });
+      fetchUsers();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Reassign failed.');
+    }
+  }
+
+  async function handleImpersonate(row: UserRow) {
+    if (!confirm(`Impersonate ${row.email}?`)) return;
+    try {
+      const result = await adminPost<{ sessionToken: string; originalToken: string; user: { email: string } }>(
+        `/admin/users/${row.id}/impersonate`,
+        {},
+      );
+      startImpersonation(result.sessionToken, result.originalToken, result.user.email);
+      window.location.href = '/';
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Impersonation failed');
+    }
+  }
+
+  async function handleDelete(row: UserRow) {
+    if (!confirm(`Delete user ${row.email}? This cannot be undone.`)) return;
+    try {
+      await adminDelete(`/admin/users/${row.id}`);
+      fetchUsers();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Delete failed');
+    }
+  }
+
   const columns = [
-    { key: 'email', header: 'Email' },
+    {
+      key: 'email',
+      header: 'Email',
+      render: (row: UserRow) => (
+        <span className="text-sm text-gray-800 truncate max-w-[220px] block">{row.email}</span>
+      ),
+    },
     {
       key: 'role',
       header: 'Role',
       render: (row: UserRow) => (
         <span
-          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${
             row.role === 'super_admin'
               ? 'bg-red-100 text-red-800'
               : row.role === 'admin'
@@ -105,26 +234,34 @@ export default function UsersPage() {
       header: 'Company',
       render: (row: UserRow) =>
         row.tenantName
-          ? <span className="text-sm text-gray-700">{row.tenantName}</span>
-          : <span className="text-xs text-gray-400 italic">—</span>,
+          ? <span className="text-sm text-gray-700 whitespace-nowrap">{row.tenantName}</span>
+          : <span className="text-xs text-gray-400 italic">&mdash;</span>,
     },
     {
       key: 'pbxNames',
       header: 'PBX',
       render: (row: UserRow) =>
         row.pbxNames.length > 0
-          ? <span className="text-sm text-gray-600">{row.pbxNames.join(', ')}</span>
-          : <span className="text-xs text-gray-400 italic">—</span>,
+          ? <span className="text-xs text-gray-600 whitespace-nowrap">{row.pbxNames.join(', ')}</span>
+          : <span className="text-xs text-gray-400 italic">&mdash;</span>,
     },
     {
       key: 'emailVerified',
       header: 'Verified',
-      render: (row: UserRow) => (row.emailVerified ? 'Yes' : 'No'),
+      render: (row: UserRow) => (
+        <span className={`text-xs ${row.emailVerified ? 'text-green-600' : 'text-gray-400'}`}>
+          {row.emailVerified ? 'Yes' : 'No'}
+        </span>
+      ),
     },
     {
       key: 'createdAt',
       header: 'Created',
-      render: (row: UserRow) => new Date(row.createdAt).toLocaleDateString(),
+      render: (row: UserRow) => (
+        <span className="text-xs text-gray-500 whitespace-nowrap">
+          {new Date(row.createdAt).toLocaleDateString()}
+        </span>
+      ),
     },
   ];
 
@@ -173,85 +310,15 @@ export default function UsersPage() {
             data={data.users}
             rowKey={(row) => row.id}
             actions={(row) => (
-              <div className="flex flex-wrap gap-2 items-center">
-                {row.role !== 'super_admin' && (
-                  <button
-                    onClick={() => setEditingUser(row)}
-                    className="text-sm text-blue-600 hover:underline"
-                  >
-                    Change Role
-                  </button>
-                )}
-                {/* Reassign company — admin+ */}
-                {(myRole === 'admin' || myRole === 'super_admin') && row.role !== 'super_admin' && tenantOptions.length > 1 && (
-                  <div className="flex items-center gap-1">
-                    <select
-                      value={reassignTarget[row.id] ?? ''}
-                      onChange={e => setReassignTarget(prev => ({ ...prev, [row.id]: e.target.value }))}
-                      className="text-xs border border-gray-300 rounded px-1.5 py-1 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                    >
-                      <option value="">Move to…</option>
-                      {tenantOptions
-                        .filter(t => t.id !== row.tenantId)
-                        .map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                    </select>
-                    <button
-                      disabled={!reassignTarget[row.id]}
-                      onClick={async () => {
-                        const tid = reassignTarget[row.id];
-                        const tname = tenantOptions.find(t => t.id === tid)?.name ?? tid;
-                        if (!confirm(`Move ${row.email} to "${tname}"?`)) return;
-                        try {
-                          await adminPut(`/admin/users/${row.id}/company`, { tenantId: tid });
-                          setReassignTarget(prev => { const n = { ...prev }; delete n[row.id]; return n; });
-                          fetchUsers();
-                        } catch (err) {
-                          alert(err instanceof Error ? err.message : 'Reassign failed.');
-                        }
-                      }}
-                      className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 disabled:opacity-40"
-                    >
-                      Move
-                    </button>
-                  </div>
-                )}
-                {myRole === 'super_admin' && row.role !== 'super_admin' && (
-                  <button
-                    onClick={async () => {
-                      if (!confirm(`Impersonate ${row.email}?`)) return;
-                      try {
-                        const result = await adminPost<{ sessionToken: string; originalToken: string; user: { email: string } }>(
-                          `/admin/users/${row.id}/impersonate`,
-                          {},
-                        );
-                        startImpersonation(result.sessionToken, result.originalToken, result.user.email);
-                        window.location.href = '/';
-                      } catch (err) {
-                        alert(err instanceof Error ? err.message : 'Impersonation failed');
-                      }
-                    }}
-                    className="text-sm text-orange-600 hover:underline"
-                  >
-                    Impersonate
-                  </button>
-                )}
-                {row.role !== 'super_admin' && (
-                  <button
-                    onClick={async () => {
-                      if (!confirm(`Delete user ${row.email}? This cannot be undone.`)) return;
-                      try {
-                        await adminDelete(`/admin/users/${row.id}`);
-                        fetchUsers();
-                      } catch (err) {
-                        alert(err instanceof Error ? err.message : 'Delete failed');
-                      }
-                    }}
-                    className="text-sm text-red-500 hover:underline"
-                  >
-                    Delete
-                  </button>
-                )}
-              </div>
+              <UserActionsMenu
+                row={row}
+                myRole={myRole}
+                tenantOptions={tenantOptions}
+                onChangeRole={() => setEditingUser(row)}
+                onMove={(tid) => handleMove(row, tid)}
+                onImpersonate={() => handleImpersonate(row)}
+                onDelete={() => handleDelete(row)}
+              />
             )}
           />
 

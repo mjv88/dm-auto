@@ -13,13 +13,18 @@ interface AuditEntry {
   id: string;
   createdAt: string;
   entraEmail: string;
-  action: string;
+  extensionNumber: string;
+  fromDeptId: string | null;
+  fromDeptName: string | null;
+  toDeptId: string;
+  toDeptName: string | null;
   status: string;
   pbxFqdn?: string;
   errorMessage?: string;
   ipAddress?: string;
   userAgent?: string;
   deviceId?: string;
+  durationMs?: number;
 }
 
 interface PaginatedAudit {
@@ -115,8 +120,29 @@ export default function AuditPage() {
         </span>
       ),
     },
-    { key: 'entraEmail', header: 'Email' },
-    { key: 'action', header: 'Action' },
+    {
+      key: 'entraEmail',
+      header: 'Email',
+      render: (row) => (
+        <span className="text-xs text-gray-600 truncate max-w-[200px] block">{row.entraEmail}</span>
+      ),
+    },
+    {
+      key: 'extensionNumber',
+      header: 'Ext.',
+      render: (row) => (
+        <span className="text-xs font-mono">{row.extensionNumber || '\u2014'}</span>
+      ),
+    },
+    {
+      key: 'fromDeptName',
+      header: 'From \u2192 To',
+      render: (row) => (
+        <span className="text-xs">
+          {row.fromDeptName || '\u2014'} \u2192 {row.toDeptName || '\u2014'}
+        </span>
+      ),
+    },
     {
       key: 'status',
       header: 'Status',
@@ -125,6 +151,8 @@ export default function AuditPage() {
           className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
             row.status === 'success'
               ? 'bg-green-100 text-green-700'
+              : row.status === 'denied'
+              ? 'bg-yellow-100 text-yellow-700'
               : 'bg-red-100 text-red-700'
           }`}
         >
@@ -132,7 +160,22 @@ export default function AuditPage() {
         </span>
       ),
     },
-    { key: 'pbxFqdn', header: 'PBX' },
+    {
+      key: 'pbxFqdn',
+      header: 'PBX',
+      render: (row) => (
+        <span className="text-xs text-gray-500">{row.pbxFqdn || '\u2014'}</span>
+      ),
+    },
+    {
+      key: 'durationMs',
+      header: 'Duration',
+      render: (row) => (
+        <span className="text-xs text-gray-400">
+          {row.durationMs != null ? `${row.durationMs}ms` : '\u2014'}
+        </span>
+      ),
+    },
   ];
 
   return (
