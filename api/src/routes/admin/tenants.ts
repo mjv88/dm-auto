@@ -81,7 +81,7 @@ export async function adminTenantRoutes(
       });
     }
 
-    const { name, adminEmails, entraTenantId } = parseResult.data;
+    const { name, adminEmails, entraTenantId, autoProvisionRunners } = parseResult.data;
 
     // Reject if super_admin tries to assign themselves — they already have global access.
     const myEmail = (session.entraEmail ?? session.email ?? '').toLowerCase();
@@ -105,6 +105,7 @@ export async function adminTenantRoutes(
           name,
           entraGroupId: '',
           adminEmails,
+          autoProvisionRunners: autoProvisionRunners ?? false,
           isActive: true,
         })
         .returning();
@@ -358,6 +359,7 @@ export async function adminTenantRoutes(
         ...(updates.name !== undefined && { name: updates.name }),
         ...(updates.entraGroupId !== undefined && { entraGroupId: updates.entraGroupId }),
         ...(updates.entraTenantId !== undefined && { entraTenantId: updates.entraTenantId }),
+        ...(updates.autoProvisionRunners !== undefined && { autoProvisionRunners: updates.autoProvisionRunners }),
         updatedAt: sql`now()`,
       })
       .where(eq(tenants.id, tenantId!))

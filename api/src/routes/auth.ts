@@ -11,7 +11,10 @@
  *   3. Check Entra group membership using tenant's group_id
  *      If not member → 403 NOT_IN_RUNNERS_GROUP
  *   4. Look up runner(s) in DB by email + tenant_id
- *      If none found → 403 RUNNER_NOT_FOUND
+ *      If none found and autoProvisionRunners is enabled:
+ *        a. Query each PBX for users matching this email
+ *        b. Auto-create runner records with all departments allowed
+ *      If still none found → 403 RUNNER_NOT_FOUND
  *   5. Multiple PBX FQDNs → return { mode: 'select', options }
  *      Single PBX → return { mode: 'direct', runner, sessionToken }
  */
@@ -25,6 +28,7 @@ import { checkEntraGroup } from '../entra/groupCheck.js';
 import { createSessionToken } from '../middleware/session.js';
 import { writeAuditLog } from '../middleware/audit.js';
 import { authBodySchema } from '../utils/validate.js';
+import { XAPIClient } from '../xapi/client.js';
 
 export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.post('/runner/auth', async (request, reply) => {
@@ -115,6 +119,65 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           eq(pbxCredentials.isActive, true),
         ),
       );
+
+    // 5b. Auto-provision runner if tenant has it enabled and no runner exists
+    if (runnerRows.length === 0 && tenant.autoProvisionRunners) {
+      // Get all active PBX credentials for this tenant
+      const tenantPbxCreds = await db
+        .select({ id: pbxCredentials.id, pbxFqdn: pbxCredentials.pbxFqdn, pbxName: pbxCredentials.pbxName })
+        .from(pbxCredentials)
+        .where(and(eq(pbxCredentials.tenantId, tenant.id), eq(pbxCredentials.isActive, true)));
+
+      for (const cred of tenantPbxCreds) {
+        try {
+          const client = await XAPIClient.create(cred.pbxFqdn);
+          const pbxUsers = await client.getAllUsers();
+          const match = pbxUsers.find(
+            (u) => u.email.toLowerCase() === email.toLowerCase(),
+          );
+          if (!match) continue;
+
+          // Fetch all departments to allow everything by default
+          const groups = await client.getGroups();
+          const allDeptIds = groups.map((g) => String(g.id));
+
+          // Create runner record
+          const [newRunner] = await db
+            .insert(runners)
+            .values({
+              tenantId:        tenant.id,
+              pbxCredentialId: cred.id,
+              entraEmail:      email,
+              extensionNumber: match.number,
+              allowedDeptIds:  allDeptIds,
+              outboundCallerId: match.outboundCallerId ?? null,
+              isActive:        true,
+              createdBy:       'auto-provision',
+            })
+            .onConflictDoNothing()
+            .returning({
+              id: runners.id,
+              extensionNumber: runners.extensionNumber,
+              allowedDeptIds: runners.allowedDeptIds,
+              pbxCredentialId: runners.pbxCredentialId,
+            });
+
+          if (newRunner) {
+            runnerRows.push({
+              id:              newRunner.id,
+              extensionNumber: newRunner.extensionNumber,
+              allowedDeptIds:  newRunner.allowedDeptIds,
+              pbxFqdn:         cred.pbxFqdn,
+              pbxName:         cred.pbxName,
+              pbxCredentialId: newRunner.pbxCredentialId,
+            });
+          }
+        } catch (err) {
+          // PBX unreachable or xAPI error — skip this PBX, try others
+          request.log.warn({ pbxFqdn: cred.pbxFqdn, err }, 'Auto-provision: failed to query PBX');
+        }
+      }
+    }
 
     if (runnerRows.length === 0) {
       return reply.code(403).send({ error: 'RUNNER_NOT_FOUND' });

@@ -127,18 +127,20 @@ export const updateRunnerSchema = z.object({
 
 /** PUT /admin/tenants/me */
 export const updateTenantSchema = z.object({
-  name:          z.string().min(1).max(255).optional(),
-  entraGroupId:  z.string().uuid().optional(),
-  entraTenantId: z.string().uuid('Must be a valid UUID').optional(),
+  name:                  z.string().min(1).max(255).optional(),
+  entraGroupId:          z.string().uuid().optional(),
+  entraTenantId:         z.string().uuid('Must be a valid UUID').optional(),
+  autoProvisionRunners:  z.boolean().optional(),
 });
 
 /** POST /admin/tenants (super_admin creates a company) */
 export const createTenantSchema = z.object({
-  name:          z.string().min(1).max(255),
-  adminEmails:   z
+  name:                  z.string().min(1).max(255),
+  adminEmails:           z
     .array(z.string().email('Each entry must be a valid email'))
     .min(1, 'At least one admin email is required'),
-  entraTenantId: z.string().uuid('Must be a valid UUID').optional(),
+  entraTenantId:         z.string().uuid('Must be a valid UUID').optional(),
+  autoProvisionRunners:  z.boolean().optional(),
 });
 
 // ── Setup wizard schemas ─────────────────────────────────────────────────────
