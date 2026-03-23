@@ -21,22 +21,7 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply):
   const bearerToken = bearerHeader?.startsWith('Bearer ') ? bearerHeader.slice(7) : undefined;
   const token = cookieToken || bearerToken;
 
-  // Debug logging — remove after cookie auth is verified
-  request.log.warn({
-    hasCookies: !!cookies,
-    cookieKeys: cookies ? Object.keys(cookies) : [],
-    hasCookieToken: !!cookieToken,
-    hasBearerToken: !!bearerToken,
-    url: request.url,
-  }, 'requireAuth: token resolution');
-
   if (!token) {
-    request.log.warn({
-      url: request.url,
-      hasCookies: !!cookies,
-      cookieKeys: cookies ? Object.keys(cookies) : [],
-      hasAuthHeader: !!bearerHeader,
-    }, 'requireAuth: no token found — returning 401');
     return reply.code(401).send({ error: 'UNAUTHORIZED', message: 'Missing session' });
   }
   try {

@@ -2,7 +2,7 @@
  * lib/setupApi.ts
  *
  * Fetch wrapper for the self-service onboarding wizard.
- * Auth is handled via httpOnly cookies (credentials: 'include').
+ * Auth via Bearer token (primary) + credentials: 'include' (fallback for same-origin).
  */
 
 import { useRunnerStore } from '@/lib/store';
@@ -13,6 +13,11 @@ async function setupFetch(path: string, options?: RequestInit): Promise<Response
   const headers = new Headers(options?.headers);
   if (options?.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
+  }
+  // Inject Bearer token from store (primary auth); credentials: 'include' kept as fallback
+  const token = useRunnerStore.getState().sessionToken;
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
   }
   const resp = await fetch(`${API_URL}${path}`, { ...options, credentials: 'include', headers });
   if (resp.status === 401 && typeof window !== 'undefined') {

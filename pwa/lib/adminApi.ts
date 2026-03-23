@@ -14,6 +14,11 @@ export async function adminFetch(path: string, options?: RequestInit): Promise<R
   if (options?.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
+  // Inject Bearer token from store (primary auth); credentials: 'include' kept as fallback
+  const token = useRunnerStore.getState().sessionToken;
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
   const fullPath = appendTenantId(path);
   const resp = await fetch(`${API_URL}${fullPath}`, { ...options, credentials: 'include', headers });
   if (resp.status === 401 && typeof window !== 'undefined') {

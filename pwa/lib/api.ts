@@ -36,9 +36,16 @@ async function fetchWithTimeout(
 ): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  // Inject Bearer token from store (primary auth); credentials: 'include' kept as fallback
+  const headers = new Headers(init.headers);
+  const token = getState().sessionToken;
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
   try {
     const response = await fetch(url, {
       ...init,
+      headers,
       credentials: 'include',
       signal: controller.signal,
     });
