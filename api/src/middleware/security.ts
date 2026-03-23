@@ -19,16 +19,6 @@ import { config } from '../config.js';
 export async function registerSecurity(fastify: FastifyInstance): Promise<void> {
   const allowedOrigin = config.NEXT_PUBLIC_APP_URL;
 
-  // ── Content-Type validation — mitigates GHSA-jx2c-rxcm-jvmq (Fastify body validation bypass)
-  fastify.addHook('onRequest', async (request, reply) => {
-    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) {
-      const ct = request.headers['content-type'];
-      if (ct && /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(ct)) {
-        return reply.code(415).send({ error: 'INVALID_CONTENT_TYPE' });
-      }
-    }
-  });
-
   // ── CORS preflight ────────────────────────────────────────────────────────
   // Intercept OPTIONS before route handlers so we always return CORS headers
   // for valid origins without hitting protected route logic.

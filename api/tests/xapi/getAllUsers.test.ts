@@ -26,16 +26,17 @@ function makeClient(): XAPIClient {
 
 /** Builds a mock xAPI Users response page. */
 function buildUsersPage(
-  users: Array<{ id: number; number: string; first: string; last: string; email: string; groupId: number }>,
+  users: Array<{ id: number; number: string; first: string; last: string; email: string; groupId: number; displayName?: string }>,
 ) {
   return {
     value: users.map((u) => ({
       Id: u.id,
       Number: u.number,
-      FirstName: u.first,
-      LastName: u.last,
+      DisplayName: u.displayName ?? `${u.first} ${u.last}`.trim(),
       EmailAddress: u.email,
-      Groups: [{ GroupId: u.groupId }],
+      PrimaryGroupId: u.groupId,
+      OutboundCallerID: null,
+      Groups: [{ GroupId: u.groupId, Name: `Group ${u.groupId}` }],
     })),
   };
 }
@@ -73,8 +74,8 @@ describe('getAllUsers', () => {
     const result = await client.getAllUsers();
 
     expect(result).toEqual<XAPIUserExtension[]>([
-      { userId: 1, number: '100', email: 'alice@example.com', displayName: 'Alice Smith', currentGroupId: 10 },
-      { userId: 2, number: '101', email: 'bob@example.com', displayName: 'Bob Jones', currentGroupId: 20 },
+      { userId: 1, number: '100', email: 'alice@example.com', displayName: 'Alice Smith', currentGroupId: 10, currentGroupName: 'Group 10', outboundCallerId: null },
+      { userId: 2, number: '101', email: 'bob@example.com', displayName: 'Bob Jones', currentGroupId: 20, currentGroupName: 'Group 20', outboundCallerId: null },
     ]);
     expect(nock.isDone()).toBe(true);
   });
@@ -98,9 +99,10 @@ describe('getAllUsers', () => {
         value: [{
           Id: 5,
           Number: '200',
-          FirstName: 'Charlie',
-          LastName: 'Brown',
+          DisplayName: 'Charlie Brown',
           EmailAddress: 'charlie@example.com',
+          PrimaryGroupId: 0,
+          OutboundCallerID: null,
           Groups: [],
         }],
       });
@@ -118,10 +120,11 @@ describe('getAllUsers', () => {
         value: [{
           Id: 6,
           Number: '201',
-          FirstName: 'Dana',
-          LastName: '',
+          DisplayName: 'Dana',
           EmailAddress: null,
-          Groups: [{ GroupId: 15 }],
+          PrimaryGroupId: 15,
+          OutboundCallerID: null,
+          Groups: [{ GroupId: 15, Name: 'Group 15' }],
         }],
       });
 
@@ -132,46 +135,49 @@ describe('getAllUsers', () => {
     expect(result[0]!.displayName).toBe('Dana');
   });
 
-  it('paginates correctly when first page returns exactly PAGE_SIZE=1000 users', async () => {
-    // We can't easily build 1000 mock users, so we'll verify the pagination
-    // logic by checking that a second request is made when the first page
-    // returns exactly 1000 items.
-    const page1Users = Array.from({ length: 1000 }, (_, i) => ({
+  it('paginates correctly when first page returns exactly PAGE_SIZE=50 users', async () => {
+    // Verify the pagination logic by checking that a second request is made
+    // when the first page returns exactly 50 items (the actual PAGE_SIZE).
+    const page1Users = Array.from({ length: 50 }, (_, i) => ({
       Id: i + 1,
       Number: String(100 + i),
-      FirstName: `User`,
-      LastName: `${i}`,
+      DisplayName: `User ${i}`,
       EmailAddress: `user${i}@example.com`,
-      Groups: [{ GroupId: 1 }],
+      PrimaryGroupId: 1,
+      OutboundCallerID: null,
+      Groups: [{ GroupId: 1, Name: 'Group 1' }],
     }));
 
     const page2Users = [
       {
-        Id: 1001,
-        Number: '1100',
-        FirstName: 'Last',
-        LastName: 'User',
+        Id: 51,
+        Number: '150',
+        DisplayName: 'Last User',
         EmailAddress: 'last@example.com',
-        Groups: [{ GroupId: 2 }],
+        PrimaryGroupId: 2,
+        OutboundCallerID: null,
+        Groups: [{ GroupId: 2, Name: 'Group 2' }],
       },
     ];
 
     nock(`https://${TEST_FQDN}`)
       .get(/\/xapi\/v1\/Users.*\$skip=0/)
       .reply(200, { value: page1Users })
-      .get(/\/xapi\/v1\/Users.*\$skip=1000/)
+      .get(/\/xapi\/v1\/Users.*\$skip=50/)
       .reply(200, { value: page2Users });
 
     const client = makeClient();
     const result = await client.getAllUsers();
 
-    expect(result).toHaveLength(1001);
-    expect(result[1000]).toEqual({
-      userId: 1001,
-      number: '1100',
+    expect(result).toHaveLength(51);
+    expect(result[50]).toEqual<XAPIUserExtension>({
+      userId: 51,
+      number: '150',
       email: 'last@example.com',
       displayName: 'Last User',
       currentGroupId: 2,
+      currentGroupName: 'Group 2',
+      outboundCallerId: null,
     });
     expect(nock.isDone()).toBe(true);
   });

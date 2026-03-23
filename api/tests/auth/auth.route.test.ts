@@ -7,6 +7,7 @@
  */
 
 import Fastify from 'fastify';
+import cookie from '@fastify/cookie';
 import { authRoutes } from '../../src/routes/auth';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -94,6 +95,7 @@ const mockRunner = {
 
 async function buildApp() {
   const app = Fastify({ logger: false });
+  await app.register(cookie);
   await app.register(authRoutes);
   return app;
 }

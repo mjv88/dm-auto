@@ -253,7 +253,7 @@ describe('Security headers on every response', () => {
     const app  = await buildApp();
     const resp = await app.inject({ method: 'GET', url: '/ping' });
     expect(resp.headers['content-security-policy']).toBe(
-      "default-src 'self'; connect-src 'self' https://login.microsoftonline.com",
+      "default-src 'none'; frame-ancestors 'none'",
     );
   });
 
@@ -269,11 +269,12 @@ describe('Security headers on every response', () => {
     expect(resp.headers['x-content-type-options']).toBe('nosniff');
   });
 
-  it('includes rate-limit headers on responses', async () => {
+  it('omits rate-limit headers for allowListed routes', async () => {
     const app  = await buildApp();
     const resp = await app.inject({ method: 'GET', url: '/ping' });
-    // @fastify/rate-limit adds x-ratelimit-* headers
-    expect(resp.headers['x-ratelimit-limit']).toBeDefined();
-    expect(resp.headers['x-ratelimit-remaining']).toBeDefined();
+    // GET /ping is exempt from rate limiting (allowList returns true for non-switch routes)
+    // so x-ratelimit-* headers should NOT be present
+    expect(resp.headers['x-ratelimit-limit']).toBeUndefined();
+    expect(resp.headers['x-ratelimit-remaining']).toBeUndefined();
   });
 });

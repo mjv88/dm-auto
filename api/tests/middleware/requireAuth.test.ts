@@ -78,7 +78,7 @@ describe('requireAuth', () => {
     const reply = makeReply();
     await requireAuth(req, reply);
     expect(reply._status).toBe(401);
-    expect(reply._body).toEqual({ error: 'UNAUTHORIZED', message: 'Missing Bearer token' });
+    expect(reply._body).toEqual({ error: 'UNAUTHORIZED', message: 'Missing session' });
   });
 
   it('returns 401 when token is invalid', async () => {
