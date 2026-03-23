@@ -12,11 +12,11 @@
   },
   "dependencies": {
     "@azure/msal-browser": "^3.0.0",
+    "@ducanh2912/next-pwa": "^10.2.9",
     "@radix-ui/react-dialog": "^1.0.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
-    "next": "14.2.29",
-    "next-pwa": "^5.6.0",
+    "next": "^14.2.35",
     "papaparse": "^5.5.3",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
