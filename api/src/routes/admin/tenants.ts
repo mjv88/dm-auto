@@ -15,7 +15,8 @@ import { tenants, users, pbxCredentials, runners, auditLog, deptCache, pbxExtens
 import { requireAuth, requireRole } from '../../middleware/requireAuth.js';
 import { createSessionToken } from '../../middleware/session.js';
 import type { UnifiedSession } from '../../middleware/session.js';
-import { updateTenantSchema, createTenantSchema } from '../../utils/validate.js';
+import { updateTenantSchema, createTenantSchema, reassignAdminSchema } from '../../utils/validate.js';
+import { escapeLike } from '../../utils/sanitize.js';
 
 export async function adminTenantRoutes(
   fastify: FastifyInstance,
@@ -39,7 +40,7 @@ export async function adminTenantRoutes(
     const offset = (page - 1) * limit;
 
     const whereClause = search
-      ? ilike(tenants.name, `%${search}%`)
+      ? ilike(tenants.name, `%${escapeLike(search)}%`)
       : undefined;
 
     const [rows, countResult] = await Promise.all([
@@ -207,11 +208,14 @@ export async function adminTenantRoutes(
     const { id: sourceTenantId } = request.params as { id: string };
     const session = request.session!;
 
-    const body = request.body as { userId?: string; targetTenantId?: string };
-    if (!body.userId || !body.targetTenantId) {
-      return reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'userId and targetTenantId are required.' });
+    const parsed = reassignAdminSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: 'VALIDATION_ERROR',
+        message: parsed.error.issues[0]?.message ?? 'Invalid input',
+      });
     }
-    const { userId, targetTenantId } = body;
+    const { userId, targetTenantId } = parsed.data;
 
     if (sourceTenantId === targetTenantId) {
       return reply.code(400).send({ error: 'SAME_TENANT', message: 'Source and target company are the same.' });

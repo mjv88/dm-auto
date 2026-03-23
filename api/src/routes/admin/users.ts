@@ -13,8 +13,9 @@ import { eq, and, sql, ilike, inArray } from 'drizzle-orm';
 import { getDb } from '../../db/index.js';
 import { users, managerTenants, tenants, runners, pbxCredentials } from '../../db/schema.js';
 import { requireAuth, requireRole } from '../../middleware/requireAuth.js';
-import { changeRoleSchema } from '../../utils/validate.js';
+import { changeRoleSchema, reassignCompanySchema } from '../../utils/validate.js';
 import { createSessionToken } from '../../middleware/session.js';
+import { escapeLike } from '../../utils/sanitize.js';
 
 export async function adminUserRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.addHook('preHandler', requireAuth);
@@ -45,7 +46,7 @@ export async function adminUserRoutes(fastify: FastifyInstance): Promise<void> {
 
     // Email search (partial match)
     if (query.email) {
-      conditions.push(ilike(users.email, `%${query.email}%`));
+      conditions.push(ilike(users.email, `%${escapeLike(query.email)}%`));
     }
 
     // Tenant filter
@@ -394,11 +395,14 @@ export async function adminUserRoutes(fastify: FastifyInstance): Promise<void> {
     const session = request.session!;
     const { id } = request.params as { id: string };
 
-    const body = request.body as { tenantId?: string };
-    if (!body.tenantId) {
-      return reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'tenantId is required.' });
+    const parsed = reassignCompanySchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: 'VALIDATION_ERROR',
+        message: parsed.error.issues[0]?.message ?? 'Invalid input',
+      });
     }
-    const targetTenantId = body.tenantId;
+    const targetTenantId = parsed.data.tenantId;
 
     if (id === session.userId) {
       return reply.code(400).send({ error: 'CANNOT_REASSIGN_SELF' });

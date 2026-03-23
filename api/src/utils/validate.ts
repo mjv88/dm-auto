@@ -192,3 +192,14 @@ export const changeRoleSchema = z.object({
   role: z.enum(['super_admin', 'admin', 'manager', 'runner']),
   tenantIds: z.array(z.string().uuid()).optional(),
 });
+
+/** PUT /admin/users/:id/company */
+export const reassignCompanySchema = z.object({
+  tenantId: z.string().uuid(),
+});
+
+/** POST /admin/tenants/:id/admins/reassign */
+export const reassignAdminSchema = z.object({
+  userId: z.string().uuid(),
+  targetTenantId: z.string().uuid(),
+});
