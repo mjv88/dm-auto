@@ -131,8 +131,8 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
     {
       config: {
         rateLimit: {
-          max: 5,
-          timeWindow: 60_000, // 5 per minute
+          max: 10,
+          timeWindow: 60_000, // 10 per minute per IP
         },
       },
     },
@@ -160,6 +160,7 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
       if (user?.lockedUntil && user.lockedUntil > new Date()) {
         // Still run bcrypt.compare to keep timing consistent
         await bcrypt.compare(password, DUMMY_HASH);
+        request.log.warn({ email: normalizedEmail, method: 'email', ip: request.ip, reason: 'account_locked' }, 'Login blocked — account locked');
         return reply.code(423).send({
           error: 'ACCOUNT_LOCKED',
           message: 'Account is temporarily locked. Try again later.',
@@ -188,6 +189,10 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
               ...(lockedUntil ? { lockedUntil } : {}),
             })
             .where(eq(users.id, user.id));
+
+          request.log.warn({ email: normalizedEmail, method: 'email', ip: request.ip, reason: 'invalid_password' }, 'Login failed');
+        } else {
+          request.log.warn({ email: normalizedEmail, method: 'email', ip: request.ip, reason: 'user_not_found' }, 'Login failed');
         }
 
         return reply.code(401).send({
@@ -203,6 +208,8 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
           .set({ failedLoginAttempts: 0, lockedUntil: null })
           .where(eq(users.id, user.id));
       }
+
+      request.log.info({ email: normalizedEmail, method: 'email', ip: request.ip }, 'Login successful');
 
       // Look up linked runner (if any) to populate session fields.
       // Primary: match by users.id (explicit link set at registration time).

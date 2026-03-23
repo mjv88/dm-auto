@@ -81,6 +81,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       .limit(1);
 
     if (tenantRows.length === 0) {
+      request.log.warn({ email, method: 'entra_sso', ip: request.ip, reason: 'tenant_not_registered' }, 'Runner auth failed');
       return reply.code(403).send({ error: 'TENANT_NOT_REGISTERED' });
     }
     const tenant = tenantRows[0];
@@ -90,12 +91,14 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     try {
       isMember = await checkEntraGroup(oid, tenant.entraGroupId);
     } catch {
+      request.log.warn({ email, method: 'entra_sso', ip: request.ip, reason: 'group_check_failed' }, 'Runner auth failed');
       return reply
         .code(503)
         .send({ error: 'INTERNAL_ERROR', message: 'Group check failed' });
     }
 
     if (!isMember) {
+      request.log.warn({ email, method: 'entra_sso', ip: request.ip, reason: 'not_in_runners_group' }, 'Runner auth failed');
       return reply.code(403).send({ error: 'NOT_IN_RUNNERS_GROUP' });
     }
 
@@ -180,6 +183,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     }
 
     if (runnerRows.length === 0) {
+      request.log.warn({ email, method: 'entra_sso', ip: request.ip, reason: 'runner_not_found' }, 'Runner auth failed');
       return reply.code(403).send({ error: 'RUNNER_NOT_FOUND' });
     }
 
@@ -223,6 +227,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         path: '/',
         maxAge: 60 * 60 * 24,
       });
+      request.log.info({ email, method: 'entra_sso', ip: request.ip }, 'Runner auth successful');
       return reply.send({
         mode: 'direct',
         runner: {
@@ -274,6 +279,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       path: '/',
       maxAge: 60 * 60 * 24,
     });
+    request.log.info({ email, method: 'entra_sso', ip: request.ip }, 'Runner auth successful');
     return reply.send({
       mode: 'direct',
       runner: {
