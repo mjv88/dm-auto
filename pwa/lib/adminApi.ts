@@ -17,7 +17,7 @@ export async function adminFetch(path: string, options?: RequestInit): Promise<R
     headers.set('Content-Type', 'application/json');
   }
   const fullPath = appendTenantId(path);
-  const resp = await fetch(`${API_URL}${fullPath}`, { ...options, headers });
+  const resp = await fetch(`${API_URL}${fullPath}`, { ...options, credentials: 'include', headers });
   if (resp.status === 401 && typeof window !== 'undefined') {
     window.location.href = '/login?redirect=/admin';
   }

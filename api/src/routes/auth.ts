@@ -216,6 +216,13 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         tid: tid,
         oid: oid,
       });
+      reply.setCookie('runner_session', sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24,
+      });
       return reply.send({
         mode: 'direct',
         runner: {
@@ -260,6 +267,13 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       oid: oid,
     });
 
+    reply.setCookie('runner_session', sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24,
+    });
     return reply.send({
       mode: 'direct',
       runner: {

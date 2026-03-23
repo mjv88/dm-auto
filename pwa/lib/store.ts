@@ -147,12 +147,38 @@ export const useRunnerStore = create<RunnerStore>((set) => ({
   },
 }));
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
+
 /**
- * Restore session from sessionStorage on client mount.
+ * Restore session on client mount.
+ * 1. Try httpOnly cookie via GET /auth/me (preferred — survives tab close).
+ * 2. Fall back to sessionStorage (backward compat — will be removed later).
  * Call this in the root layout's useEffect to avoid hydration mismatch.
  */
-export function restoreSession(): void {
+export async function restoreSession(): Promise<void> {
   if (typeof window === 'undefined') return;
+
+  // 1. Try cookie-based restore via /auth/me
+  try {
+    const res = await fetch(`${API_BASE}/auth/me`, { credentials: 'include' });
+    if (res.ok) {
+      const data = await res.json();
+      const token: string = data.sessionToken;
+      const session = data.session;
+      useRunnerStore.setState({
+        sessionToken: token,
+        role: session.role ?? 'runner',
+        authStatus: 'authenticated',
+      });
+      // Keep sessionStorage in sync for backward compat
+      sessionStorage.setItem('sessionToken', token);
+      return;
+    }
+  } catch {
+    // /auth/me unavailable — fall through to sessionStorage
+  }
+
+  // 2. Fallback: sessionStorage (will be removed in a future release)
   try {
     const token = sessionStorage.getItem('sessionToken');
     if (!token) return;

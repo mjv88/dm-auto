@@ -150,11 +150,11 @@ export async function authenticate(
   request: FastifyRequest,
   reply: FastifyReply,
 ): Promise<void> {
-  const header = request.headers.authorization;
-  if (!header?.startsWith('Bearer ')) {
-    return reply.code(401).send({ error: 'UNAUTHORIZED', message: 'Missing Bearer token' });
+  const token = request.cookies?.runner_session
+    || request.headers.authorization?.replace('Bearer ', '');
+  if (!token) {
+    return reply.code(401).send({ error: 'UNAUTHORIZED', message: 'Missing session token' });
   }
-  const token = header.slice(7);
   try {
     const session = validateSessionToken(token);
     // Unified sessions always have type 'session'; check role for runner access
@@ -181,11 +181,11 @@ export async function adminAuthenticate(
   request: FastifyRequest,
   reply: FastifyReply,
 ): Promise<void> {
-  const header = request.headers.authorization;
-  if (!header?.startsWith('Bearer ')) {
-    return reply.code(401).send({ error: 'UNAUTHORIZED', message: 'Missing Bearer token' });
+  const token = request.cookies?.runner_session
+    || request.headers.authorization?.replace('Bearer ', '');
+  if (!token) {
+    return reply.code(401).send({ error: 'UNAUTHORIZED', message: 'Missing session token' });
   }
-  const token = header.slice(7);
 
   // Try admin session JWT first (fast path for subsequent requests)
   try {

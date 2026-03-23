@@ -18,7 +18,7 @@ import { eq, and } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { users, tenants, runners, pbxCredentials } from '../db/schema.js';
 import { config } from '../config.js';
-import { createSessionToken } from '../middleware/session.js';
+import { createSessionToken, validateSessionToken } from '../middleware/session.js';
 import { authenticate } from '../middleware/authenticate.js';
 import {
   registerSchema,
@@ -37,6 +37,15 @@ const LOCKOUT_THRESHOLD = 10;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+/** Cookie options shared by login/logout */
+const SESSION_COOKIE_OPTS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+  path: '/',
+  maxAge: 60 * 60 * 24,
+};
 
 function generateToken(): string {
   return crypto.randomBytes(32).toString('hex');
@@ -257,6 +266,7 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
         oid: null,
       });
 
+      reply.setCookie('runner_session', sessionToken, SESSION_COOKIE_OPTS);
       return reply.send({
         sessionToken,
         user: {
@@ -482,4 +492,40 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
       return reply.send({ message: 'Password changed.' });
     },
   );
+
+  // ── GET /auth/me ─────────────────────────────────────────────────────────
+  // Cookie-based session check: validates the httpOnly cookie and returns
+  // the decoded session payload so the PWA can restore state without
+  // sessionStorage.
+  fastify.get('/auth/me', async (request, reply) => {
+    const token = request.cookies?.runner_session;
+    if (!token) {
+      return reply.code(401).send({ error: 'UNAUTHORIZED' });
+    }
+    try {
+      const session = validateSessionToken(token);
+      return reply.send({
+        sessionToken: token,
+        session: {
+          userId: session.userId,
+          email: session.email,
+          role: session.role,
+          tenantId: session.tenantId,
+          runnerId: session.runnerId,
+          emailVerified: session.emailVerified,
+          pbxFqdn: session.pbxFqdn,
+          extensionNumber: session.extensionNumber,
+        },
+      });
+    } catch {
+      reply.clearCookie('runner_session', { path: '/' });
+      return reply.code(401).send({ error: 'TOKEN_EXPIRED' });
+    }
+  });
+
+  // ── POST /auth/logout ────────────────────────────────────────────────────
+  fastify.post('/auth/logout', async (_request, reply) => {
+    reply.clearCookie('runner_session', { path: '/' });
+    return reply.send({ message: 'Logged out.' });
+  });
 }

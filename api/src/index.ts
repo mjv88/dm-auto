@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import cookie from '@fastify/cookie';
 import * as Sentry from '@sentry/node';
 import { config } from './config.js';
 import { logger } from './utils/logger.js';
@@ -33,6 +34,9 @@ async function buildServer() {
       level: config.LOG_LEVEL,
     },
   });
+
+  // Cookie parsing (must be registered before routes that read/set cookies)
+  await fastify.register(cookie);
 
   // Security headers + CORS (registered first so every response is covered)
   await registerSecurity(fastify);
