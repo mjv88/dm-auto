@@ -42,7 +42,7 @@ const RESET_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const SESSION_COOKIE_OPTS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
+  sameSite: 'none' as const,
   path: '/',
   maxAge: 60 * 60 * 24,
 };
