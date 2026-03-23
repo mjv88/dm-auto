@@ -51,6 +51,7 @@ export function createSessionToken(payload: UnifiedSession): string {
   const secret = getSecret();
   const expiresIn = getExpiresIn();
   return jwt.sign(payload as unknown as Record<string, unknown>, secret, {
+    algorithm: 'HS256',
     expiresIn,
   } as jwt.SignOptions);
 }
@@ -64,7 +65,7 @@ export function createSessionToken(payload: UnifiedSession): string {
 export function validateSessionToken(token: string): UnifiedSession {
   const secret = getSecret();
   try {
-    const raw = jwt.verify(token, secret) as Record<string, unknown>;
+    const raw = jwt.verify(token, secret, { algorithms: ['HS256'] }) as Record<string, unknown>;
 
     // Normalize legacy token types to unified shape
     const legacyType = raw.type as string | undefined;
