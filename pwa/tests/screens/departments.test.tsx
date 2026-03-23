@@ -1,8 +1,8 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import DepartmentsPage from '@/app/departments/page';
 
-// ── Mocks ─────────────────────────────────────────────────────────────────────
+// -- Mocks --------------------------------------------------------------------
 
 const mockPush = jest.fn();
 jest.mock('next/navigation', () => ({
@@ -14,14 +14,7 @@ jest.mock('../../lib/api', () => ({
   switchDepartment: jest.fn(),
 }));
 
-// Radix Dialog needs pointer events in jsdom
-beforeAll(() => {
-  // @ts-expect-error jsdom limitation
-  window.PointerEvent = MouseEvent;
-  Object.defineProperty(document, 'hasPointerCapture', { value: () => false });
-});
-
-// ── Store mock ─────────────────────────────────────────────────────────────────
+// -- Store mock ---------------------------------------------------------------
 
 const SALES: import('@/types/auth').Dept = { id: 1, name: 'Sales', groupId: 10 };
 const SUPPORT: import('@/types/auth').Dept = { id: 2, name: 'Support', groupId: 20 };
@@ -30,7 +23,7 @@ const RECEPTION: import('@/types/auth').Dept = { id: 3, name: 'Reception', group
 const mockSetCurrentDept = jest.fn();
 const mockSetAllowedDepts = jest.fn();
 
-const baseStore = {
+const baseStore: Record<string, unknown> = {
   allowedDepts: [SALES, SUPPORT, RECEPTION],
   currentDept: SALES,
   runnerProfile: {
@@ -43,8 +36,12 @@ const baseStore = {
     currentDept: SALES,
   },
   selectedPbxFqdn: 'test.pbx.com',
+  pbxOptions: [{ pbxFqdn: 'test.pbx.com', pbxName: 'Test PBX' }],
+  sessionToken: null,
   setCurrentDept: mockSetCurrentDept,
   setAllowedDepts: mockSetAllowedDepts,
+  setRunnerProfile: jest.fn(),
+  setSelectedPbxFqdn: jest.fn(),
 };
 
 jest.mock('@/lib/store', () => ({
@@ -54,20 +51,20 @@ jest.mock('@/lib/store', () => ({
   useRunnerStore: (selector: (s: typeof baseStore) => unknown) => selector(baseStore),
 }));
 
-// ── Import API mocks after jest.mock calls ────────────────────────────────────
+// -- Import API mocks after jest.mock calls -----------------------------------
 
 import { switchDepartment, getDepartments } from '../../lib/api';
 
 const mockSwitchDepartment = switchDepartment as jest.MockedFunction<typeof switchDepartment>;
 const mockGetDepartments = getDepartments as jest.MockedFunction<typeof getDepartments>;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers ------------------------------------------------------------------
 
 function renderPage() {
   return render(<DepartmentsPage />);
 }
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
+// -- Tests --------------------------------------------------------------------
 
 describe('DepartmentsPage', () => {
   beforeEach(() => {
@@ -81,36 +78,39 @@ describe('DepartmentsPage', () => {
     expect(screen.getByText('Reception')).toBeInTheDocument();
   });
 
-  it('current dept card is disabled', () => {
+  it('current dept card shows "Assigned" badge', () => {
     renderPage();
-    const salesBtn = screen.getByRole('button', { name: /Sales – aktuell/i });
-    expect(salesBtn).toBeDisabled();
+    expect(screen.getByText('Assigned')).toBeInTheDocument();
   });
 
-  it('non-current dept cards are enabled', () => {
+  it('non-current dept cards show "Change" label', () => {
     renderPage();
-    const supportBtn = screen.getByRole('button', { name: /Zu Support wechseln/i });
-    const receptionBtn = screen.getByRole('button', { name: /Zu Reception wechseln/i });
-    expect(supportBtn).not.toBeDisabled();
-    expect(receptionBtn).not.toBeDisabled();
+    const changeLabels = screen.getAllByText('Change');
+    expect(changeLabels).toHaveLength(2); // Support + Reception
   });
 
-  it('tapping a dept card opens ConfirmSheet', () => {
+  it('tapping a non-current dept card shows confirm/cancel', () => {
     renderPage();
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Zu Support wechseln/i }));
+    // Click Support "Change" row
+    const supportRow = screen.getByText('Support').closest('[role="button"]')!;
+    fireEvent.click(supportRow);
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(within(screen.getByRole('dialog')).getByText('Support')).toBeInTheDocument();
+    // Should now show Confirm and Cancel buttons
+    expect(screen.getByText('Confirm')).toBeInTheDocument();
+    expect(screen.getByText('Cancel')).toBeInTheDocument();
   });
 
   it('confirm calls switchDepartment with correct args', async () => {
     mockSwitchDepartment.mockResolvedValue(undefined);
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: /Zu Support wechseln/i }));
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /Zu Support wechseln/i }));
+    // Click Support row to enter confirming state
+    const supportRow = screen.getByText('Support').closest('[role="button"]')!;
+    fireEvent.click(supportRow);
+
+    // Click Confirm
+    fireEvent.click(screen.getByText('Confirm'));
 
     await waitFor(() => {
       expect(mockSwitchDepartment).toHaveBeenCalledWith('test.pbx.com', 20);
@@ -121,8 +121,9 @@ describe('DepartmentsPage', () => {
     mockSwitchDepartment.mockResolvedValue(undefined);
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: /Zu Support wechseln/i }));
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /Zu Support wechseln/i }));
+    const supportRow = screen.getByText('Support').closest('[role="button"]')!;
+    fireEvent.click(supportRow);
+    fireEvent.click(screen.getByText('Confirm'));
 
     await waitFor(() => {
       expect(screen.getByText(/Switched to Support/i)).toBeInTheDocument();
@@ -133,8 +134,9 @@ describe('DepartmentsPage', () => {
     mockSwitchDepartment.mockResolvedValue(undefined);
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: /Zu Support wechseln/i }));
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /Zu Support wechseln/i }));
+    const supportRow = screen.getByText('Support').closest('[role="button"]')!;
+    fireEvent.click(supportRow);
+    fireEvent.click(screen.getByText('Confirm'));
 
     await waitFor(() => {
       expect(mockSetCurrentDept).toHaveBeenCalledWith(SUPPORT);
@@ -147,22 +149,24 @@ describe('DepartmentsPage', () => {
     mockSwitchDepartment.mockRejectedValue(appErr);
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: /Zu Support wechseln/i }));
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /Zu Support wechseln/i }));
+    const supportRow = screen.getByText('Support').closest('[role="button"]')!;
+    fireEvent.click(supportRow);
+    fireEvent.click(screen.getByText('Confirm'));
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/error?code=PBX_UNAVAILABLE');
     });
   });
 
-  it('cancel closes ConfirmSheet', () => {
+  it('cancel hides confirm/cancel buttons', () => {
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: /Zu Support wechseln/i }));
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    const supportRow = screen.getByText('Support').closest('[role="button"]')!;
+    fireEvent.click(supportRow);
+    expect(screen.getByText('Confirm')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByLabelText('Abbrechen'));
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(screen.queryByText('Confirm')).not.toBeInTheDocument();
   });
 
   it('refresh button calls getDepartments', async () => {

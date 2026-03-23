@@ -10,47 +10,71 @@ describe('DeptCard', () => {
     expect(screen.getByText('Sales')).toBeInTheDocument();
   });
 
-  it('shows "Aktuell hier" badge when isCurrent is true', () => {
+  it('shows "Assigned" badge when isCurrent is true', () => {
     render(<DeptCard dept={dept} isCurrent />);
-    expect(screen.getByText('Aktuell hier')).toBeInTheDocument();
+    expect(screen.getByText('Assigned')).toBeInTheDocument();
   });
 
-  it('does not show badge when isCurrent is false', () => {
+  it('shows "Change" label when not current and not confirming', () => {
     render(<DeptCard dept={dept} />);
-    expect(screen.queryByText('Aktuell hier')).not.toBeInTheDocument();
+    expect(screen.getByText('Change')).toBeInTheDocument();
   });
 
-  it('sets aria-current when isCurrent is true', () => {
-    render(<DeptCard dept={dept} isCurrent />);
-    expect(screen.getByRole('button')).toHaveAttribute('aria-current', 'true');
-  });
-
-  it('calls onClick when clicked', () => {
-    const onClick = jest.fn();
-    render(<DeptCard dept={dept} onClick={onClick} />);
-    fireEvent.click(screen.getByRole('button'));
-    expect(onClick).toHaveBeenCalledTimes(1);
-  });
-
-  it('is disabled when isDisabled is true', () => {
-    render(<DeptCard dept={dept} isDisabled />);
-    expect(screen.getByRole('button')).toBeDisabled();
-  });
-
-  it('does not call onClick when disabled', () => {
-    const onClick = jest.fn();
-    render(<DeptCard dept={dept} isDisabled onClick={onClick} />);
-    fireEvent.click(screen.getByRole('button'));
-    expect(onClick).not.toHaveBeenCalled();
-  });
-
-  it('has accessible aria-label describing switch action', () => {
+  it('does not show "Assigned" badge when isCurrent is false', () => {
     render(<DeptCard dept={dept} />);
-    expect(screen.getByRole('button')).toHaveAttribute('aria-label', 'Zu Sales wechseln');
+    expect(screen.queryByText('Assigned')).not.toBeInTheDocument();
   });
 
-  it('has accessible aria-label indicating current when isCurrent', () => {
+  it('current card does not have tabIndex (not clickable)', () => {
     render(<DeptCard dept={dept} isCurrent />);
-    expect(screen.getByRole('button')).toHaveAttribute('aria-label', 'Sales – aktuell');
+    const btn = screen.getByRole('button');
+    expect(btn).not.toHaveAttribute('tabindex');
+  });
+
+  it('non-current card has tabIndex 0', () => {
+    render(<DeptCard dept={dept} />);
+    const btn = screen.getByRole('button');
+    expect(btn).toHaveAttribute('tabindex', '0');
+  });
+
+  it('calls onSelect when clicked (not current, not confirming)', () => {
+    const onSelect = jest.fn();
+    render(<DeptCard dept={dept} onSelect={onSelect} />);
+    fireEvent.click(screen.getByRole('button'));
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith(dept);
+  });
+
+  it('does not call onSelect when isCurrent', () => {
+    const onSelect = jest.fn();
+    render(<DeptCard dept={dept} isCurrent onSelect={onSelect} />);
+    fireEvent.click(screen.getByRole('button'));
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('shows Confirm and Cancel buttons when isConfirming', () => {
+    render(<DeptCard dept={dept} isConfirming />);
+    expect(screen.getByText('Confirm')).toBeInTheDocument();
+    expect(screen.getByText('Cancel')).toBeInTheDocument();
+  });
+
+  it('shows "Switching..." when isConfirming and isLoading', () => {
+    render(<DeptCard dept={dept} isConfirming isLoading />);
+    expect(screen.getByText('Switching...')).toBeInTheDocument();
+  });
+
+  it('calls onConfirmSwitch when Confirm button is clicked', () => {
+    const onConfirmSwitch = jest.fn();
+    render(<DeptCard dept={dept} isConfirming onConfirmSwitch={onConfirmSwitch} />);
+    fireEvent.click(screen.getByText('Confirm'));
+    expect(onConfirmSwitch).toHaveBeenCalledTimes(1);
+    expect(onConfirmSwitch).toHaveBeenCalledWith(dept);
+  });
+
+  it('calls onCancel when Cancel button is clicked', () => {
+    const onCancel = jest.fn();
+    render(<DeptCard dept={dept} isConfirming onCancel={onCancel} />);
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(onCancel).toHaveBeenCalledTimes(1);
   });
 });

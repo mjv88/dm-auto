@@ -100,9 +100,10 @@ describe('MSAL cache is sessionStorage, not localStorage', () => {
     expect(src).not.toContain("cacheLocation: 'localStorage'");
   });
 
-  test('lib/auth.ts has storeAuthStateInCookie set to false', () => {
+  test('lib/auth.ts does not enable storeAuthStateInCookie', () => {
     const src = readSource('lib/auth.ts');
-    expect(src).toContain('storeAuthStateInCookie: false');
+    // MSAL v5 removed storeAuthStateInCookie; verify it is not re-enabled as true
+    expect(src).not.toContain('storeAuthStateInCookie: true');
   });
 });
 
