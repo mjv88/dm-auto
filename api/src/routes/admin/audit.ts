@@ -55,7 +55,9 @@ function buildAuditConditions(tenantId: string | null, query: AuditQuery) {
     }
   }
   if (query.to) {
-    const toDate = new Date(query.to);
+    // If only a date (no time component), include the entire day
+    const toStr = query.to.length === 10 ? `${query.to}T23:59:59.999Z` : query.to;
+    const toDate = new Date(toStr);
     if (!isNaN(toDate.getTime())) {
       conditions.push(lte(auditLog.createdAt, toDate));
     }
