@@ -15,12 +15,28 @@ const ROLE_HIERARCHY: Record<string, number> = { super_admin: 4, admin: 3, manag
 
 export async function requireAuth(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   // Read token from httpOnly cookie first, fallback to Bearer header
-  const token = (request.cookies as Record<string, string> | undefined)?.runner_session
-    || (request.headers.authorization?.startsWith('Bearer ')
-      ? request.headers.authorization.slice(7)
-      : undefined);
+  const cookies = request.cookies as Record<string, string> | undefined;
+  const cookieToken = cookies?.runner_session;
+  const bearerHeader = request.headers.authorization;
+  const bearerToken = bearerHeader?.startsWith('Bearer ') ? bearerHeader.slice(7) : undefined;
+  const token = cookieToken || bearerToken;
+
+  // Debug logging — remove after cookie auth is verified
+  request.log.debug({
+    hasCookies: !!cookies,
+    cookieKeys: cookies ? Object.keys(cookies) : [],
+    hasCookieToken: !!cookieToken,
+    hasBearerToken: !!bearerToken,
+    url: request.url,
+  }, 'requireAuth: token resolution');
 
   if (!token) {
+    request.log.warn({
+      url: request.url,
+      hasCookies: !!cookies,
+      cookieKeys: cookies ? Object.keys(cookies) : [],
+      hasAuthHeader: !!bearerHeader,
+    }, 'requireAuth: no token found — returning 401');
     return reply.code(401).send({ error: 'UNAUTHORIZED', message: 'Missing session' });
   }
   try {
