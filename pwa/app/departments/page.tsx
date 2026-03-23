@@ -22,6 +22,7 @@ export default function DepartmentsPage() {
   const currentDept = useCurrentDept();
   const runnerProfile = useRunnerProfile();
   const selectedPbxFqdn = useRunnerStore((s) => s.selectedPbxFqdn);
+  const pbxOptions = useRunnerStore((s) => s.pbxOptions);
   const setCurrentDept = useRunnerStore((s) => s.setCurrentDept);
   const setAllowedDepts = useRunnerStore((s) => s.setAllowedDepts);
 
@@ -203,6 +204,17 @@ export default function DepartmentsPage() {
     }
   }
 
+  const handleChangePbx = useCallback(() => {
+    try {
+      localStorage.removeItem('runner_last_pbx_fqdn');
+    } catch {
+      // localStorage unavailable
+    }
+    router.push('/select-pbx');
+  }, [router]);
+
+  const isMultiPbx = pbxOptions.length > 1;
+
   const otherDepts = allowedDepts.filter((d) => d.id !== currentDept?.id);
   const currentDeptName = currentDept?.name ?? '—';
 
@@ -261,6 +273,19 @@ export default function DepartmentsPage() {
             </svg>
           </button>
         </div>
+
+        {/* Change PBX link for multi-PBX runners */}
+        {isMultiPbx && (
+          <div className="px-4 pt-1 pb-0">
+            <button
+              type="button"
+              onClick={handleChangePbx}
+              className="text-xs text-brand-blue hover:underline"
+            >
+              Change PBX
+            </button>
+          </div>
+        )}
 
         {/* Slow request warning */}
         {isSlow && (

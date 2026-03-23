@@ -2,11 +2,13 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useRunnerStore } from '@/lib/store';
 import { getDepartments } from '@/lib/api';
 import LoadingScreen from '@/components/LoadingScreen';
+
+const LAST_PBX_KEY = 'runner_last_pbx_fqdn';
 
 export default function SelectPBXPage() {
   const router = useRouter();
@@ -16,6 +18,23 @@ export default function SelectPBXPage() {
   const runnerProfile = useRunnerStore((s) => s.runnerProfile);
 
   const [loadingFqdn, setLoadingFqdn] = useState<string | null>(null);
+  const [autoSelectAttempted, setAutoSelectAttempted] = useState(false);
+
+  // Auto-select last used PBX from localStorage
+  useEffect(() => {
+    if (autoSelectAttempted || pbxOptions.length <= 1) return;
+    setAutoSelectAttempted(true);
+
+    try {
+      const lastFqdn = localStorage.getItem(LAST_PBX_KEY);
+      if (lastFqdn && pbxOptions.some((p) => p.pbxFqdn === lastFqdn)) {
+        handleSelect(lastFqdn);
+      }
+    } catch {
+      // localStorage unavailable — show selector
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pbxOptions]);
 
   // Only shown when more than one PBX option exists
   if (pbxOptions.length <= 1) {
@@ -25,6 +44,11 @@ export default function SelectPBXPage() {
   async function handleSelect(fqdn: string) {
     setLoadingFqdn(fqdn);
     setSelectedPbxFqdn(fqdn);
+    try {
+      localStorage.setItem(LAST_PBX_KEY, fqdn);
+    } catch {
+      // localStorage unavailable — skip persistence
+    }
     try {
       const depts = await getDepartments(fqdn);
       setAllowedDepts(depts);
