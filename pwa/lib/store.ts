@@ -155,10 +155,10 @@ export async function restoreSession(): Promise<void> {
     const res = await fetch(`${API_BASE}/auth/me`, { credentials: 'include' });
     if (res.ok) {
       const data = await res.json();
-      const token: string = data.sessionToken;
       const session = data.session;
+      // httpOnly cookie handles auth — only store session metadata in Zustand
       useRunnerStore.setState({
-        sessionToken: token,
+        sessionToken: 'httponly-cookie',
         role: session.role ?? 'runner',
         authStatus: 'authenticated',
       });

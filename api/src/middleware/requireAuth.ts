@@ -14,12 +14,17 @@ declare module 'fastify' {
 const ROLE_HIERARCHY: Record<string, number> = { super_admin: 4, admin: 3, manager: 2, runner: 1 };
 
 export async function requireAuth(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  const header = request.headers.authorization;
-  if (!header?.startsWith('Bearer ')) {
-    return reply.code(401).send({ error: 'UNAUTHORIZED', message: 'Missing Bearer token' });
+  // Read token from httpOnly cookie first, fallback to Bearer header
+  const token = (request.cookies as Record<string, string> | undefined)?.runner_session
+    || (request.headers.authorization?.startsWith('Bearer ')
+      ? request.headers.authorization.slice(7)
+      : undefined);
+
+  if (!token) {
+    return reply.code(401).send({ error: 'UNAUTHORIZED', message: 'Missing session' });
   }
   try {
-    request.session = validateSessionToken(header.slice(7));
+    request.session = validateSessionToken(token);
   } catch (err: unknown) {
     const code = (err as { code?: string }).code;
     if (code === 'TOKEN_EXPIRED') return reply.code(401).send({ error: 'TOKEN_EXPIRED' });

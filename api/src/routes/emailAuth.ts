@@ -131,8 +131,8 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
     {
       config: {
         rateLimit: {
-          max: 10,
-          timeWindow: 60_000, // 10 per minute per IP
+          max: 5,
+          timeWindow: 60_000, // 5 per minute per IP
         },
       },
     },
@@ -511,8 +511,8 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
     }
     try {
       const session = validateSessionToken(token);
+      // Return decoded session claims only — never expose the raw JWT
       return reply.send({
-        sessionToken: token,
         session: {
           userId: session.userId,
           email: session.email,
@@ -522,6 +522,7 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
           emailVerified: session.emailVerified,
           pbxFqdn: session.pbxFqdn,
           extensionNumber: session.extensionNumber,
+          entraEmail: session.entraEmail,
         },
       });
     } catch {
