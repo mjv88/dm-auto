@@ -111,9 +111,9 @@ describe('No localStorage writes in source files (§15 credential storage)', () 
     expect(clearViolations).toHaveLength(0);
   });
 
-  test('store.ts comment confirms sessionStorage-only auth cache', () => {
+  test('store.ts comment confirms httpOnly cookie auth', () => {
     const storeContent = fs.readFileSync(path.join(ROOT, 'lib', 'store.ts'), 'utf-8');
-    // Confirm the intentional comment about not persisting to localStorage
-    expect(storeContent).toContain('memory only');
+    // Confirm the intentional comment about cookie-based auth
+    expect(storeContent).toContain('httpOnly cookie handles auth');
   });
 });

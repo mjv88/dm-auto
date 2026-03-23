@@ -2,7 +2,7 @@
  * lib/setupApi.ts
  *
  * Fetch wrapper for the self-service onboarding wizard.
- * Uses the sessionToken from the Zustand store for auth.
+ * Auth is handled via httpOnly cookies (credentials: 'include').
  */
 
 import { useRunnerStore } from '@/lib/store';
@@ -10,13 +10,11 @@ import { useRunnerStore } from '@/lib/store';
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 async function setupFetch(path: string, options?: RequestInit): Promise<Response> {
-  const token = useRunnerStore.getState().sessionToken;
   const headers = new Headers(options?.headers);
-  if (token) headers.set('Authorization', `Bearer ${token}`);
   if (options?.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
-  const resp = await fetch(`${API_URL}${path}`, { ...options, headers });
+  const resp = await fetch(`${API_URL}${path}`, { ...options, credentials: 'include', headers });
   if (resp.status === 401 && typeof window !== 'undefined') {
     window.location.href = '/login?redirect=/setup';
   }

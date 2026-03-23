@@ -181,11 +181,11 @@ export default function UsersPage() {
   async function handleImpersonate(row: UserRow) {
     if (!confirm(`Impersonate ${row.email}?`)) return;
     try {
-      const result = await adminPost<{ sessionToken: string; originalToken: string; user: { email: string } }>(
+      const result = await adminPost<{ user: { email: string } }>(
         `/admin/users/${row.id}/impersonate`,
         {},
       );
-      startImpersonation(result.sessionToken, result.originalToken, result.user.email);
+      startImpersonation(result.user.email);
       window.location.href = '/';
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Impersonation failed');

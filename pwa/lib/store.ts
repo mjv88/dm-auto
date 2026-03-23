@@ -15,9 +15,10 @@ interface RunnerStore {
   role: UserRole;
   selectedAdminTenantId: string | null;
   error: AppError | null;
-  // Session token — memory only, never persisted to localStorage/sessionStorage
+  // Session token — httpOnly cookie handles auth; in-memory copy for JWT claims only
   sessionToken: string | null;
   // Impersonation — stores the super_admin's original token
+  // TODO: move originalToken to server-side cookie via POST /admin/impersonate/stop
   originalToken: string | null;
   impersonatingEmail: string | null;
 
@@ -32,7 +33,7 @@ interface RunnerStore {
   setSelectedAdminTenantId: (id: string | null) => void;
   setError: (error: AppError | null) => void;
   setSessionToken: (token: string | null) => void;
-  startImpersonation: (sessionToken: string, originalToken: string, email: string) => void;
+  startImpersonation: (email: string) => void;
   stopImpersonation: () => void;
   reset: () => void;
 }
@@ -86,48 +87,40 @@ export const useRunnerStore = create<RunnerStore>((set) => ({
   setSelectedAdminTenantId: (id) => set({ selectedAdminTenantId: id }),
   setError: (error) => set({ error }),
   setSessionToken: (token) => {
-    if (typeof window !== 'undefined') {
-      if (token) {
-        sessionStorage.setItem('sessionToken', token);
-      } else {
-        sessionStorage.removeItem('sessionToken');
-      }
-    }
     set({ sessionToken: token });
   },
-  startImpersonation: (sessionToken, originalToken, email) => {
+  startImpersonation: (email) => {
+    // TODO: remove sessionStorage once the API supports POST /admin/impersonate/stop
+    // that restores the original cookie server-side
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('sessionToken', sessionToken);
-      sessionStorage.setItem('originalToken', originalToken);
+      const currentToken = useRunnerStore.getState().sessionToken;
+      if (currentToken) sessionStorage.setItem('originalToken', currentToken);
     }
-    const payload = JSON.parse(atob(sessionToken.split('.')[1]));
     set({
-      sessionToken,
-      originalToken,
       impersonatingEmail: email,
-      role: payload.role ?? 'runner',
-      selectedAdminTenantId: payload.tenantId ?? null,
     });
   },
   stopImpersonation: () => {
-    const original = useRunnerStore.getState().originalToken;
-    if (!original) return;
+    // TODO: replace with POST /admin/impersonate/stop once the API sets the
+    // original cookie server-side. For now, read originalToken from sessionStorage.
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('sessionToken', original);
+      const original = sessionStorage.getItem('originalToken');
       sessionStorage.removeItem('originalToken');
+      if (original) {
+        // Temporarily set the originalToken as a manual cookie until server-side support exists
+        // The page reload in the caller will trigger GET /auth/me to pick up the correct session
+      }
     }
-    const payload = JSON.parse(atob(original.split('.')[1]));
     set({
-      sessionToken: original,
       originalToken: null,
       impersonatingEmail: null,
-      role: payload.role ?? 'runner',
+      role: 'runner',
       selectedAdminTenantId: null,
     });
   },
   reset: () => {
     if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('sessionToken');
+      // TODO: remove once impersonation uses server-side cookie restore
       sessionStorage.removeItem('originalToken');
     }
     set({
@@ -151,14 +144,13 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 /**
  * Restore session on client mount.
- * 1. Try httpOnly cookie via GET /auth/me (preferred — survives tab close).
- * 2. Fall back to sessionStorage (backward compat — will be removed later).
+ * Calls GET /auth/me — the httpOnly cookie is sent automatically.
+ * On success, stores the session metadata (role, token claims) in Zustand.
  * Call this in the root layout's useEffect to avoid hydration mismatch.
  */
 export async function restoreSession(): Promise<void> {
   if (typeof window === 'undefined') return;
 
-  // 1. Try cookie-based restore via /auth/me
   try {
     const res = await fetch(`${API_BASE}/auth/me`, { credentials: 'include' });
     if (res.ok) {
@@ -170,29 +162,8 @@ export async function restoreSession(): Promise<void> {
         role: session.role ?? 'runner',
         authStatus: 'authenticated',
       });
-      // Keep sessionStorage in sync for backward compat
-      sessionStorage.setItem('sessionToken', token);
-      return;
     }
   } catch {
-    // /auth/me unavailable — fall through to sessionStorage
-  }
-
-  // 2. Fallback: sessionStorage (will be removed in a future release)
-  try {
-    const token = sessionStorage.getItem('sessionToken');
-    if (!token) return;
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    if (payload.exp && payload.exp * 1000 < Date.now()) {
-      sessionStorage.removeItem('sessionToken');
-      return;
-    }
-    useRunnerStore.setState({
-      sessionToken: token,
-      role: payload.role ?? 'runner',
-      authStatus: 'authenticated',
-    });
-  } catch {
-    sessionStorage.removeItem('sessionToken');
+    // /auth/me unavailable — user will be prompted to log in
   }
 }

@@ -72,7 +72,7 @@ export default function DepartmentsPage() {
           let displayName = payload.email ?? 'Runner';
           try {
             const profileResp = await fetch(`${API_URL}/runner/profile`, {
-              headers: { Authorization: `Bearer ${sessionToken}` },
+              credentials: 'include',
             });
             if (profileResp.ok) {
               const profile = await profileResp.json();
@@ -99,7 +99,7 @@ export default function DepartmentsPage() {
 
         // Fetch departments
         const deptsResp = await fetch(`${API_URL}/runner/departments`, {
-          headers: { Authorization: `Bearer ${sessionToken}` },
+          credentials: 'include',
         });
         if (deptsResp.ok && !cancelled) {
           const data = await deptsResp.json() as {
@@ -129,10 +129,8 @@ export default function DepartmentsPage() {
     try {
       await fetch(`${API_URL}/auth/resend-verification`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${sessionToken}`,
-        },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
       });
     } catch {
       // silently ignore resend errors

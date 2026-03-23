@@ -277,15 +277,11 @@ export class RunnerAPIClient {
    * On 401: silent re-auth then retry once.
    */
   async getDepartments(): Promise<DeptResponse> {
-    let res = await fetchWithRetry(`${API_BASE}/runner/departments`, {
-      headers: { Authorization: `Bearer ${getState().sessionToken}` },
-    });
+    let res = await fetchWithRetry(`${API_BASE}/runner/departments`);
 
     if (res.status === 401) {
       await this._silentReAuth();
-      res = await fetchWithRetry(`${API_BASE}/runner/departments`, {
-        headers: { Authorization: `Bearer ${getState().sessionToken}` },
-      });
+      res = await fetchWithRetry(`${API_BASE}/runner/departments`);
     }
 
     if (!res.ok) {
@@ -304,10 +300,7 @@ export class RunnerAPIClient {
     const doFetch = () =>
       fetchWithRetry(`${API_BASE}/runner/switch`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getState().sessionToken}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ targetDeptId }),
       });
 

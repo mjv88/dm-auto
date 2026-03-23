@@ -174,14 +174,13 @@ describe('getDepartments()', () => {
     expect(depts[1]).toEqual({ id: 7, name: 'Support', groupId: 7 });
   });
 
-  it('sends Authorization header with session token', async () => {
+  it('sends request with credentials: include (cookie auth)', async () => {
     mockFetch.mockResolvedValueOnce(okJson(DEPT_RESPONSE));
 
     await getDepartments();
 
     const [, opts] = mockFetch.mock.calls[0];
-    const hdrs = (opts as RequestInit).headers;
-    expect(hdrs instanceof Headers ? hdrs.get('Authorization') : (hdrs as Record<string, string>)['Authorization']).toBe('Bearer valid-token');
+    expect((opts as RequestInit).credentials).toBe('include');
   });
 
   it('401: triggers silent re-auth and retries once, returning dept list', async () => {
@@ -229,7 +228,7 @@ describe('switchDepartment()', () => {
     expect(state.currentDept?.name).toBe('Support');
   });
 
-  it('sends correct request body and Authorization header', async () => {
+  it('sends correct request body with credentials: include (cookie auth)', async () => {
     mockFetch.mockResolvedValueOnce(okJson(SWITCH_RESPONSE));
 
     await switchDepartment('any-fqdn', 7);
@@ -237,8 +236,7 @@ describe('switchDepartment()', () => {
     const [, opts] = mockFetch.mock.calls[0];
     const body = JSON.parse((opts as RequestInit).body as string);
     expect(body.targetDeptId).toBe(7);
-    const hdrs = (opts as RequestInit).headers;
-    expect(hdrs instanceof Headers ? hdrs.get('Authorization') : (hdrs as Record<string, string>)['Authorization']).toBe('Bearer valid-token');
+    expect((opts as RequestInit).credentials).toBe('include');
   });
 
   it('401: triggers silent re-auth and retries once', async () => {
