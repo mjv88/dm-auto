@@ -22,6 +22,8 @@ export interface UnifiedSession {
   entraEmail: string | null;
   tid: string | null;
   oid: string | null;
+  /** Set when a super_admin is impersonating this user — contains the admin's userId */
+  impersonatedBy?: string | null;
 }
 
 // Legacy aliases for backward compat
@@ -84,6 +86,7 @@ export function validateSessionToken(token: string): UnifiedSession {
         entraEmail: (raw.entraEmail as string) || null,
         tid: (raw.tid as string) ?? null,
         oid: (raw.oid as string) ?? null,
+        impersonatedBy: (raw.impersonatedBy as string) ?? null,
       };
     }
 
@@ -101,6 +104,7 @@ export function validateSessionToken(token: string): UnifiedSession {
         entraEmail: (raw.entraEmail as string) || null,
         tid: (raw.tid as string) ?? null,
         oid: (raw.oid as string) ?? null,
+        impersonatedBy: (raw.impersonatedBy as string) ?? null,
       };
     }
 
@@ -118,6 +122,7 @@ export function validateSessionToken(token: string): UnifiedSession {
       entraEmail: (raw.entraEmail as string) ?? null,
       tid: (raw.tid as string) ?? null,
       oid: (raw.oid as string) ?? null,
+      impersonatedBy: (raw.impersonatedBy as string) ?? null,
     };
   } catch (err: unknown) {
     if (err instanceof jwt.TokenExpiredError) {

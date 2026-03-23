@@ -328,7 +328,7 @@ export async function adminUserRoutes(fastify: FastifyInstance): Promise<void> {
       return reply.code(404).send({ error: 'NOT_FOUND' });
     }
 
-    // Issue a session token as the target user
+    // Issue a session token as the target user, tagging with impersonator's userId
     const sessionToken = createSessionToken({
       type: 'session',
       userId: target.id,
@@ -342,6 +342,7 @@ export async function adminUserRoutes(fastify: FastifyInstance): Promise<void> {
       entraEmail: null,
       tid: null,
       oid: null,
+      impersonatedBy: session.userId,
     });
 
     return reply.send({

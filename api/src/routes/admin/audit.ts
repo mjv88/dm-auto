@@ -122,6 +122,7 @@ export async function adminAuditRoutes(fastify: FastifyInstance): Promise<void> 
         userAgent: auditLog.userAgent,
         deviceId: auditLog.deviceId,
         durationMs: auditLog.durationMs,
+        impersonatedBy: auditLog.impersonatedBy,
         createdAt: auditLog.createdAt,
       })
       .from(auditLog)
@@ -161,6 +162,7 @@ export async function adminAuditRoutes(fastify: FastifyInstance): Promise<void> 
         errorMessage: auditLog.errorMessage,
         ipAddress: auditLog.ipAddress,
         durationMs: auditLog.durationMs,
+        impersonatedBy: auditLog.impersonatedBy,
         createdAt: auditLog.createdAt,
       })
       .from(auditLog)
@@ -172,7 +174,7 @@ export async function adminAuditRoutes(fastify: FastifyInstance): Promise<void> 
     const headers = [
       'id', 'entraEmail', 'pbxFqdn', 'extensionNumber',
       'fromDeptId', 'fromDeptName', 'toDeptId', 'toDeptName',
-      'status', 'errorMessage', 'ipAddress', 'durationMs', 'createdAt',
+      'status', 'errorMessage', 'ipAddress', 'durationMs', 'impersonatedBy', 'createdAt',
     ];
 
     const escapeCsv = (val: unknown): string => {

@@ -153,6 +153,7 @@ export const auditLog = pgTable(
     userAgent:       text('user_agent'),
     deviceId:        text('device_id'),
     durationMs:      integer('duration_ms'),
+    impersonatedBy:  uuid('impersonated_by'),  // admin userId when action performed under impersonation
     createdAt:       timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

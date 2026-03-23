@@ -31,6 +31,8 @@ export interface AuditParams {
   status:          'success' | 'failed' | 'denied';
   errorCode:       string | null;   // stored as error_message in DB
   durationMs:      number;
+  /** Present when action is performed under an impersonated session */
+  impersonatedBy?: string | null;
 }
 
 /**
@@ -47,6 +49,11 @@ export function writeAuditLog(
   const ipAddress = request.ip ?? null;
   const userAgent = (request.headers['user-agent'] as string | undefined) ?? null;
   const deviceId  = (request.headers['x-intune-device-id'] as string | undefined) ?? null;
+
+  // Resolve impersonatedBy from explicit param or from the request session
+  const sessionObj = (request as unknown as { session?: { impersonatedBy?: string | null } }).session;
+  const impersonatedBy: string | null =
+    params.impersonatedBy ?? sessionObj?.impersonatedBy ?? null;
 
   // Defer the DB write so the caller (route handler) is not blocked.
   setImmediate(() => {
@@ -67,6 +74,7 @@ export function writeAuditLog(
         userAgent,
         deviceId,
         durationMs:      params.durationMs,
+        impersonatedBy:  impersonatedBy ?? null,
       })
       .catch((err: unknown) => {
         // Audit failures must never crash the server or affect the response.
