@@ -114,7 +114,7 @@ export default function AdminDashboard() {
             <tbody>
               {(stats.topDepartments ?? []).map((d, i) => (
                 <tr key={d.toDeptName ?? i} className="border-b last:border-b-0">
-                  <td className="px-4 py-2 text-gray-700">{d.toDeptName || '\u2014'}</td>
+                  <td className="px-4 py-2 text-gray-700">{d.toDeptName || '—'}</td>
                   <td className="px-4 py-2 text-right text-gray-500 whitespace-nowrap">{d.count} switches</td>
                 </tr>
               ))}
@@ -154,7 +154,7 @@ export default function AdminDashboard() {
                   {entry.entraEmail}
                 </td>
                 <td className="px-4 py-2 text-xs text-gray-600">
-                  {entry.fromDeptName || '\u2014'} &rarr; {entry.toDeptName || '\u2014'}
+                  {entry.fromDeptName || '—'} &rarr; {entry.toDeptName || '—'}
                 </td>
                 <td className="px-4 py-2">
                   <span

@@ -252,7 +252,7 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
         emailVerified: user.emailVerified,
         pbxFqdn,
         extensionNumber,
-        entraEmail: null,
+        entraEmail: normalizedEmail,
         tid: null,
         oid: null,
       });

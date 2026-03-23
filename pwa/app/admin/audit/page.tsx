@@ -121,25 +121,18 @@ export default function AuditPage() {
       ),
     },
     {
-      key: 'entraEmail',
-      header: 'Email',
-      render: (row) => (
-        <span className="text-xs text-gray-600 truncate max-w-[200px] block">{row.entraEmail}</span>
-      ),
-    },
-    {
       key: 'extensionNumber',
       header: 'Ext.',
       render: (row) => (
-        <span className="text-xs font-mono">{row.extensionNumber || '\u2014'}</span>
+        <span className="text-xs font-mono">{row.extensionNumber || '—'}</span>
       ),
     },
     {
       key: 'fromDeptName',
-      header: 'From \u2192 To',
+      header: 'From → To',
       render: (row) => (
         <span className="text-xs">
-          {row.fromDeptName || '\u2014'} \u2192 {row.toDeptName || '\u2014'}
+          {row.fromDeptName || '—'} → {row.toDeptName || '—'}
         </span>
       ),
     },
@@ -164,7 +157,7 @@ export default function AuditPage() {
       key: 'pbxFqdn',
       header: 'PBX',
       render: (row) => (
-        <span className="text-xs text-gray-500">{row.pbxFqdn || '\u2014'}</span>
+        <span className="text-xs text-gray-500">{row.pbxFqdn || '—'}</span>
       ),
     },
     {
@@ -172,7 +165,7 @@ export default function AuditPage() {
       header: 'Duration',
       render: (row) => (
         <span className="text-xs text-gray-400">
-          {row.durationMs != null ? `${row.durationMs}ms` : '\u2014'}
+          {row.durationMs != null ? `${row.durationMs}ms` : '—'}
         </span>
       ),
     },
