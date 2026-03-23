@@ -32,6 +32,11 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   ],
 });
 
+const isDev = process.env.NODE_ENV === 'development';
+const scriptSrc = isDev
+  ? "'self' 'unsafe-inline' 'unsafe-eval'"
+  : "'self' 'unsafe-inline'";
+
 /** @type {import('next').NextConfig} */
 module.exports = withPWA({
   output: 'standalone',
@@ -51,12 +56,14 @@ module.exports = withPWA({
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              `script-src ${scriptSrc}`,
               `connect-src 'self' ${process.env.NEXT_PUBLIC_API_URL || 'https://runner-api.tcx-hub.com'} https://login.microsoftonline.com https://graph.microsoft.com https://*.sentry.io`,
               "img-src 'self' data:",
               "style-src 'self' 'unsafe-inline'",
               "font-src 'self'",
               "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
             ].join('; '),
           },
           {
@@ -73,7 +80,7 @@ module.exports = withPWA({
           },
           {
             key: 'Permissions-Policy',
-            value: 'geolocation=(), microphone=(), camera=()',
+            value: 'camera=(), microphone=(), geolocation=(), payment=()',
           },
           {
             key: 'Strict-Transport-Security',

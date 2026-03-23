@@ -4,9 +4,11 @@
  * Registers security headers on every response:
  *   - CORS: only the NEXT_PUBLIC_APP_URL origin is allowed
  *   - HSTS: max-age=31536000; includeSubDomains
- *   - CSP: default-src 'self'; connect-src 'self' https://login.microsoftonline.com
+ *   - CSP: default-src 'none'; frame-ancestors 'none'
  *   - X-Frame-Options: DENY
  *   - X-Content-Type-Options: nosniff
+ *   - Referrer-Policy: strict-origin-when-cross-origin
+ *   - Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
  *
  * Also handles CORS preflight (OPTIONS) requests.
  */
@@ -60,9 +62,11 @@ export async function registerSecurity(fastify: FastifyInstance): Promise<void> 
       .header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
       .header(
         'Content-Security-Policy',
-        "default-src 'self'; connect-src 'self' https://login.microsoftonline.com",
+        "default-src 'none'; frame-ancestors 'none'",
       )
       .header('X-Frame-Options', 'DENY')
-      .header('X-Content-Type-Options', 'nosniff');
+      .header('X-Content-Type-Options', 'nosniff')
+      .header('Referrer-Policy', 'strict-origin-when-cross-origin')
+      .header('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
   });
 }
