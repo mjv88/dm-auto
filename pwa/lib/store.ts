@@ -21,6 +21,8 @@ interface RunnerStore {
   // TODO: move originalToken to server-side cookie via POST /admin/impersonate/stop
   originalToken: string | null;
   impersonatingEmail: string | null;
+  // IVR self-service — true when runner's departments grant IVR access
+  ivrAccess: boolean;
 
   // Actions
   setAuthStatus: (status: AuthStatus) => void;
@@ -33,6 +35,7 @@ interface RunnerStore {
   setSelectedAdminTenantId: (id: string | null) => void;
   setError: (error: AppError | null) => void;
   setSessionToken: (token: string | null) => void;
+  setIvrAccess: (ivrAccess: boolean) => void;
   startImpersonation: (email: string) => void;
   stopImpersonation: () => void;
   reset: () => void;
@@ -51,6 +54,7 @@ const initialState = {
   sessionToken: null,
   originalToken: null,
   impersonatingEmail: null,
+  ivrAccess: false,
 };
 
 // ---------------------------------------------------------------------------
@@ -74,6 +78,8 @@ export function useRunnerProfile() {
   return useRunnerStore(useShallow((s) => s.runnerProfile));
 }
 
+export const useIvrAccess = () => useRunnerStore((s) => s.ivrAccess);
+
 export const useRunnerStore = create<RunnerStore>((set) => ({
   ...initialState,
 
@@ -96,6 +102,7 @@ export const useRunnerStore = create<RunnerStore>((set) => ({
     }
     set({ sessionToken: token });
   },
+  setIvrAccess: (ivrAccess) => set({ ivrAccess }),
   startImpersonation: (email) => {
     // TODO: remove sessionStorage once the API supports POST /admin/impersonate/stop
     // that restores the original cookie server-side
@@ -141,6 +148,7 @@ export const useRunnerStore = create<RunnerStore>((set) => ({
       sessionToken: null,
       originalToken: null,
       impersonatingEmail: null,
+      ivrAccess: false,
     });
   },
 }));

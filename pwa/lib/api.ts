@@ -114,6 +114,7 @@ export interface DeptResponse {
   currentDeptId: number;
   currentDeptName: string;
   allowedDepts: Array<{ id: number; name: string }>;
+  ivrAccess?: boolean;
 }
 
 export interface SwitchResponse {
@@ -331,6 +332,10 @@ export const apiClient = new RunnerAPIClient();
  */
 export async function getDepartments(_pbxFqdn?: string): Promise<Department[]> {
   const data = await apiClient.getDepartments();
+  // Propagate ivrAccess flag to store when departments are refreshed
+  if (data.ivrAccess !== undefined) {
+    getState().setIvrAccess(data.ivrAccess);
+  }
   return data.allowedDepts.map((d) => ({ id: d.id, name: d.name, groupId: d.id }));
 }
 
