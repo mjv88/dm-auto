@@ -11,6 +11,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 import RunnerHeader from '@/components/RunnerHeader';
 import DeptCard from '@/components/DeptCard';
 import SuccessToast from '@/components/SuccessToast';
+import IvrSection from '@/components/ivr/IvrSection';
 import type { Dept } from '@/types/auth';
 
 const SLOW_REQUEST_THRESHOLD_MS = 5_000;
@@ -340,6 +341,8 @@ export default function DepartmentsPage() {
               )}
             </>
           )}
+
+          <IvrSection />
         </div>
       </div>
 
