@@ -110,6 +110,7 @@ export const createRunnerSchema = z.object({
   outboundCallerId: callerIdSchema.nullable().optional(),
   deptCallerIds:    z.record(z.string(), callerIdSchema).optional(),
   deptRingGroups: z.record(z.string(), z.array(z.number().int().positive())).optional(),
+  ivrAccess: z.boolean().optional(),
 });
 
 /** PUT /admin/runners/:id */
@@ -121,6 +122,7 @@ export const updateRunnerSchema = z.object({
   outboundCallerId: callerIdSchema.nullable().optional(),
   deptCallerIds:    z.record(z.string(), callerIdSchema).optional(),
   deptRingGroups: z.record(z.string(), z.array(z.number().int().positive())).optional(),
+  ivrAccess: z.boolean().optional(),
 });
 
 // ── Admin tenant schemas ───────────────────────────────────────────────────────
@@ -202,4 +204,15 @@ export const reassignCompanySchema = z.object({
 export const reassignAdminSchema = z.object({
   userId: z.string().uuid(),
   targetTenantId: z.string().uuid(),
+});
+
+// ── IVR schemas ─────────────────────────────────────────────────────────────
+
+export const ivrRecordSchema = z.object({
+  filename: z.string().min(1).max(100).regex(/^[a-zA-Z0-9_-]+$/, 'Alphanumeric, hyphens, underscores only'),
+});
+
+export const ivrAssignPromptSchema = z.object({
+  promptType: z.enum(['main', 'offHours', 'holidays', 'break']),
+  filename: z.string().min(1).max(150),
 });
