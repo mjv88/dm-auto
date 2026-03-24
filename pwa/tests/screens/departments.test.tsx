@@ -14,6 +14,15 @@ jest.mock('../../lib/api', () => ({
   switchDepartment: jest.fn(),
 }));
 
+jest.mock('@/lib/ivrApi', () => ({
+  getIvrs: jest.fn().mockResolvedValue([]),
+  getIvrDetail: jest.fn(),
+  getPromptAudioUrl: jest.fn(),
+  triggerRecording: jest.fn(),
+  uploadPromptFile: jest.fn(),
+  assignPrompt: jest.fn(),
+}));
+
 // -- Store mock ---------------------------------------------------------------
 
 const SALES: import('@/types/auth').Dept = { id: 1, name: 'Sales', groupId: 10 };
@@ -38,6 +47,7 @@ const baseStore: Record<string, unknown> = {
   selectedPbxFqdn: 'test.pbx.com',
   pbxOptions: [{ pbxFqdn: 'test.pbx.com', pbxName: 'Test PBX' }],
   sessionToken: null,
+  ivrAccess: false,
   setCurrentDept: mockSetCurrentDept,
   setAllowedDepts: mockSetAllowedDepts,
   setRunnerProfile: jest.fn(),
@@ -48,6 +58,7 @@ jest.mock('@/lib/store', () => ({
   useAllowedDepts: () => baseStore.allowedDepts,
   useCurrentDept: () => baseStore.currentDept,
   useRunnerProfile: () => baseStore.runnerProfile,
+  useIvrAccess: () => baseStore.ivrAccess,
   useRunnerStore: (selector: (s: typeof baseStore) => unknown) => selector(baseStore),
 }));
 
