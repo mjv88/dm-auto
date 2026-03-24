@@ -26,13 +26,15 @@ export interface AuditParams {
   extensionNumber: string;
   fromDeptId:      string | null;   // null when dept context is unknown
   fromDeptName:    string | null;
-  toDeptId:        string;
+  toDeptId:        string | null;
   toDeptName:      string | null;
   status:          'success' | 'failed' | 'denied';
   errorCode:       string | null;   // stored as error_message in DB
   durationMs:      number;
   /** Present when action is performed under an impersonated session */
   impersonatedBy?: string | null;
+  action?:         string;
+  metadata?:       Record<string, unknown> | null;
 }
 
 /**
@@ -66,7 +68,7 @@ export function writeAuditLog(
         extensionNumber: params.extensionNumber,
         fromDeptId:      params.fromDeptId ?? null,
         fromDeptName:    params.fromDeptName ?? null,
-        toDeptId:        params.toDeptId,
+        toDeptId:        params.toDeptId ?? null,
         toDeptName:      params.toDeptName ?? null,
         status:          params.status,
         errorMessage:    params.errorCode ?? null,
@@ -75,6 +77,8 @@ export function writeAuditLog(
         deviceId,
         durationMs:      params.durationMs,
         impersonatedBy:  impersonatedBy ?? null,
+        action:          params.action ?? 'switch',
+        metadata:        params.metadata ?? null,
       })
       .catch((err: unknown) => {
         // Audit failures must never crash the server or affect the response.
