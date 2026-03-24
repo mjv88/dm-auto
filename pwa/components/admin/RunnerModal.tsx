@@ -44,6 +44,7 @@ interface RunnerForm {
   outboundCallerId: string;
   deptCallerIds: Record<string, string>;
   deptRingGroups: Record<string, number[]>;
+  ivrAccess: boolean;
 }
 
 interface RunnerData {
@@ -56,6 +57,7 @@ interface RunnerData {
   outboundCallerId?: string | null;
   deptCallerIds?: Record<string, string> | null;
   deptRingGroups?: Record<string, number[]> | null;
+  ivrAccess?: boolean;
   isActive: boolean;
 }
 
@@ -143,6 +145,7 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
     outboundCallerId: '',
     deptCallerIds: {},
     deptRingGroups: {},
+    ivrAccess: false,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -166,6 +169,7 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
         outboundCallerId: runner.outboundCallerId ?? '',
         deptCallerIds:    runner.deptCallerIds ?? {},
         deptRingGroups:   runner.deptRingGroups ?? {},
+        ivrAccess:        runner.ivrAccess ?? false,
       });
     }
   }, [runner, pbxList]);
@@ -533,6 +537,20 @@ export default function RunnerModal({ runner, pbxList, departments, onSave, onCl
               </p>
             )}
           </div>
+
+          {/* IVR Management toggle */}
+          <label className="flex items-center gap-2 mt-4">
+            <input
+              type="checkbox"
+              checked={form.ivrAccess}
+              onChange={(e) => setForm({ ...form, ivrAccess: e.target.checked })}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm font-medium text-gray-700">IVR Management</span>
+          </label>
+          <p className="text-xs text-gray-500 ml-6 mb-4">
+            Allows this runner to view and re-record IVR prompts for their assigned departments.
+          </p>
 
           <div className="flex justify-end gap-2 pt-2">
             <button
