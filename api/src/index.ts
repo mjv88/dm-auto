@@ -18,6 +18,7 @@ import { adminSystemRoutes } from './routes/admin/system.js';
 import { emailAuthRoutes } from './routes/emailAuth.js';
 import { setupRoutes } from './routes/setup.js';
 import { companyRoutes } from './routes/company.js';
+import { ivrRoutes } from './routes/ivr.js';
 import { registerRateLimit } from './middleware/rateLimit.js';
 import { registerSecurity } from './middleware/security.js';
 import { RunnerError } from './utils/errors.js';
@@ -59,6 +60,7 @@ async function buildServer() {
   await fastify.register(adminSystemRoutes);
   await fastify.register(setupRoutes);
   await fastify.register(companyRoutes);
+  await fastify.register(ivrRoutes);
 
   // Global error handler — maps RunnerError codes → HTTP responses
   fastify.setErrorHandler((error, _request, reply) => {

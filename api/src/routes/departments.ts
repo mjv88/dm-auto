@@ -176,6 +176,7 @@ export async function departmentRoutes(fastify: FastifyInstance): Promise<void> 
         currentDeptId:   currentGroupId,
         currentDeptName,
         allowedDepts,
+        ivrAccess:       runner.ivrAccess ?? false,
       });
     },
   );
