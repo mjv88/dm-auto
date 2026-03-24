@@ -206,6 +206,11 @@ export const reassignAdminSchema = z.object({
   targetTenantId: z.string().uuid(),
 });
 
+/** PUT /admin/users/:id/pricing-access */
+export const pricingAccessSchema = z.object({
+  pricingAccess: z.boolean(),
+});
+
 // ── IVR schemas ─────────────────────────────────────────────────────────────
 
 export const ivrRecordSchema = z.object({

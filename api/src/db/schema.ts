@@ -56,6 +56,7 @@ export const users = pgTable(
     tenantId:              uuid('tenant_id').references(() => tenants.id),
     createdAt:             timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     role:                  text('role').notNull().default('runner'),
+    pricingAccess:         boolean('pricing_access').notNull().default(false),
     updatedAt:             timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [

@@ -13,7 +13,7 @@ import { eq, and, sql, ilike, inArray } from 'drizzle-orm';
 import { getDb } from '../../db/index.js';
 import { users, managerTenants, tenants, runners, pbxCredentials } from '../../db/schema.js';
 import { requireAuth, requireRole } from '../../middleware/requireAuth.js';
-import { changeRoleSchema, reassignCompanySchema } from '../../utils/validate.js';
+import { changeRoleSchema, reassignCompanySchema, pricingAccessSchema } from '../../utils/validate.js';
 import { createSessionToken } from '../../middleware/session.js';
 import { escapeLike } from '../../utils/sanitize.js';
 
@@ -85,6 +85,7 @@ export async function adminUserRoutes(fastify: FastifyInstance): Promise<void> {
         tenantId: users.tenantId,
         tenantName: tenants.name,
         emailVerified: users.emailVerified,
+        pricingAccess: users.pricingAccess,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
       })
@@ -463,5 +464,40 @@ export async function adminUserRoutes(fastify: FastifyInstance): Promise<void> {
       .onConflictDoNothing();
 
     return reply.send({ message: 'User reassigned.' });
+  });
+
+  // ── PUT /admin/users/:id/pricing-access ───────────────────────────────────
+  // Toggle pricing dashboard access for a user. Super_admin only.
+
+  fastify.put('/admin/users/:id/pricing-access', { preHandler: [requireRole('super_admin')] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const parsed = pricingAccessSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: 'VALIDATION_ERROR',
+        message: parsed.error.issues[0]?.message ?? 'Invalid input',
+      });
+    }
+    const { pricingAccess } = parsed.data;
+
+    const db = getDb();
+
+    const targetRows = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+
+    if (!targetRows[0]) {
+      return reply.code(404).send({ error: 'NOT_FOUND' });
+    }
+
+    await db
+      .update(users)
+      .set({ pricingAccess })
+      .where(eq(users.id, id));
+
+    return reply.send({ user: { id, pricingAccess } });
   });
 }
