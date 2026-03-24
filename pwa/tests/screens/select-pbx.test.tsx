@@ -56,6 +56,9 @@ function renderPage() {
 describe('SelectPBXPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Clear localStorage to prevent auto-select from previous tests
+    // (the component reads runner_last_pbx_fqdn on mount)
+    localStorage.clear();
   });
 
   it('renders all PBX options', () => {

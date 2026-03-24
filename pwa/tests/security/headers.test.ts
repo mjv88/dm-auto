@@ -63,9 +63,14 @@ describe('Security headers — next.config.js', () => {
     expect(cspSource).toContain("default-src 'self'");
   });
 
-  test("CSP contains script-src 'self' 'unsafe-inline'", () => {
-    const cspSource = extractJoinedHeaderSource('Content-Security-Policy');
-    expect(cspSource).toContain("script-src 'self' 'unsafe-inline'");
+  test("CSP script-src uses scriptSrc variable (prod = 'self' 'unsafe-inline')", () => {
+    // The CSP array uses a template literal: `script-src ${scriptSrc}`
+    // Verify the variable reference exists in the source
+    expect(configSource).toContain('script-src ${scriptSrc}');
+    // Verify the production value of scriptSrc is "'self' 'unsafe-inline'" (no unsafe-eval)
+    expect(configSource).toMatch(
+      /const\s+scriptSrc\s*=[\s\S]*?:\s*["']'self'\s+'unsafe-inline'["']/,
+    );
   });
 
   test('CSP connect-src includes Microsoft login endpoint', () => {
