@@ -33,6 +33,7 @@ export default function LoginPage() {
   const setAuthStatus = useRunnerStore((s) => s.setAuthStatus);
   const setSessionToken = useRunnerStore((s) => s.setSessionToken);
   const setRole = useRunnerStore((s) => s.setRole);
+  const setPricingAccess = useRunnerStore((s) => s.setPricingAccess);
   const setError = useRunnerStore((s) => s.setError);
 
   const msLoginUrl =
@@ -144,6 +145,10 @@ export default function LoginPage() {
                 const payload = JSON.parse(atob(result.sessionToken.split('.')[1]));
                 setRole(payload.role ?? 'runner');
               } catch { /* fallback to runner */ }
+              // Set pricingAccess from API response (not in JWT)
+              if (result.user?.pricingAccess !== undefined) {
+                setPricingAccess(result.user.pricingAccess);
+              }
               setAuthStatus('authenticated');
               router.push('/departments');
             } catch (err) {
