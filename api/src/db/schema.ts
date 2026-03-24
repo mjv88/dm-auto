@@ -119,6 +119,7 @@ export const runners = pgTable(
     outboundCallerId: text('outbound_caller_id'),
     deptCallerIds:    jsonb('dept_caller_ids').$type<Record<string, string>>(),
     deptRingGroups:   jsonb('dept_ring_groups').$type<Record<string, number[]>>(),
+    ivrAccess:        boolean('ivr_access').notNull().default(false),
   },
   (t) => [
     uniqueIndex('idx_runners_email_cred_unique').on(t.entraEmail, t.pbxCredentialId),
@@ -145,7 +146,7 @@ export const auditLog = pgTable(
     extensionNumber: text('extension_number').notNull(),
     fromDeptId:      text('from_dept_id'),
     fromDeptName:    text('from_dept_name'),
-    toDeptId:        text('to_dept_id').notNull(),
+    toDeptId:        text('to_dept_id'),
     toDeptName:      text('to_dept_name'),
     status:          text('status').notNull(), // 'success' | 'failed' | 'denied'
     errorMessage:    text('error_message'),
@@ -154,6 +155,8 @@ export const auditLog = pgTable(
     deviceId:        text('device_id'),
     durationMs:      integer('duration_ms'),
     impersonatedBy:  uuid('impersonated_by'),  // admin userId when action performed under impersonation
+    action:          text('action').notNull().default('switch'),
+    metadata:        jsonb('metadata'),
     createdAt:       timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
