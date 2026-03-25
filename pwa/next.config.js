@@ -50,6 +50,17 @@ module.exports = withPWA({
   async headers() {
     return [
       {
+        // Pricing dashboard: relaxed CSP for inline scripts/styles + Google Fonts
+        source: '/pricing-dashboard.html',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; frame-ancestors 'self'",
+          },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+        ],
+      },
+      {
         source: '/(.*)',
         headers: [
           {
