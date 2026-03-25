@@ -145,14 +145,13 @@ export async function ivrRoutes(fastify: FastifyInstance): Promise<void> {
     },
   );
 
-  // ── GET /runner/ivrs/:id ──────────────────────────────────────────────────
+  // ── GET /runner/ivrs/prompts (must be before /:id to avoid matching "prompts" as id) ──
+  // List all custom prompts (CanBeDeleted: true only)
   fastify.get(
-    '/runner/ivrs/:id',
+    '/runner/ivrs/prompts',
     { preHandler: [authenticate, requireIvrAccess] },
     async (request, reply) => {
       const session = request.runnerContext!;
-      const runner = (request as any).ivrRunner as IvrRunner;
-      const { id } = request.params as { id: string };
 
       let client: XAPIClient;
       try {
@@ -161,19 +160,13 @@ export async function ivrRoutes(fastify: FastifyInstance): Promise<void> {
         return reply.code(503).send({ error: 'PBX_UNAVAILABLE' });
       }
 
-      let detail: XAPIReceptionistDetail;
       try {
-        const raw = await client.getReceptionist(parseInt(id, 10));
-        detail = parseReceptionistDetail(raw as Record<string, any>);
+        const raw = await client.getPrompts();
+        const prompts = parseCustomPrompts(raw);
+        return reply.send({ prompts });
       } catch {
         return reply.code(503).send({ error: 'PBX_UNAVAILABLE' });
       }
-
-      if (!ivrInScope(detail.groups, runner.allowedDeptIds)) {
-        return reply.code(403).send({ error: 'IVR_ACCESS_DENIED' });
-      }
-
-      return reply.send(detail);
     },
   );
 
@@ -211,31 +204,6 @@ export async function ivrRoutes(fastify: FastifyInstance): Promise<void> {
           prompt.fileLink,
         );
         return reply.header('Content-Type', contentType).send(buffer);
-      } catch {
-        return reply.code(503).send({ error: 'PBX_UNAVAILABLE' });
-      }
-    },
-  );
-
-  // ── GET /runner/ivrs/prompts ──────────────────────────────────────────────
-  // List all custom prompts (CanBeDeleted: true only)
-  fastify.get(
-    '/runner/ivrs/prompts',
-    { preHandler: [authenticate, requireIvrAccess] },
-    async (request, reply) => {
-      const session = request.runnerContext!;
-
-      let client: XAPIClient;
-      try {
-        client = await XAPIClient.create(session.pbxFqdn!);
-      } catch {
-        return reply.code(503).send({ error: 'PBX_UNAVAILABLE' });
-      }
-
-      try {
-        const raw = await client.getPrompts();
-        const prompts = parseCustomPrompts(raw);
-        return reply.send({ prompts });
       } catch {
         return reply.code(503).send({ error: 'PBX_UNAVAILABLE' });
       }
