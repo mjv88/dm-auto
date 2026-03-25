@@ -246,7 +246,7 @@
 
   <!-- HEADER -->
   <div class="hdr">
-    <div class="hdr-eye">Deutsche Markt · Pricing Intelligence</div>
+    <div class="hdr-eye">Pricing Intelligence</div>
     <h1>DM Overview <em>2026</em></h1>
     <div class="hdr-sub">TCX-Hub Multi-Tenant · SC Size Comparison · Stand: 20.03.2026</div>
   </div>
@@ -281,9 +281,9 @@
     <div class="ctl">
       <label>SC Größe</label>
       <div class="pills" id="sc-pills">
-        <button class="pill on-sc" onclick="setSize('128')">128 SC</button>
+        <button class="pill"       onclick="setSize('128')">128 SC</button>
         <button class="pill"       onclick="setSize('192')">192 SC</button>
-        <button class="pill"       onclick="setSize('256')">256 SC</button>
+        <button class="pill on-sc" onclick="setSize('256')">256 SC</button>
         <button class="pill"       onclick="setSize('512')">512 SC</button>
       </div>
     </div>
@@ -298,8 +298,8 @@
       <label>Laufzeit</label>
       <div class="pills" id="dur-pills">
         <button class="pill"        onclick="setDur(1)">1 Jahr</button>
-        <button class="pill on-dur" onclick="setDur(2)">2 Jahre</button>
-        <button class="pill"        onclick="setDur(3)">3 Jahre</button>
+        <button class="pill"        onclick="setDur(2)">2 Jahre</button>
+        <button class="pill on-dur" onclick="setDur(3)">3 Jahre</button>
       </div>
     </div>
   </div>
@@ -390,7 +390,7 @@
     <div class="cfg-title">＋ Addon Produkte &amp; Gebühren</div>
 
     <!-- ONE-TIME PRODUCTS -->
-    <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--teal);margin-bottom:10px;">Einmalige Produkte (One-Time)</div>
+    <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--teal);margin-bottom:10px;">Einmalige Bereitstellungsgebühren</div>
 
     <div id="ot-products">
       <!-- Product rows injected -->
@@ -581,20 +581,19 @@ const HOST_DISC=['0%','11,5%','23%'];
 const LIC_DISC=['0% Rabatt','10% Rabatt','15% Rabatt'];
 
 // ── STATE ─────────────────────────────────────────────────────────
-let cSize='128',cTier='BASIC',cDur=2;
+let cSize='256',cTier='BASIC',cDur=3;
 let customInst=null,customDept=null;
 
 // One-time products: {name, price, enabled}
 const otProducts=[
-  {name:'TCX-Hub Onboarding',price:500,enabled:true},
-  {name:'CTI Router Setup',  price:300,enabled:true},
-  {name:'PreDirectory Lizenz',price:200,enabled:false},
+  {name:'Migration Tool',      price:39000,enabled:true},
+  {name:'Runner',              price:29000,enabled:true},
+  {name:'Zero Provisioning',   price:29000,enabled:true},
 ];
 
 // Monthly fees: {name, rate, basis:'instance'|'department'|'user', enabled}
 const monthlyFees=[
-  {name:'TCX-Hub SaaS',rate:2.50,basis:'instance',enabled:true},
-  {name:'CTI Router',  rate:1.00,basis:'instance',enabled:false},
+  {name:'Managed Platform',rate:5.00,basis:'instance',enabled:true},
 ];
 
 // ── HELPERS ───────────────────────────────────────────────────────
