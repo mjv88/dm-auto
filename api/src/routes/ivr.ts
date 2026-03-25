@@ -210,6 +210,38 @@ export async function ivrRoutes(fastify: FastifyInstance): Promise<void> {
     },
   );
 
+  // ── GET /runner/ivrs/:id ──────────────────────────────────────────────────
+  fastify.get(
+    '/runner/ivrs/:id',
+    { preHandler: [authenticate, requireIvrAccess] },
+    async (request, reply) => {
+      const session = request.runnerContext!;
+      const runner = (request as any).ivrRunner as IvrRunner;
+      const { id } = request.params as { id: string };
+
+      let client: XAPIClient;
+      try {
+        client = await XAPIClient.create(session.pbxFqdn!);
+      } catch {
+        return reply.code(503).send({ error: 'PBX_UNAVAILABLE' });
+      }
+
+      let detail: XAPIReceptionistDetail;
+      try {
+        const raw = await client.getReceptionist(parseInt(id, 10));
+        detail = parseReceptionistDetail(raw as Record<string, any>);
+      } catch {
+        return reply.code(503).send({ error: 'PBX_UNAVAILABLE' });
+      }
+
+      if (!ivrInScope(detail.groups, runner.allowedDeptIds)) {
+        return reply.code(403).send({ error: 'IVR_ACCESS_DENIED' });
+      }
+
+      return reply.send(detail);
+    },
+  );
+
   // ── DELETE /runner/ivrs/prompts/:filename ────────────────────────────────
   // Delete a custom prompt from the PBX
   fastify.delete(
