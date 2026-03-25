@@ -4,8 +4,8 @@ A mobile-first Progressive Web App that lets 3CX users switch their department a
 
 ## Tech Stack
 
-- **Framework**: Next.js 14 (App Router, standalone output)
-- **Auth**: Microsoft MSAL (Entra ID, PKCE)
+- **Framework**: Next.js 15 (App Router, React 19, standalone output)
+- **Auth**: Microsoft MSAL 5 (Entra ID, PKCE)
 - **State**: Zustand
 - **Styling**: Tailwind CSS
 - **Testing**: Jest + React Testing Library, Playwright E2E

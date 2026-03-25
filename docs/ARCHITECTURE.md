@@ -13,7 +13,7 @@ TCX Runner is a multi-tenant enterprise PWA that lets 3CX PBX users ("runners") 
 │                        Hetzner CX23                              │
 │  ┌─────────────────┐    ┌──────────────────┐    ┌────────────┐  │
 │  │  runner-pwa     │    │   runner-api      │    │ PostgreSQL │  │
-│  │  Next.js 14     │───▶│   Fastify 4       │───▶│    16      │  │
+│  │  Next.js 15     │───▶│   Fastify 5       │───▶│    16      │  │
 │  │  :3000          │    │   :3001           │    │  :5432     │  │
 │  └─────────────────┘    └──────────────────┘    └────────────┘  │
 │           │                      │                               │
@@ -39,8 +39,8 @@ TCX Runner is a multi-tenant enterprise PWA that lets 3CX PBX users ("runners") 
 
 | Layer | Technology |
 |-------|-----------|
-| PWA | Next.js 14 App Router, React, MSAL, Zustand, Tailwind CSS |
-| API | Fastify 4, TypeScript, Drizzle ORM |
+| PWA | Next.js 15 App Router, React 19, MSAL 5, Zustand, Tailwind CSS |
+| API | Fastify 5, TypeScript, Drizzle ORM |
 | Database | PostgreSQL 16 |
 | 3CX integration | xAPI v1 (`https://{pbx_fqdn}/xapi/v1`), OAuth2 client credentials |
 | Auth (runners) | Microsoft Entra ID SSO (MSAL silent flow) or email/password |
