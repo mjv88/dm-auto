@@ -73,6 +73,7 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
         outboundCallerId: runners.outboundCallerId,
         deptCallerIds:    runners.deptCallerIds,
         deptRingGroups: runners.deptRingGroups,
+        ivrAccess: runners.ivrAccess,
       })
       .from(runners)
       .innerJoin(pbxCredentials, eq(runners.pbxCredentialId, pbxCredentials.id))
@@ -99,7 +100,7 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
     if (!parseResult.success) {
       return reply.code(400).send({ error: 'VALIDATION_ERROR', message: parseResult.error.message });
     }
-    const { email, extension, pbxId, allowedDeptIds, outboundCallerId, deptCallerIds, deptRingGroups } = parseResult.data;
+    const { email, extension, pbxId, allowedDeptIds, outboundCallerId, deptCallerIds, deptRingGroups, ivrAccess } = parseResult.data;
 
     const db = getDb();
 
@@ -166,6 +167,7 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
         outboundCallerId: outboundCallerId ?? null,
         deptCallerIds:    deptCallerIds ?? null,
         deptRingGroups: deptRingGroups ?? null,
+        ivrAccess: ivrAccess ?? false,
       })
       .returning();
 
@@ -212,6 +214,7 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
     if (updates.outboundCallerId !== undefined) setValues.outboundCallerId = updates.outboundCallerId;
     if (updates.deptCallerIds    !== undefined) setValues.deptCallerIds    = updates.deptCallerIds as Record<string, string>;
     if (updates.deptRingGroups !== undefined) setValues.deptRingGroups = updates.deptRingGroups as Record<string, number[]>;
+    if (updates.ivrAccess !== undefined) setValues.ivrAccess = updates.ivrAccess;
 
     const updated = await db
       .update(runners)
