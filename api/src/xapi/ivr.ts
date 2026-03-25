@@ -125,15 +125,17 @@ export function buildPromptPatchBody(
 
 /**
  * Upload a .wav file to the PBX as a custom prompt.
- * Uses multipart/form-data POST to /Prompts/Upload.
+ * Uses multipart/form-data POST to /xapi/v1/customPrompts.
+ * The PBX auto-scopes the file to the caller's group (e.g. Custom/GRP0002/filename.wav).
+ * Returns the group-scoped path from the response.
  */
 export async function uploadCustomPrompt(
   pbxFqdn: string,
   filename: string,
   buffer: Buffer,
-): Promise<void> {
+): Promise<string> {
   const token = await getXAPIToken(pbxFqdn);
-  const url = `https://${pbxFqdn}/xapi/v1/Prompts/Upload`;
+  const url = `https://${pbxFqdn}/xapi/v1/customPrompts`;
 
   const formData = new FormData();
   const blob = new Blob([buffer], { type: 'audio/wav' });
@@ -152,6 +154,9 @@ export async function uploadCustomPrompt(
     if (!res.ok) {
       throw new PBXUnavailableError(`Prompt upload failed: HTTP ${res.status}`);
     }
+    // Response: { "@odata.context": "...", "value": "Custom/GRP0002/filename.wav" }
+    const data = await res.json() as { value?: string };
+    return data.value ?? filename;
   } finally {
     clearTimeout(timeoutId);
   }

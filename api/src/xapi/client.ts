@@ -357,6 +357,10 @@ export class XAPIClient {
     });
   }
 
+  async deleteCustomPrompt(filename: string): Promise<void> {
+    await this.request('DELETE', `/CustomPrompts('${encodeURIComponent(filename)}')`);
+  }
+
   // ── Private helpers ─────────────────────────────────────────────────────────
 
   private async get(path: string): Promise<unknown> {

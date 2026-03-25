@@ -217,6 +217,91 @@ export async function ivrRoutes(fastify: FastifyInstance): Promise<void> {
     },
   );
 
+  // ── GET /runner/ivrs/prompts ──────────────────────────────────────────────
+  // List all custom prompts (CanBeDeleted: true only)
+  fastify.get(
+    '/runner/ivrs/prompts',
+    { preHandler: [authenticate, requireIvrAccess] },
+    async (request, reply) => {
+      const session = request.runnerContext!;
+
+      let client: XAPIClient;
+      try {
+        client = await XAPIClient.create(session.pbxFqdn!);
+      } catch {
+        return reply.code(503).send({ error: 'PBX_UNAVAILABLE' });
+      }
+
+      try {
+        const raw = await client.getPrompts();
+        const prompts = parseCustomPrompts(raw);
+        return reply.send({ prompts });
+      } catch {
+        return reply.code(503).send({ error: 'PBX_UNAVAILABLE' });
+      }
+    },
+  );
+
+  // ── DELETE /runner/ivrs/prompts/:filename ────────────────────────────────
+  // Delete a custom prompt from the PBX
+  fastify.delete(
+    '/runner/ivrs/prompts/:filename',
+    {
+      preHandler: [authenticate, requireIvrAccess],
+      config: { rateLimit: { max: 10, timeWindow: 3_600_000 } } as any,
+    },
+    async (request, reply) => {
+      const session = request.runnerContext!;
+      const runner = (request as any).ivrRunner as IvrRunner;
+      const { filename } = request.params as { filename: string };
+
+      let client: XAPIClient;
+      try {
+        client = await XAPIClient.create(session.pbxFqdn!);
+      } catch {
+        return reply.code(503).send({ error: 'PBX_UNAVAILABLE' });
+      }
+
+      // Verify prompt exists and is deletable
+      let prompts: ReturnType<typeof parseCustomPrompts>;
+      try {
+        const raw = await client.getPrompts();
+        prompts = parseCustomPrompts(raw);
+      } catch {
+        return reply.code(503).send({ error: 'PBX_UNAVAILABLE' });
+      }
+
+      const prompt = prompts.find((p) => p.filename === filename);
+      if (!prompt) {
+        return reply.code(404).send({ error: 'PROMPT_NOT_FOUND' });
+      }
+      if (!prompt.canBeDeleted) {
+        return reply.code(403).send({ error: 'PROMPT_NOT_DELETABLE', message: 'System prompts cannot be deleted' });
+      }
+
+      // Delete via xAPI
+      try {
+        await client.deleteCustomPrompt(filename);
+      } catch {
+        return reply.code(503).send({ error: 'PBX_UNAVAILABLE' });
+      }
+
+      // Audit
+      writeAuditLog(request, {
+        runnerId: runner.id,
+        entraEmail: session.email ?? '',
+        pbxFqdn: session.pbxFqdn ?? '',
+        extensionNumber: runner.extensionNumber,
+        fromDeptId: null, fromDeptName: null, toDeptId: null, toDeptName: null,
+        status: 'success', errorCode: null, durationMs: 0,
+        action: 'ivr_prompt_deleted',
+        metadata: { filename },
+      });
+
+      return reply.code(204).send();
+    },
+  );
+
   // ── POST /runner/ivrs/:id/record ──────────────────────────────────────────
   fastify.post(
     '/runner/ivrs/:id/record',

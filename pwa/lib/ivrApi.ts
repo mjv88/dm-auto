@@ -63,6 +63,25 @@ export async function uploadPromptFile(ivrId: number, file: File): Promise<strin
   return data.uploadedFilename;
 }
 
+export interface CustomPrompt {
+  filename: string;
+  displayName: string;
+  fileLink: string;
+  canBeDeleted: boolean;
+}
+
+export async function getCustomPrompts(): Promise<CustomPrompt[]> {
+  const res = await ivrFetch('/runner/ivrs/prompts');
+  const data = await res.json();
+  return data.prompts;
+}
+
+export async function deleteCustomPrompt(filename: string): Promise<void> {
+  await ivrFetch(`/runner/ivrs/prompts/${encodeURIComponent(filename)}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function assignPrompt(
   ivrId: number,
   promptType: PromptType,
