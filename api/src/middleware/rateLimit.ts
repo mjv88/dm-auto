@@ -11,13 +11,15 @@ export async function registerRateLimit(fastify: FastifyInstance): Promise<void>
       error: 'RATE_LIMITED',
       message: 'Too many requests. Try again later.',
     }),
-    // Only rate-limit POST /runner/switch — everything else is exempt
+    // Rate-limit POST /runner/switch and POST /runner/ivrs/* — everything else is exempt
     allowList: (req) => {
       const url = req.url ?? '';
       const method = req.method ?? '';
-      // Only apply rate limit to the department switch endpoint
       if (method === 'POST' && url.startsWith('/runner/switch')) {
         return false; // NOT exempt — rate limit applies
+      }
+      if (method === 'POST' && url.startsWith('/runner/ivrs/')) {
+        return false; // NOT exempt — per-route rate limits apply
       }
       return true; // exempt from rate limit
     },

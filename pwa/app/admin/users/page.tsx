@@ -19,6 +19,7 @@ interface UserRow {
   tenantName: string | null;
   pbxNames: string[];
   emailVerified: boolean;
+  pricingAccess: boolean;
   createdAt: string;
 }
 
@@ -36,6 +37,7 @@ function UserActionsMenu({
   onChangeRole,
   onMove,
   onImpersonate,
+  onTogglePricing,
   onDelete,
 }: {
   row: UserRow;
@@ -44,6 +46,7 @@ function UserActionsMenu({
   onChangeRole: () => void;
   onMove: (tenantId: string) => void;
   onImpersonate: () => void;
+  onTogglePricing: () => void;
   onDelete: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -104,6 +107,14 @@ function UserActionsMenu({
               className="w-full text-left px-3 py-1.5 hover:bg-gray-50 text-orange-600 border-t border-gray-100"
             >
               Impersonate
+            </button>
+          )}
+          {myRole === 'super_admin' && row.role === 'admin' && (
+            <button
+              onClick={() => { setOpen(false); onTogglePricing(); }}
+              className="w-full text-left px-3 py-1.5 hover:bg-gray-50 text-teal-600 border-t border-gray-100"
+            >
+              {row.pricingAccess ? 'Revoke Pricing Access' : 'Grant Pricing Access'}
             </button>
           )}
           <button
@@ -203,12 +214,28 @@ export default function UsersPage() {
     }
   }
 
+  async function handleTogglePricing(row: UserRow) {
+    try {
+      await adminPut(`/admin/users/${row.id}/pricing-access`, { pricingAccess: !row.pricingAccess });
+      fetchUsers();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update pricing access.');
+    }
+  }
+
   const columns = [
     {
       key: 'email',
       header: 'Email',
       render: (row: UserRow) => (
-        <span className="text-sm text-gray-800 truncate max-w-[220px] block">{row.email}</span>
+        <span className="text-sm text-gray-800 truncate max-w-[220px] inline-flex items-center gap-1.5">
+          {row.email}
+          {row.pricingAccess && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-teal-100 text-teal-700" title="Pricing access granted">
+              $
+            </span>
+          )}
+        </span>
       ),
     },
     {
@@ -318,6 +345,7 @@ export default function UsersPage() {
                 onChangeRole={() => setEditingUser(row)}
                 onMove={(tid) => handleMove(row, tid)}
                 onImpersonate={() => handleImpersonate(row)}
+                onTogglePricing={() => handleTogglePricing(row)}
                 onDelete={() => handleDelete(row)}
               />
             )}

@@ -21,6 +21,10 @@ interface RunnerStore {
   // TODO: move originalToken to server-side cookie via POST /admin/impersonate/stop
   originalToken: string | null;
   impersonatingEmail: string | null;
+  // IVR self-service — true when runner's departments grant IVR access
+  ivrAccess: boolean;
+  // Pricing dashboard access — true when user has been granted access by super_admin
+  pricingAccess: boolean;
 
   // Actions
   setAuthStatus: (status: AuthStatus) => void;
@@ -33,6 +37,8 @@ interface RunnerStore {
   setSelectedAdminTenantId: (id: string | null) => void;
   setError: (error: AppError | null) => void;
   setSessionToken: (token: string | null) => void;
+  setIvrAccess: (ivrAccess: boolean) => void;
+  setPricingAccess: (pricingAccess: boolean) => void;
   startImpersonation: (email: string) => void;
   stopImpersonation: () => void;
   reset: () => void;
@@ -51,6 +57,8 @@ const initialState = {
   sessionToken: null,
   originalToken: null,
   impersonatingEmail: null,
+  ivrAccess: false,
+  pricingAccess: false,
 };
 
 // ---------------------------------------------------------------------------
@@ -74,6 +82,9 @@ export function useRunnerProfile() {
   return useRunnerStore(useShallow((s) => s.runnerProfile));
 }
 
+export const useIvrAccess = () => useRunnerStore((s) => s.ivrAccess);
+export const usePricingAccess = () => useRunnerStore((s) => s.pricingAccess);
+
 export const useRunnerStore = create<RunnerStore>((set) => ({
   ...initialState,
 
@@ -96,6 +107,8 @@ export const useRunnerStore = create<RunnerStore>((set) => ({
     }
     set({ sessionToken: token });
   },
+  setIvrAccess: (ivrAccess) => set({ ivrAccess }),
+  setPricingAccess: (pricingAccess) => set({ pricingAccess }),
   startImpersonation: (email) => {
     // TODO: remove sessionStorage once the API supports POST /admin/impersonate/stop
     // that restores the original cookie server-side
@@ -141,6 +154,8 @@ export const useRunnerStore = create<RunnerStore>((set) => ({
       sessionToken: null,
       originalToken: null,
       impersonatingEmail: null,
+      ivrAccess: false,
+      pricingAccess: false,
     });
   },
 }));
@@ -183,6 +198,7 @@ export async function restoreSession(): Promise<void> {
       useRunnerStore.setState({
         sessionToken: session.token ?? null,
         role: session.role ?? 'runner',
+        pricingAccess: session.pricingAccess ?? false,
         authStatus: 'authenticated',
       });
     }

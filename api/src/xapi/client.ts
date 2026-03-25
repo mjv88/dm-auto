@@ -327,6 +327,36 @@ export class XAPIClient {
     await this.patch(`/RingGroups(${ringGroupId})`, { Members: pbxMembers });
   }
 
+  // ── IVR / Receptionist methods ──────────────────────────────────────────────
+
+  async getReceptionists(): Promise<unknown> {
+    return this.get(
+      `/Receptionists?$select=Id,Name,Number,IVRType,PromptFilename` +
+      `&$expand=Groups($select=GroupId,Name;$filter=not startsWith(Name,'___FAVORITES___'))`,
+    );
+  }
+
+  async getReceptionist(id: number): Promise<unknown> {
+    return this.get(
+      `/Receptionists(${id})?$expand=Forwards,Groups($select=GroupId,Name;$filter=not startsWith(Name,'___FAVORITES___'))`,
+    );
+  }
+
+  async patchReceptionist(id: number, body: Record<string, unknown>): Promise<void> {
+    await this.patch(`/Receptionists(${id})`, body);
+  }
+
+  async getPrompts(): Promise<unknown> {
+    return this.get(`/Prompts`);
+  }
+
+  async makeCallRecordPrompt(extensionNumber: string, filename: string): Promise<void> {
+    await this.post(`/CustomPrompts/Pbx.MakeCallRecordCustomPrompt`, {
+      dn: extensionNumber,
+      filename,
+    });
+  }
+
   // ── Private helpers ─────────────────────────────────────────────────────────
 
   private async get(path: string): Promise<unknown> {
@@ -335,6 +365,10 @@ export class XAPIClient {
 
   private async patch(path: string, body: unknown): Promise<void> {
     await this.request('PATCH', path, body);
+  }
+
+  private async post(path: string, body: unknown): Promise<unknown> {
+    return this.request('POST', path, body);
   }
 
   /**

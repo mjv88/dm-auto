@@ -14,24 +14,21 @@ describe('RunnerHeader', () => {
     expect(screen.getByText('Maria Klein')).toBeInTheDocument();
   });
 
-  it('renders extension number and PBX name', () => {
+  it('renders extension number in the avatar circle', () => {
     render(<RunnerHeader {...defaultProps} />);
-    expect(screen.getByText('Ext. 101 · Kunde GmbH')).toBeInTheDocument();
+    expect(screen.getByText('101')).toBeInTheDocument();
   });
 
-  it('renders avatar with correct initials for full name', () => {
+  it('renders fallback extension when none provided', () => {
+    render(<RunnerHeader {...defaultProps} extensionNumber={undefined} />);
+    expect(screen.getByText('--')).toBeInTheDocument();
+  });
+
+  it('renders display name only (no PBX subtitle)', () => {
     render(<RunnerHeader {...defaultProps} />);
-    expect(screen.getByText('MK')).toBeInTheDocument();
-  });
-
-  it('renders single initial for single-word name', () => {
-    render(<RunnerHeader {...defaultProps} displayName="Maria" />);
-    expect(screen.getByText('M')).toBeInTheDocument();
-  });
-
-  it('renders initials from first and last word of multi-part name', () => {
-    render(<RunnerHeader {...defaultProps} displayName="Maria Anna Klein" />);
-    expect(screen.getByText('MK')).toBeInTheDocument();
+    expect(screen.getByText('Maria Klein')).toBeInTheDocument();
+    // PBX name is no longer rendered in the header
+    expect(screen.queryByText(/Kunde GmbH/)).not.toBeInTheDocument();
   });
 
   it('has accessible header landmark', () => {

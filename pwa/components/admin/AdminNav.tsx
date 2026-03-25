@@ -18,15 +18,32 @@ const SUPER_ADMIN_LINKS: { href: string; label: string; exact?: boolean }[] = [
   { href: '/admin/system',    label: 'System' },
 ];
 
+const PRICING_LINK = { href: '/admin/pricing', label: 'Pricing' };
+
 export default function AdminNav() {
   const pathname = usePathname();
   const role = useRunnerStore((s) => s.role);
+  const pricingAccess = useRunnerStore((s) => s.pricingAccess);
 
-  // Order: Dashboard | Companies* | Users | PBX | Runners | MS-Entra | Audit Log | System*
-  // (* super_admin only)
-  const links = role === 'super_admin'
-    ? [BASE_LINKS[0], ...SUPER_ADMIN_LINKS.slice(0, 1), ...BASE_LINKS.slice(1), SUPER_ADMIN_LINKS[1]]
-    : BASE_LINKS;
+  // Order: Dashboard | Companies* | Users | PBX | Runners | MS-Entra | Audit Log | Pricing** | System*
+  // (* super_admin only, ** super_admin always / admin if pricingAccess)
+  let links: { href: string; label: string; exact?: boolean }[];
+
+  if (role === 'super_admin') {
+    // super_admin: all tabs, Pricing between Audit Log and System
+    links = [
+      BASE_LINKS[0],
+      ...SUPER_ADMIN_LINKS.slice(0, 1),
+      ...BASE_LINKS.slice(1),
+      PRICING_LINK,
+      SUPER_ADMIN_LINKS[1],
+    ];
+  } else if (role === 'admin' && pricingAccess) {
+    // admin with pricingAccess: base tabs + Pricing
+    links = [...BASE_LINKS, PRICING_LINK];
+  } else {
+    links = BASE_LINKS;
+  }
 
   return (
     <nav className="bg-white border-b">

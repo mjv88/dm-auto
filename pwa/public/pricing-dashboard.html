@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DM Pricing Overview 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #f2f4f8;
+    --white:    #ffffff;
+    --surface:  #f8f9fc;
+    --border:   #e0e6ef;
+    --border2:  #c8d3e3;
+    --text:     #0d1520;
+    --muted:    #7d8fa8;
+    --dim:      #3d5068;
+    --accent:   #1a56db;
+    --accent-l: #eef3fe;
+    --green:    #057a55;
+    --green-l:  #e3f5ee;
+    --amber:    #b45309;
+    --amber-l:  #fef3e2;
+    --red:      #c81e1e;
+    --red-l:    #fdf2f2;
+    --purple:   #6b21a8;
+    --purple-l: #f5f0ff;
+    --teal:     #0e7490;
+    --teal-l:   #ecfeff;
+    --shadow-s: 0 1px 3px rgba(13,21,32,.06),0 2px 8px rgba(13,21,32,.04);
+    --shadow-m: 0 2px 8px rgba(13,21,32,.08),0 6px 20px rgba(13,21,32,.05);
+    --r: 10px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Figtree',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5;}
+  .wrap{max-width:1100px;margin:0 auto;padding:40px 24px 80px;}
+
+  /* HEADER */
+  .hdr{margin-bottom:36px;}
+  .hdr-eye{font-size:10px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
+  .hdr h1{font-size:clamp(22px,3.5vw,34px);font-weight:900;color:var(--text);line-height:1.1;letter-spacing:-.5px;}
+  .hdr h1 em{font-style:normal;color:var(--accent);}
+  .hdr-sub{margin-top:5px;font-size:12px;color:var(--muted);}
+
+  /* SECTION LABEL */
+  .sec{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:12px;}
+  .sec::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  /* CARD */
+  .card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow-s);overflow:hidden;}
+  .card-hdr{padding:13px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface);}
+  .card-title{font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--dim);text-transform:uppercase;}
+
+  /* BADGE */
+  .badge{font-size:9px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:1.5px;text-transform:uppercase;}
+  .badge-red   {background:var(--red-l);  color:var(--red);   border:1px solid #fca5a5;}
+  .badge-green {background:var(--green-l);color:var(--green); border:1px solid #84d9b7;}
+  .badge-blue  {background:var(--accent-l);color:var(--accent);border:1px solid #a4cafe;}
+  .badge-amber {background:var(--amber-l);color:var(--amber); border:1px solid #fbbf24;}
+  .badge-purple{background:var(--purple-l);color:var(--purple);border:1px solid #c4b5fd;}
+  .badge-teal  {background:var(--teal-l); color:var(--teal);  border:1px solid #67e8f9;}
+
+  /* TABLE */
+  table{width:100%;border-collapse:collapse;}
+  th{padding:9px 16px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);text-align:right;border-bottom:1px solid var(--border);background:var(--surface);}
+  th:first-child{text-align:left;}
+  td{padding:11px 16px;font-size:12px;font-weight:500;color:var(--dim);text-align:right;border-bottom:1px solid var(--bg);}
+  td:first-child{text-align:left;color:var(--text);font-weight:600;}
+  tr:last-child td{border-bottom:none;}
+  .td-n{font-size:13px;font-weight:600;color:var(--text);}
+  tr.tr-total{background:var(--red-l);}
+  tr.tr-total td{font-weight:800;border-bottom:none;}
+  tr.tr-total td.big{font-size:17px;color:var(--red);}
+
+  /* CONTROLS */
+  .controls{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-bottom:24px;}
+  .ctl label{display:block;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+  .pills{display:flex;border:1px solid var(--border2);border-radius:7px;overflow:hidden;}
+  .pill{font-size:12px;font-weight:700;letter-spacing:.3px;padding:9px 20px;cursor:pointer;background:var(--white);color:var(--muted);border:none;border-right:1px solid var(--border2);transition:all .14s;}
+  .pill:last-child{border-right:none;}
+  .pill:hover{background:var(--bg);color:var(--text);}
+  .pill.on-sc   {background:var(--accent);color:#fff;}
+  .pill.on-basic{background:var(--green); color:#fff;}
+  .pill.on-ent  {background:var(--amber); color:#fff;}
+  .pill.on-dur  {background:var(--text);  color:#fff;}
+
+  /* SPINNERS */
+  .spinners-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:24px;}
+  .spin-box{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow-s);}
+  .spin-box.warn{border-color:#fbbf24;background:#fffbeb;}
+  .spin-info{flex:1;min-width:0;}
+  .spin-lbl{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:3px;display:flex;align-items:center;gap:6px;}
+  .spin-v{font-size:24px;font-weight:800;color:var(--text);line-height:1.1;}
+  .spin-v.green{color:var(--green);}
+  .spin-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+  .spin-btns{display:flex;flex-direction:column;gap:4px;}
+  .spin-btn{width:30px;height:30px;border-radius:6px;border:1px solid var(--border2);background:var(--surface);color:var(--dim);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s;font-family:'Figtree',sans-serif;user-select:none;}
+  .spin-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .spin-btn:active{transform:scale(.93);}
+
+  /* CONFIG BLOCK BASE */
+  .cfg-block{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;margin-bottom:24px;box-shadow:var(--shadow-s);}
+  .cfg-title{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;}
+
+  /* SUPPORT */
+  .cfg-block.support{border-left:3px solid var(--purple);}
+  .cfg-block.support .cfg-title{color:var(--purple);}
+
+  /* ADDONS */
+  .cfg-block.addons{border-left:3px solid var(--teal);}
+  .cfg-block.addons .cfg-title{color:var(--teal);}
+
+  /* FIELD */
+  .field-row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;}
+  .field{display:flex;flex-direction:column;gap:6px;}
+  .field label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
+  .fw{display:flex;align-items:center;gap:0;border:1px solid var(--border2);border-radius:6px;overflow:hidden;background:var(--white);}
+  .fp{padding:8px 11px;background:var(--surface);font-size:12px;font-weight:600;color:var(--muted);border-right:1px solid var(--border2);white-space:nowrap;}
+  .fp.right{border-right:none;border-left:1px solid var(--border2);}
+  .fi{padding:8px 11px;border:none;outline:none;font-family:'Figtree',sans-serif;font-size:14px;font-weight:700;color:var(--text);background:var(--white);}
+  .fi:focus{background:var(--accent-l);}
+  .fi.name{width:160px;font-size:13px;}
+  .fi.price{width:90px;}
+  .fi.narrow{width:70px;}
+  select.fi{cursor:pointer;appearance:none;padding-right:28px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237d8fa8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;width:130px;}
+
+  /* DIVIDER */
+  .addon-divider{height:1px;background:var(--border);margin:16px 0;}
+
+  /* ADDON PRODUCT ROW */
+  .addon-product-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;padding:10px 0;}
+
+  /* MOD DOT */
+  .mod-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);}
+
+  /* KPI STRIP */
+  .kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:24px;box-shadow:var(--shadow-s);}
+  .kpi{background:var(--white);padding:15px 16px;}
+  .kpi-k{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+  .kpi-v{font-size:20px;font-weight:800;color:var(--text);line-height:1.1;}
+  .kpi-v.blue  {color:var(--accent);}
+  .kpi-v.green {color:var(--green);}
+  .kpi-v.amber {color:var(--amber);}
+  .kpi-v.custom{color:var(--accent);}
+  .kpi-sub{font-size:10px;color:var(--muted);margin-top:3px;}
+
+  /* YEAR CARDS */
+  .year-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;}
+  .yc{background:var(--white);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow-s);transition:opacity .3s,border-color .2s,box-shadow .2s;}
+  .yc:hover:not(.yc-dim){box-shadow:var(--shadow-m);}
+  .yc.yc-dim{opacity:.22;pointer-events:none;}
+  .yc.yc-active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(26,86,219,.12),var(--shadow-s);}
+  .yc-head{padding:11px 16px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .yc-name{font-size:11px;font-weight:800;letter-spacing:1px;color:var(--dim);text-transform:uppercase;}
+  .yc-body{padding:14px 16px;}
+  .yl{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bg);font-size:12px;}
+  .yl:last-child{border-bottom:none;}
+  .yl-k{color:var(--muted);font-weight:500;}
+  .yl-v{color:var(--dim);font-weight:600;}
+  .yl.hi-purple{background:var(--purple-l);margin:0 -16px;padding:6px 16px;}
+  .yl.hi-teal  {background:var(--teal-l);  margin:0 -16px;padding:6px 16px;}
+  .yt{margin-top:12px;padding:10px 12px;background:var(--bg);border-radius:6px;display:flex;justify-content:space-between;align-items:center;}
+  .ytk{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
+  .ytv{font-size:17px;font-weight:800;}
+  .sp{margin-top:8px;padding:5px 10px;border-radius:5px;display:flex;justify-content:space-between;font-size:11px;font-weight:600;}
+  .sp span{color:var(--muted);font-weight:500;}
+  .sp.green{background:var(--green-l);}
+  .sp.amber{background:var(--amber-l);}
+  .sp.green strong{color:var(--green);}
+  .sp.amber strong{color:var(--amber);}
+
+  /* SUMMARY GRID */
+  .sum-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px;}
+  .sc{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow-s);}
+  .sc.hi-blue {border-color:#93c5fd;background:var(--accent-l);}
+  .sc.hi-green{border-color:#84d9b7;background:var(--green-l);}
+  .sc.hi-amber{border-color:#fbbf24;background:var(--amber-l);}
+  .sc.hi-teal {border-color:#67e8f9;background:var(--teal-l);}
+  .sc-k{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+  .sc-v{font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.5px;}
+  .sc-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+
+  /* LEGEND */
+  .legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--dim);}
+  .ld{width:10px;height:10px;border-radius:3px;}
+  .ld.lic {background:var(--accent);}
+  .ld.host{background:var(--green);}
+  .ld.sup {background:var(--purple);}
+  .ld.add {background:var(--teal);}
+
+  /* STACKED BAR */
+  .stack-bar{height:14px;border-radius:5px;overflow:hidden;display:flex;border:1px solid var(--border);margin-bottom:4px;transition:width .55s cubic-bezier(.4,0,.2,1);}
+  .sb-lic {background:var(--accent);}
+  .sb-host{background:var(--green);}
+  .sb-sup {background:var(--purple);}
+  .sb-add {background:var(--teal);}
+
+  /* BARS BLOCK */
+  .bars-block{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:22px 24px;margin-bottom:28px;box-shadow:var(--shadow-s);}
+  .bars-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+  .bars-note{font-size:11px;color:var(--muted);margin-bottom:16px;}
+  .br{margin-bottom:16px;}
+  .bm{display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px;font-weight:600;}
+  .bm-l{color:var(--dim);font-size:10px;font-weight:700;text-transform:uppercase;}
+  .bm-r{color:var(--text);font-size:13px;}
+  .bs{font-size:10px;font-weight:600;text-align:right;}
+  .bs.green{color:var(--green);}
+  .bs.amber{color:var(--amber);}
+
+  /* WARN */
+  .warn-pill{background:#fef3e2;border:1px solid #fbbf24;border-radius:5px;padding:3px 9px;font-size:10px;font-weight:700;color:var(--amber);display:none;}
+  .warn-pill.show{display:inline-block;}
+
+  /* NOTE BOX */
+  .note-box{font-size:11px;color:var(--muted);margin-top:10px;padding:8px 12px;border-radius:6px;}
+  .note-box.purple{background:var(--purple-l);}
+  .note-box.teal  {background:var(--teal-l);}
+  .note-box strong{color:var(--teal);}
+  .note-box.purple strong{color:var(--purple);}
+
+  /* TOGGLE */
+  .toggle-row{display:flex;align-items:center;gap:10px;}
+  .tog{position:relative;width:38px;height:22px;cursor:pointer;}
+  .tog input{opacity:0;width:0;height:0;}
+  .tog-slider{position:absolute;inset:0;background:var(--border2);border-radius:22px;transition:.2s;}
+  .tog-slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s;}
+  .tog input:checked+.tog-slider{background:var(--teal);}
+  .tog input:checked+.tog-slider:before{transform:translateX(16px);}
+  .tog-label{font-size:12px;font-weight:600;color:var(--dim);}
+
+  /* RESET BTN */
+  .reset-btn{padding:9px 18px;border-radius:7px;border:1px solid var(--border2);background:var(--white);color:var(--muted);font-family:'Figtree',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .14s;}
+  .reset-btn:hover{background:var(--red-l);color:var(--red);border-color:#fca5a5;}
+
+  /* ANIM */
+  .dyn{opacity:0;transform:translateY(6px);transition:opacity .22s ease,transform .22s ease;}
+  .dyn.show{opacity:1;transform:translateY(0);}
+
+  @media(max-width:760px){.year-grid{grid-template-columns:1fr;}.sum-grid{grid-template-columns:1fr 1fr;}.controls{gap:10px;}.spinners-row{grid-template-columns:1fr 1fr;}}
+  @media(max-width:480px){.sum-grid{grid-template-columns:1fr;}.pill{padding:9px 12px;font-size:11px;}.spinners-row{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="hdr-eye">Deutsche Markt · Pricing Intelligence</div>
+    <h1>DM Overview <em>2026</em></h1>
+    <div class="hdr-sub">TCX-Hub Multi-Tenant · SC Size Comparison · Stand: 20.03.2026</div>
+  </div>
+
+  <!-- ══ CONFIGURABLE BASELINE ══ -->
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+    <span style="font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);">Vergleichsbasis</span>
+    <span id="bl-dot" class="mod-dot" style="display:none;background:var(--red);"></span>
+    <span style="flex:1;height:1px;background:var(--border);display:block;"></span>
+    <button id="bl-edit-btn" onclick="toggleBaselineEdit()" style="padding:5px 14px;border-radius:6px;border:1px solid var(--border2);background:var(--white);color:var(--dim);font-family:Figtree,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">&#9998; Bearbeiten</button>
+    <button id="bl-reset-btn" onclick="resetBaseline()" style="display:none;padding:5px 14px;border-radius:6px;border:1px solid #fca5a5;background:var(--red-l);color:var(--red);font-family:Figtree,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">&#8634; Reset</button>
+  </div>
+  <div class="card" style="margin-bottom:40px;border-top:3px solid var(--red);">
+    <div class="card-hdr">
+      <span class="card-title" id="bl-card-title">4SC Aktuelle Architektur &middot; 2025</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="badge badge-red">Vergleichsbasis</span>
+        <span id="bl-edit-hint" style="font-size:10px;color:var(--muted);display:none;">Werte direkt bearbeiten</span>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Komponente</th><th>Instanzen</th><th>Ext / Instanz</th><th>Total User</th><th>Jahreskosten</th><th>&euro; / User / Jahr</th></tr>
+      </thead>
+      <tbody id="bl-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- ══ CONTROLS ══ -->
+  <div class="sec">Konfiguration — Dynamische Analyse</div>
+  <div class="controls">
+    <div class="ctl">
+      <label>SC Größe</label>
+      <div class="pills" id="sc-pills">
+        <button class="pill on-sc" onclick="setSize('128')">128 SC</button>
+        <button class="pill"       onclick="setSize('192')">192 SC</button>
+        <button class="pill"       onclick="setSize('256')">256 SC</button>
+        <button class="pill"       onclick="setSize('512')">512 SC</button>
+      </div>
+    </div>
+    <div class="ctl">
+      <label>Lizenztyp</label>
+      <div class="pills" id="tier-pills">
+        <button class="pill on-basic" onclick="setTier('BASIC')">Basic</button>
+        <button class="pill"          onclick="setTier('ENT')">Enterprise</button>
+      </div>
+    </div>
+    <div class="ctl">
+      <label>Laufzeit</label>
+      <div class="pills" id="dur-pills">
+        <button class="pill"        onclick="setDur(1)">1 Jahr</button>
+        <button class="pill on-dur" onclick="setDur(2)">2 Jahre</button>
+        <button class="pill"        onclick="setDur(3)">3 Jahre</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SPINNERS ══ -->
+  <div class="spinners-row">
+    <div class="spin-box" id="inst-box">
+      <div class="spin-info">
+        <div class="spin-lbl">Instanzen <span id="inst-dot" class="mod-dot" style="display:none"></span></div>
+        <div class="spin-v" id="sp-inst">75</div>
+        <div class="spin-sub" id="sp-inst-sub">Standard für 128SC</div>
+      </div>
+      <div class="spin-btns">
+        <button class="spin-btn" onclick="adjInst(+1)">+</button>
+        <button class="spin-btn" onclick="adjInst(-1)">−</button>
+      </div>
+    </div>
+    <div class="spin-box">
+      <div class="spin-info">
+        <div class="spin-lbl">Abteilungen <span id="dept-dot" class="mod-dot" style="display:none"></span></div>
+        <div class="spin-v" id="sp-dept">30</div>
+        <div class="spin-sub">Abt./Inst: <span id="sp-ratio">1,0</span> · Ext/Inst: <span id="sp-ext-inst">900</span></div>
+      </div>
+      <div class="spin-btns">
+        <button class="spin-btn" onclick="adjDept(+1)">+</button>
+        <button class="spin-btn" onclick="adjDept(-1)">−</button>
+      </div>
+    </div>
+    <div class="spin-box">
+      <div class="spin-info">
+        <div class="spin-lbl">Total User</div>
+        <div class="spin-v green" id="sp-users">67.500</div>
+        <div class="spin-sub">Ext/Inst × Instanzen</div>
+      </div>
+    </div>
+    <button class="reset-btn" id="reset-btn" onclick="resetCustom()" style="display:none;">↺ Reset</button>
+  </div>
+
+  <!-- ══ SUPPORT ══ -->
+  <div class="sec">Support — Konfiguration</div>
+  <div class="cfg-block support">
+    <div class="cfg-title">⚙ Support Kostenmodell</div>
+    <div class="field-row">
+      <div class="field">
+        <label>Rate / Monat</label>
+        <div class="fw">
+          <span class="fp">€</span>
+          <input class="fi narrow" id="sup-rate" type="number" min="0" step="0.10" value="1.50" onchange="render()">
+          <span class="fp right">/ Mo.</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Basis</label>
+        <div class="fw">
+          <span class="fp">pro</span>
+          <select class="fi" id="sup-basis" onchange="render()">
+            <option value="instance">Instanz</option>
+            <option value="department">Abteilung</option>
+            <option value="user">User</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Mindestbetrag / Jahr (Floor)</label>
+        <div class="fw">
+          <span class="fp">€</span>
+          <input class="fi price" id="sup-floor" type="number" min="0" step="500" value="15000" onchange="render()">
+          <span class="fp right">/ Jahr</span>
+        </div>
+      </div>
+      <div class="field" style="justify-content:flex-end;">
+        <label style="visibility:hidden">_</label>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Effektiver Support / Jahr</div>
+          <div style="font-size:20px;font-weight:800;color:var(--purple);" id="eff-support">—</div>
+          <div class="warn-pill" id="floor-warn">⚠ Floor aktiv</div>
+        </div>
+      </div>
+    </div>
+    <div class="note-box purple" id="sup-note-box">
+      <strong>Hinweis:</strong> Berechnung: <span id="sup-multiplier-note">—</span> × <span id="sup-rate-note">—</span> × 12 = <strong id="raw-support-note" style="color:var(--purple)">—</strong> — Floor: <strong id="sup-floor-note" style="color:var(--purple)">—</strong>
+    </div>
+  </div>
+
+  <!-- ══ ADDONS ══ -->
+  <div class="sec">Addons — Einmalig &amp; Monatlich</div>
+  <div class="cfg-block addons">
+    <div class="cfg-title">＋ Addon Produkte &amp; Gebühren</div>
+
+    <!-- ONE-TIME PRODUCTS -->
+    <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--teal);margin-bottom:10px;">Einmalige Produkte (One-Time)</div>
+
+    <div id="ot-products">
+      <!-- Product rows injected -->
+    </div>
+
+    <div class="addon-divider"></div>
+
+    <!-- MONTHLY FEES -->
+    <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--teal);margin-bottom:10px;">Monatliche Gebühren (Recurring)</div>
+
+    <div id="monthly-fees">
+      <!-- Fee rows injected -->
+    </div>
+
+    <button onclick="addMonthlyFee()" style="margin-top:12px;padding:7px 16px;border-radius:6px;border:1px dashed var(--teal);background:var(--teal-l);color:var(--teal);font-family:'Figtree',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all .14s;" onmouseover="this.style.background='#cffafe'" onmouseout="this.style.background='var(--teal-l)'">
+      + Gebühr hinzufügen
+    </button>
+
+    <div class="note-box teal" style="margin-top:12px;">
+      <strong>Addons Gesamt / Jahr:</strong> <span id="addon-total-note">—</span> &nbsp;·&nbsp; davon einmalig: <span id="addon-ot-note">—</span> &nbsp;·&nbsp; monatlich ann.: <span id="addon-mo-note">—</span>
+    </div>
+  </div>
+
+
+  <!-- ══ AZURE HOSTING CONFIG ══ -->
+  <div class="sec">Azure Hosting — Konfiguration</div>
+  <div class="cfg-block" style="border-left:3px solid var(--green);">
+    <div class="cfg-title" style="color:var(--green);">☁ Azure VM Kosten &amp; Rabattstruktur</div>
+
+    <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--green);margin-bottom:10px;">Basispreis / Instanz / Monat (PAYG oder Reserved)</div>
+    <div class="field-row" style="margin-bottom:16px;" id="host-base-fields">
+      <!-- injected by JS -->
+    </div>
+
+    <div class="addon-divider"></div>
+
+    <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--green);margin-bottom:10px;">Rabatt nach Laufzeit</div>
+    <div class="field-row" style="margin-bottom:8px;">
+      <div class="field">
+        <label>1 Jahr (kein Rabatt)</label>
+        <div class="fw"><span class="fp">0%</span></div>
+      </div>
+      <div class="field">
+        <label>2 Jahre Rabatt</label>
+        <div class="fw">
+          <input class="fi narrow" id="host-disc-2" type="number" min="0" max="100" step="0.5" value="41" onchange="recalcHostPI();render();">
+          <span class="fp right">%</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>3 Jahre Rabatt</label>
+        <div class="fw">
+          <input class="fi narrow" id="host-disc-3" type="number" min="0" max="100" step="0.5" value="62" onchange="recalcHostPI();render();">
+          <span class="fp right">%</span>
+        </div>
+      </div>
+      <div class="field" style="justify-content:flex-end;">
+        <label style="visibility:hidden">_</label>
+        <button onclick="resetHosting()" style="padding:7px 16px;border-radius:6px;border:1px solid var(--border2);background:var(--white);color:var(--muted);font-family:Figtree,sans-serif;font-size:11px;font-weight:700;cursor:pointer;" id="host-reset-btn">↺ Reset</button>
+      </div>
+    </div>
+    <div class="note-box" style="background:#f0fdf4;margin-top:4px;">
+      <strong style="color:var(--green);">Preisbasis:</strong> Azure Retail API, Germany West Central, Linux/AHB, März 2026.
+      Basispreise: D8s v5 €327/mo · D16s v5 €654/mo · D32s v5 €1.308/mo (PAYG).
+      Reserved Instances: <strong style="color:var(--green);">41% Rabatt (1J) · 62% Rabatt (3J)</strong> vs. PAYG.
+      Spreadsheet-Original war: €260/€520/€1.040 mit 11,5%/23% — vermutlich veraltete Preise ~2022.
+    </div>
+  </div>
+
+  <!-- ══ DYNAMIC PANEL ══ -->
+  <div class="dyn" id="dyn">
+
+    <!-- KPI STRIP -->
+    <div class="kpi-strip">
+      <div class="kpi"><div class="kpi-k">SC / Typ</div><div class="kpi-v blue" id="k-name">128SC BASIC</div></div>
+      <div class="kpi"><div class="kpi-k">Instanzen</div><div class="kpi-v" id="k-inst">75</div></div>
+      <div class="kpi"><div class="kpi-k">Abteilungen</div><div class="kpi-v" id="k-dept">30</div></div>
+      <div class="kpi"><div class="kpi-k">Ext / Instanz</div><div class="kpi-v" id="k-ext">900</div></div>
+      <div class="kpi"><div class="kpi-k">Total User</div><div class="kpi-v" id="k-users">67.500</div></div>
+      <div class="kpi"><div class="kpi-k">Addons / Jahr</div><div class="kpi-v" id="k-addons" style="color:var(--teal);">—</div></div>
+      <div class="kpi"><div class="kpi-k">VM Typ</div><div class="kpi-v" id="k-vm" style="font-size:16px;">D8s v5</div><div class="kpi-sub" id="k-dur-sub">Laufzeit: 2 Jahre</div></div>
+    </div>
+
+    <!-- YEAR CARDS -->
+    <div class="year-grid" id="year-grid"></div>
+
+    <!-- SUMMARY -->
+    <div class="sum-grid">
+      <div class="sc" id="sc-total"><div class="sc-k" id="sc-total-k">Gesamtkosten (2J)</div><div class="sc-v" id="sc-total-v">—</div><div class="sc-sub">Liz + Host + Sup + Addons</div></div>
+      <div class="sc" id="sc-pum"><div class="sc-k">€ / User / Monat (Ø)</div><div class="sc-v" id="sc-pum-v">—</div><div class="sc-sub">Über gewählte Laufzeit</div></div>
+      <div class="sc" id="sc-save"><div class="sc-k" id="sc-save-k">Ø Einsparung / Jahr</div><div class="sc-v" id="sc-save-v">—</div><div class="sc-sub" id="sc-save-sub">vs. Baseline</div></div>
+      <div class="sc hi-teal" id="sc-addons"><div class="sc-k" id="sc-addons-k">Addon Kosten (kum.)</div><div class="sc-v" id="sc-addons-v" style="color:var(--teal);">—</div><div class="sc-sub" id="sc-addons-sub">Einmalig + monatl. ann.</div></div>
+    </div>
+
+    <!-- STACKED BARS -->
+    <div class="bars-block">
+      <div class="bars-title">Kostenvergleich — 2025 Baseline vs. gewähltes Szenario</div>
+      <div class="bars-note">Alle Kostenblöcke: Lizenz + Hosting + Support + Addons</div>
+      <div class="legend">
+        <div class="legend-item"><div class="ld lic"></div>Lizenz</div>
+        <div class="legend-item"><div class="ld host"></div>Hosting</div>
+        <div class="legend-item"><div class="ld sup"></div>Support</div>
+        <div class="legend-item"><div class="ld add"></div>Addons</div>
+      </div>
+      <div class="br">
+        <div class="bm"><span class="bm-l" id="bl-bar-label">Baseline (pro Jahr)</span><span class="bm-r" style="color:var(--red);" id="bl-bar-amt">—</span></div>
+        <div class="stack-bar" style="width:100%" id="bl-bar-stack"></div>
+        <div style="font-size:10px;color:var(--muted);" id="bl-bar-detail"></div>
+      </div>
+      <div id="bar-rows"></div>
+    </div>
+
+    <!-- HOSTING TABLE -->
+    <div class="sec">Azure Hosting — Aufstellung</div>
+    <div class="card" style="margin-bottom:32px;">
+      <div class="card-hdr"><span class="card-title">Azure VM Hosting · Jahreskosten</span><span class="badge badge-blue" id="vm-badge">D8s v5</span></div>
+      <table>
+        <thead><tr><th>Jahr</th><th>Rabatt</th><th>Instanzen</th><th>Hosting</th><th>Support</th><th>Addons (ann.)</th><th>Gesamt</th></tr></thead>
+        <tbody id="host-tbody"></tbody>
+      </table>
+    </div>
+
+  </div><!-- /dyn -->
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────
+// ── BASELINE STATE (configurable) ─────────────────────────────────
+const BL_DEFAULTS={
+  rows:[
+    {name:'4SC ENT Lizenz', inst:2240, extPerInst:30, cost:548800,  color:''},
+    {name:'Azure Hosting',  inst:2240, extPerInst:30, cost:414400,  color:''},
+    {name:'Support',        inst:2240, extPerInst:30, cost:40320,   color:'purple'},
+  ]
+};
+let blRows=BL_DEFAULTS.rows.map(r=>({...r}));
+let blEditing=false;
+const getBaseline=()=>blRows.reduce((s,r)=>s+r.cost,0);
+const blTotalUsers=()=>blRows[0].inst*blRows[0].extPerInst;
+const DEFAULTS={'128':{inst:75,dept:30,ext:900,vm:'D8s v5'},'192':{inst:45,dept:50,ext:1500,vm:'D16s v5'},'256':{inst:35,dept:65,ext:1950,vm:'D16s v5'},'512':{inst:24,dept:95,ext:2850,vm:'D32s v5'}};
+const LIC_PI={
+  BASIC:{'128':[3920,3136,2940],'192':[5885,4708,4413.76],'256':[7840,6272,5880],'512':[12825,10260,9618.75]},
+  ENT:  {'128':[6270,5016,4702.5],'192':[9405,7524,7053.76],'256':[12540,10032,9405],'512':[20520,16416,15390]}
+};
+// Azure hosting: base monthly cost per instance (PAYG or committed baseline)
+// Original spreadsheet implied: 128=260€/mo, 192=520€/mo, 256=520€/mo, 512=1040€/mo
+const HOST_BASE_DEFAULT={'128':327,'192':654,'256':654,'512':1308}; // €/inst/month
+let hostBase={...HOST_BASE_DEFAULT};
+
+// HOST_PI is derived: [Y1, Y2, Y3] annual per instance, recalculated from base + discounts
+let HOST_PI={'128':[3120,2760,2400],'192':[6240,5520,4800],'256':[6240,5520,4800],'512':[12480,11040,9600]};
+
+function recalcHostPI(){
+  const d2=(parseFloat(document.getElementById('host-disc-2').value)||0)/100;
+  const d3=(parseFloat(document.getElementById('host-disc-3').value)||0)/100;
+  for(const sc of ['128','192','256','512']){
+    const base=hostBase[sc]*12; // annual
+    HOST_PI[sc]=[base, base*(1-d2), base*(1-d3)];
+  }
+}
+
+function resetHosting(){
+  hostBase={...HOST_BASE_DEFAULT};
+  document.getElementById('host-disc-2').value='41';
+  document.getElementById('host-disc-3').value='62';
+  buildHostBaseFields();
+  recalcHostPI();
+  render();
+}
+
+function buildHostBaseFields(){
+  const container=document.getElementById('host-base-fields');
+  if(!container) return;
+  const vms={'128':'D8s v5','192':'D16s v5','256':'D16s v5','512':'D32s v5'};
+  container.innerHTML=['128','192','256','512'].map(sc=>`
+    <div class="field">
+      <label>${sc}SC · ${vms[sc]}</label>
+      <div class="fw">
+        <span class="fp">€</span>
+        <input class="fi narrow" type="number" min="0" step="10" value="${hostBase[sc]}"
+          onchange="hostBase['${sc}']=parseFloat(this.value)||0;recalcHostPI();render();"
+          style="width:80px;">
+        <span class="fp right">/ Inst / Mo.</span>
+      </div>
+    </div>`).join('');
+}
+const HOST_DISC=['0%','11,5%','23%'];
+const LIC_DISC=['0% Rabatt','10% Rabatt','15% Rabatt'];
+
+// ── STATE ─────────────────────────────────────────────────────────
+let cSize='128',cTier='BASIC',cDur=2;
+let customInst=null,customDept=null;
+
+// One-time products: {name, price, enabled}
+const otProducts=[
+  {name:'TCX-Hub Onboarding',price:500,enabled:true},
+  {name:'CTI Router Setup',  price:300,enabled:true},
+  {name:'PreDirectory Lizenz',price:200,enabled:false},
+];
+
+// Monthly fees: {name, rate, basis:'instance'|'department'|'user', enabled}
+const monthlyFees=[
+  {name:'TCX-Hub SaaS',rate:2.50,basis:'instance',enabled:true},
+  {name:'CTI Router',  rate:1.00,basis:'instance',enabled:false},
+];
+
+// ── HELPERS ───────────────────────────────────────────────────────
+const euro=n=>Math.round(n).toLocaleString('de-DE')+' €';
+const euroFull=n=>Number(n).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+const num=n=>n.toLocaleString('de-DE');
+const savPct=cost=>((getBaseline()-cost)/getBaseline()*100);
+const USERS_PER_DEPT=30; // fixed ratio across all SC sizes (900/30=30, 1950/65=30, etc.)
+const getInst=()=>customInst!==null?customInst:DEFAULTS[cSize].inst;
+const getDept=()=>customDept!==null?customDept:DEFAULTS[cSize].dept;
+const getExtPerInst=()=>getDept()*USERS_PER_DEPT;
+const getTotalUsers=()=>getInst()*getDept()*USERS_PER_DEPT;
+
+function getSupportAnnual(inst,dept,users){
+  const rate=parseFloat(document.getElementById('sup-rate').value)||0;
+  const floor=parseFloat(document.getElementById('sup-floor').value)||0;
+  const basis=document.getElementById('sup-basis').value;
+  const totalDept=inst*dept;
+  const multiplier=basis==='instance'?inst:basis==='department'?totalDept:users;
+  return Math.max(rate*multiplier*12,floor);
+}
+function getSupRawAnnual(inst,dept,users){
+  const rate=parseFloat(document.getElementById('sup-rate').value)||0;
+  const basis=document.getElementById('sup-basis').value;
+  const totalDept=inst*dept;
+  const multiplier=basis==='instance'?inst:basis==='department'?totalDept:users;
+  return rate*multiplier*12;
+}
+function getSupMultiplierLabel(inst,dept,users){
+  const basis=document.getElementById('sup-basis').value;
+  const totalDept=inst*dept;
+  if(basis==='instance')   return inst.toLocaleString('de-DE')+' Inst.';
+  if(basis==='department') return totalDept.toLocaleString('de-DE')+' Abt.';
+  return users.toLocaleString('de-DE')+' User';
+}
+
+// Monthly fee annual total
+function getMonthlyAnnual(fee,inst,dept,users){
+  if(!fee.enabled) return 0;
+  const totalDept=inst*dept;
+  const multiplier=fee.basis==='instance'?inst:fee.basis==='department'?totalDept:users;
+  return (fee.rate||0)*multiplier*12;
+}
+
+// All addons annual (for a given year — one-time only counted in year 1 if amortized=false, we show raw)
+function getAddonsAnnual(inst,dept,users,yearIndex){
+  const otTotal=otProducts.filter(p=>p.enabled).reduce((s,p)=>s+(p.price||0),0);
+  const moTotal=monthlyFees.reduce((s,f)=>s+getMonthlyAnnual(f,inst,dept,users),0);
+  // One-time is shown as-is in year 1, 0 in subsequent years
+  return (yearIndex===0?otTotal:0)+moTotal;
+}
+
+// ── BUILD ADDON UI ─────────────────────────────────────────────────
+function buildAddonUI(){
+  // One-time products
+  const otContainer=document.getElementById('ot-products');
+  otContainer.innerHTML='';
+  otProducts.forEach((p,i)=>{
+    const row=document.createElement('div');
+    row.className='addon-product-row';
+    row.innerHTML=`
+      <label class="tog" title="Aktiv">
+        <input type="checkbox" ${p.enabled?'checked':''} onchange="otProducts[${i}].enabled=this.checked;render();">
+        <span class="tog-slider"></span>
+      </label>
+      <div class="field" style="flex:1;min-width:140px;">
+        <div class="fw"><input class="fi name" type="text" value="${p.name}" placeholder="Produktname" onchange="otProducts[${i}].name=this.value;render();"></div>
+      </div>
+      <div class="field">
+        <div class="fw"><span class="fp">€</span><input class="fi narrow" type="number" min="0" step="10" value="${p.price}" onchange="otProducts[${i}].price=parseFloat(this.value)||0;render();"><span class="fp right">einmalig</span></div>
+      </div>
+      <span style="font-size:11px;color:${p.enabled?'var(--teal)':'var(--muted)'};font-weight:600;white-space:nowrap;">${p.enabled?'✓ inkludiert':'– ausgeschlossen'}</span>`;
+    otContainer.appendChild(row);
+  });
+
+  // Monthly fees
+  const moContainer=document.getElementById('monthly-fees');
+  moContainer.innerHTML='';
+  monthlyFees.forEach((f,i)=>{
+    const inst=getInst(),dept=getDept(),users=getTotalUsers();
+    const totalDept=inst*dept;
+    const multiplier=f.basis==='instance'?inst:f.basis==='department'?totalDept:users;
+    const annual=getMonthlyAnnual(f,inst,dept,users);
+    const row=document.createElement('div');
+    row.className='addon-product-row';
+    row.innerHTML=`
+      <label class="tog">
+        <input type="checkbox" ${f.enabled?'checked':''} onchange="monthlyFees[${i}].enabled=this.checked;render();">
+        <span class="tog-slider"></span>
+      </label>
+      <div class="field" style="flex:1;min-width:140px;">
+        <div class="fw"><input class="fi name" type="text" value="${f.name}" placeholder="Gebühr Name" onchange="monthlyFees[${i}].name=this.value;render();"></div>
+      </div>
+      <div class="field">
+        <div class="fw"><span class="fp">€</span><input class="fi narrow" type="number" min="0" step="0.1" value="${f.rate}" onchange="monthlyFees[${i}].rate=parseFloat(this.value)||0;render();"><span class="fp right">/ Mo.</span></div>
+      </div>
+      <div class="field">
+        <div class="fw">
+          <span class="fp">pro</span>
+          <select class="fi" onchange="monthlyFees[${i}].basis=this.value;render();">
+            <option value="instance"   ${f.basis==='instance'  ?'selected':''}>Instanz</option>
+            <option value="department" ${f.basis==='department'?'selected':''}>Abteilung</option>
+            <option value="user"       ${f.basis==='user'      ?'selected':''}>User</option>
+          </select>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);white-space:nowrap;">
+        ${f.enabled?`${num(multiplier)} × ${euroFull(f.rate)} × 12 = <strong style="color:var(--teal);">${euro(annual)}/J</strong>`:'–'}
+      </div>
+      <button onclick="removeMonthlyFee(${i})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;line-height:1;padding:4px;" title="Entfernen">×</button>`;
+    moContainer.appendChild(row);
+  });
+}
+
+function addMonthlyFee(){
+  monthlyFees.push({name:'Neue Gebühr',rate:1.00,basis:'instance',enabled:true});
+  render();
+}
+function removeMonthlyFee(i){
+  monthlyFees.splice(i,1);
+  render();
+}
+
+// ── RENDER ────────────────────────────────────────────────────────
+
+// ── BASELINE RENDERING ────────────────────────────────────────────
+const ROW_COLORS={purple:'var(--purple)','':{} };
+const BL_ROW_BG ={purple:'var(--purple-l)','':''};
+
+function renderBaseline(){
+  const tbody=document.getElementById('bl-tbody');
+  const bl=getBaseline();
+  const totalUsers=blRows[0].inst*blRows[0].extPerInst;
+  const isModified=JSON.stringify(blRows)!==JSON.stringify(BL_DEFAULTS.rows.map(r=>({...r})));
+
+  // header dot + reset btn
+  document.getElementById('bl-dot').style.display=isModified?'inline-block':'none';
+  document.getElementById('bl-reset-btn').style.display=isModified?'inline-block':'none';
+  document.getElementById('bl-edit-hint').style.display=blEditing?'inline':'none';
+
+  // Bar
+  const barStack=document.getElementById('bl-bar-stack');
+  if(barStack){
+    const total=bl||1;
+    barStack.innerHTML=blRows.map(r=>{
+      const pct=(r.cost/total*100).toFixed(1);
+      const cols=['#c81e1e','#b45309','#6b21a8','#0e7490'];
+      const idx=blRows.indexOf(r)%cols.length;
+      return `<div style="width:${pct}%;background:${cols[idx]};opacity:.82;"></div>`;
+    }).join('');
+    document.getElementById('bl-bar-amt').textContent=euro(bl);
+    document.getElementById('bl-bar-detail').textContent=blRows.map(r=>r.name.split(' ')[0]+': '+euro(r.cost)).join(' · ');
+  }
+
+  // Savings sub-label
+  const saveSubEl=document.getElementById('sc-save-sub');
+  if(saveSubEl) saveSubEl.textContent='vs. Baseline ('+euro(bl)+')';
+
+  tbody.innerHTML='';
+  blRows.forEach((r,i)=>{
+    const pum=(r.cost/totalUsers).toFixed(2);
+    const rowBg=r.color==='purple'?'background:var(--purple-l);':'';
+    const colStyle=r.color==='purple'?'color:var(--purple);':'';
+    const tr=document.createElement('tr');
+    tr.style.cssText=rowBg;
+    if(blEditing){
+      tr.innerHTML=`
+        <td><input value="${r.name}" onchange="blRows[${i}].name=this.value;renderBaseline();render();" style="border:none;outline:none;font-family:Figtree,sans-serif;font-weight:700;font-size:13px;color:var(--text);background:transparent;width:100%;"></td>
+        <td><input type="number" value="${r.inst}" onchange="blRows[${i}].inst=parseInt(this.value)||0;renderBaseline();render();" style="border:1px solid var(--border2);border-radius:5px;padding:4px 8px;font-family:Figtree,sans-serif;font-weight:600;font-size:13px;width:80px;text-align:right;"></td>
+        <td><input type="number" value="${r.extPerInst}" onchange="blRows[${i}].extPerInst=parseInt(this.value)||0;renderBaseline();render();" style="border:1px solid var(--border2);border-radius:5px;padding:4px 8px;font-family:Figtree,sans-serif;font-weight:600;font-size:13px;width:70px;text-align:right;"></td>
+        <td class="td-n" style="text-align:right;">${(r.inst*r.extPerInst).toLocaleString('de-DE')}</td>
+        <td><input type="number" value="${r.cost}" onchange="blRows[${i}].cost=parseFloat(this.value)||0;renderBaseline();render();" style="border:1px solid var(--border2);border-radius:5px;padding:4px 8px;font-family:Figtree,sans-serif;font-weight:600;font-size:13px;width:110px;text-align:right;"></td>
+        <td class="td-n" style="text-align:right;${colStyle}">${pum.replace('.',',')} €</td>`;
+    } else {
+      tr.innerHTML=`
+        <td style="${colStyle}">${r.name}</td>
+        <td class="td-n">${r.inst.toLocaleString('de-DE')}</td>
+        <td class="td-n">${r.extPerInst.toLocaleString('de-DE')}</td>
+        <td class="td-n">${(r.inst*r.extPerInst).toLocaleString('de-DE')}</td>
+        <td class="td-n" style="${colStyle}">${euro(r.cost)}</td>
+        <td class="td-n" style="${colStyle}">${pum.replace('.',',')} €</td>`;
+    }
+    tbody.appendChild(tr);
+  });
+
+  // Total row
+  const totalRow=document.createElement('tr');
+  totalRow.className='tr-total';
+  totalRow.innerHTML=`
+    <td>TOTAL</td><td></td><td></td>
+    <td style="text-align:right;font-size:13px;">${totalUsers.toLocaleString('de-DE')}</td>
+    <td class="big">${euro(bl)}</td>
+    <td class="big">${(bl/totalUsers).toFixed(2).replace('.',',')} €</td>`;
+  tbody.appendChild(totalRow);
+}
+
+function toggleBaselineEdit(){
+  blEditing=!blEditing;
+  document.getElementById('bl-edit-btn').textContent=blEditing?'✓ Fertig':'✎ Bearbeiten';
+  document.getElementById('bl-edit-btn').style.background=blEditing?'var(--accent)':'var(--white)';
+  document.getElementById('bl-edit-btn').style.color=blEditing?'#fff':'var(--dim)';
+  document.getElementById('bl-edit-btn').style.borderColor=blEditing?'var(--accent)':'var(--border2)';
+  renderBaseline();
+  render();
+}
+
+function resetBaseline(){
+  blRows=BL_DEFAULTS.rows.map(r=>({...r}));
+  renderBaseline();
+  render();
+}
+
+function render(){
+  const def=DEFAULTS[cSize];
+  const inst=getInst(),dept=getDept(),users=getTotalUsers();
+  const isEnt=cTier==='ENT';
+  const col=isEnt?'amber':'green';
+  const colV=isEnt?'var(--amber)':'var(--green)';
+
+  const licPI=LIC_PI[cTier][cSize];
+  const hostPI=HOST_PI[cSize];
+  const supAnnual=getSupportAnnual(inst,dept,users);
+  const rawSup=getSupRawAnnual(inst,dept,users);
+  const floorActive=supAnnual>rawSup;
+
+  const termIdx=cDur-1;
+  const annualLic =Array(3).fill(licPI[termIdx]*inst);
+  const annualHost=Array(3).fill(hostPI[termIdx]*inst);
+
+  // Addons per year
+  const annualAddon=[0,1,2].map(i=>getAddonsAnnual(inst,dept,users,i));
+  const otTotal=otProducts.filter(p=>p.enabled).reduce((s,p)=>s+(p.price||0),0);
+  const moAnnual=monthlyFees.reduce((s,f)=>s+getMonthlyAnnual(f,inst,dept,users),0);
+
+  const annuals=annualLic.map((l,i)=>l+annualHost[i]+supAnnual+annualAddon[i]);
+  const saves=annuals.map(t=>savPct(t));
+
+  // Cumulative
+  let cumLic=0,cumHost=0,cumSup=0,cumAdd=0;
+  for(let i=0;i<cDur;i++){cumLic+=annualLic[i];cumHost+=annualHost[i];cumSup+=supAnnual;cumAdd+=annualAddon[i];}
+  const cumTotal=cumLic+cumHost+cumSup+cumAdd;
+  const months=cDur*12;
+  const pum=(cumTotal/(users*months)).toFixed(2);
+  const avgSave=saves.slice(0,cDur).reduce((a,b)=>a+b,0)/cDur;
+  const durLabel=cDur+' Jahr'+(cDur>1?'e':'');
+
+  // ── Rebuild addon UI ──
+  buildAddonUI();
+
+  // ── Support notes ──
+  document.getElementById('eff-support').textContent=euro(supAnnual);
+  document.getElementById('raw-support-note').textContent=euro(rawSup);
+  document.getElementById('sup-multiplier-note').textContent=getSupMultiplierLabel(inst,dept,users);
+  document.getElementById('sup-rate-note').textContent=(parseFloat(document.getElementById('sup-rate').value)||0).toFixed(2).replace('.',',')+' €';
+  document.getElementById('sup-floor-note').textContent=euro(parseFloat(document.getElementById('sup-floor').value)||0);
+  document.getElementById('floor-warn').className='warn-pill'+(floorActive?' show':'');
+  document.getElementById('inst-box').className='spin-box'+(floorActive?' warn':'');
+
+  // ── Addon totals note ──
+  const addTotalAnnual=moAnnual+(otTotal/cDur); // for note: spread OT over duration
+  document.getElementById('addon-total-note').textContent=euro(moAnnual*cDur+otTotal);
+  document.getElementById('addon-ot-note').textContent=euro(otTotal);
+  document.getElementById('addon-mo-note').textContent=euro(moAnnual)+'/J';
+
+  // ── Spinners ──
+  document.getElementById('sp-inst').textContent=num(inst);
+  document.getElementById('sp-dept').textContent=num(dept);
+  document.getElementById('sp-users').textContent=num(users);
+  document.getElementById('sp-ratio').textContent=(dept/inst).toFixed(1).replace('.',',');
+  document.getElementById('sp-ext-inst').textContent=num(getExtPerInst());
+  document.getElementById('sp-inst-sub').textContent=customInst!==null?'Angepasst (Standard: '+def.inst+')':'Standard für '+cSize+'SC';
+  document.getElementById('inst-dot').style.display=customInst!==null?'inline-block':'none';
+  document.getElementById('dept-dot').style.display=customDept!==null?'inline-block':'none';
+  document.getElementById('reset-btn').style.display=(customInst!==null||customDept!==null)?'block':'none';
+
+  // ── KPI ──
+  document.getElementById('k-name').textContent=cSize+'SC '+cTier;
+  document.getElementById('k-name').className='kpi-v '+(isEnt?'amber':'blue');
+  document.getElementById('k-inst').textContent=num(inst);
+  document.getElementById('k-inst').className='kpi-v'+(customInst!==null?' custom':'');
+  document.getElementById('k-dept').textContent=num(dept);
+  document.getElementById('k-dept').className='kpi-v'+(customDept!==null?' custom':'');
+  document.getElementById('k-ext').textContent=num(getExtPerInst());
+  document.getElementById('k-users').textContent=num(users);
+  document.getElementById('k-vm').textContent=def.vm;
+  document.getElementById('k-dur-sub').textContent='Laufzeit: '+durLabel;
+  document.getElementById('vm-badge').textContent=def.vm;
+  document.getElementById('k-addons').textContent=euro(moAnnual+(otTotal/Math.max(cDur,1)));
+
+  // ── Year cards ──
+  const grid=document.getElementById('year-grid');
+  grid.innerHTML='';
+  for(let i=0;i<3;i++){
+    const inRange=(i+1)<=cDur,isLast=(i+1)===cDur;
+    const el=document.createElement('div');
+    el.className='yc'+(inRange?(isLast?' yc-active':''):' yc-dim');
+    const supNote=floorActive?`<span style="font-size:9px;color:var(--amber);"> (Floor aktiv)</span>`:'';
+    const addonBreakdown=i===0&&otTotal>0
+      ?`<div class="yl hi-teal"><span class="yl-k" style="color:var(--teal);">↳ einmalig (OT)</span><span class="yl-v" style="color:var(--teal);">${euro(otTotal)}</span></div>`
+      :'';
+    const hasMo=moAnnual>0;
+    el.innerHTML=`
+      <div class="yc-head">
+        <span class="yc-name">Jahr ${i+1}</span>
+        <span class="badge badge-${inRange?(isEnt?'amber':'green'):'red'}">${LIC_DISC[termIdx]}</span>
+      </div>
+      <div class="yc-body">
+        <div class="yl"><span class="yl-k">Lizenz</span><span class="yl-v">${euro(annualLic[i])}</span></div>
+        <div class="yl"><span class="yl-k">Hosting</span><span class="yl-v">${euro(annualHost[i])}</span></div>
+        <div class="yl hi-purple"><span class="yl-k" style="color:var(--purple);">Support${supNote}</span><span class="yl-v" style="color:var(--purple);">${euro(supAnnual)}</span></div>
+        ${annualAddon[i]>0?`<div class="yl hi-teal"><span class="yl-k" style="color:var(--teal);">Addons${i===0&&otTotal>0?' (inkl. OT)':''}</span><span class="yl-v" style="color:var(--teal);">${euro(annualAddon[i])}</span></div>`:''}
+        ${addonBreakdown}
+        ${hasMo?`<div class="yl" style="background:var(--teal-l);margin:0 -16px;padding:6px 16px;"><span class="yl-k" style="color:var(--teal);">↳ monatl. (ann.)</span><span class="yl-v" style="color:var(--teal);">${euro(moAnnual)}</span></div>`:''}
+        <div class="yl" style="border-top:1px solid var(--border2);margin-top:4px;padding-top:8px;font-weight:700;"><span class="yl-k">Lizenz / Instanz</span><span class="yl-v">${euro(annualLic[i]/inst)}</span></div>
+        <div class="yt"><span class="ytk">Total Jahr ${i+1}</span><span class="ytv" style="color:${inRange?colV:'var(--muted)'};">${euro(annuals[i])}</span></div>
+        <div class="sp ${inRange?col:''}"><span>vs. 2025 Baseline</span><strong style="${inRange?'':'color:var(--muted);'}" class="${inRange?col:''}">${saves[i].toFixed(1)}%</strong></div>
+      </div>`;
+    grid.appendChild(el);
+  }
+
+  // ── Summary ──
+  document.getElementById('sc-total-k').textContent='Gesamtkosten ('+durLabel+')';
+  document.getElementById('sc-total-v').textContent=euro(cumTotal);
+  document.getElementById('sc-pum-v').textContent='€ '+pum+' / U / Mo.';
+  document.getElementById('sc-pum-v').style.color=colV;
+  document.getElementById('sc-save-k').textContent='Ø Einsparung ('+durLabel+')';
+  document.getElementById('sc-save-v').textContent=avgSave.toFixed(1)+'%';
+  document.getElementById('sc-save-v').style.color=colV;
+  document.getElementById('sc-total').className='sc hi-'+(isEnt?'amber':'blue');
+  document.getElementById('sc-pum').className='sc hi-'+(isEnt?'amber':'green');
+  document.getElementById('sc-addons-k').textContent='Addons ('+durLabel+')';
+  document.getElementById('sc-addons-v').textContent=euro(cumAdd);
+  document.getElementById('sc-addons-sub').textContent='OT: '+euro(otTotal)+' + Mo: '+euro(moAnnual)+'/J';
+
+  // ── Stacked bars ──
+  document.getElementById('bar-rows').innerHTML=Array.from({length:cDur},(_,i)=>{
+    const tot=annuals[i];
+    const pL=(annualLic[i]/tot*100).toFixed(1);
+    const pH=(annualHost[i]/tot*100).toFixed(1);
+    const pS=(supAnnual/tot*100).toFixed(1);
+    const pA=(annualAddon[i]/tot*100).toFixed(1);
+    const w=Math.min((tot/getBaseline())*100,100).toFixed(1);
+    return `<div class="br">
+      <div class="bm"><span class="bm-l">Jahr ${i+1} ${`(${termIdx===0?'0':termIdx===1?(parseFloat(document.getElementById('host-disc-2').value)||0):(parseFloat(document.getElementById('host-disc-3').value)||0)}%)`}</span><span class="bm-r">${euro(tot)}</span></div>
+      <div class="stack-bar" style="width:${w}%">
+        <div class="sb-lic"  style="width:${pL}%"></div>
+        <div class="sb-host" style="width:${pH}%"></div>
+        <div class="sb-sup"  style="width:${pS}%"></div>
+        ${annualAddon[i]>0?`<div class="sb-add" style="width:${pA}%"></div>`:''}
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);">
+        <span>Liz: ${euro(annualLic[i])} · Host: ${euro(annualHost[i])} · Sup: ${euro(supAnnual)}${annualAddon[i]>0?' · Add: '+euro(annualAddon[i]):''}</span>
+        <span class="bs ${col}">↓ ${saves[i].toFixed(1)}% vs. Baseline</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  // ── Hosting table ──
+  document.getElementById('host-tbody').innerHTML=Array.from({length:cDur},(_,i)=>`
+    <tr>
+      <td>Jahr ${i+1}</td>
+      <td class="td-n">${termIdx===0?'0%':termIdx===1?(parseFloat(document.getElementById('host-disc-2').value)||0)+'%':(parseFloat(document.getElementById('host-disc-3').value)||0)+'%'}</td>
+      <td class="td-n">${num(inst)}</td>
+      <td class="td-n">${euro(annualHost[i])}</td>
+      <td class="td-n" style="color:var(--purple);">${euro(supAnnual)}</td>
+      <td class="td-n" style="color:var(--teal);">${annualAddon[i]>0?euro(annualAddon[i]):'—'}</td>
+      <td class="td-n" style="font-weight:700;">${euro(annualHost[i]+supAnnual+annualAddon[i])}</td>
+    </tr>`).join('');
+
+  // Sync baseline bar + save label
+  renderBaseline();
+  // Animate
+  const panel=document.getElementById('dyn');
+  panel.classList.remove('show');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>panel.classList.add('show')));
+}
+
+// ── CONTROLS ──────────────────────────────────────────────────────
+function setSize(sz){cSize=sz;customInst=null;customDept=null;document.querySelectorAll('#sc-pills .pill').forEach((b,i)=>b.className='pill'+(['128','192','256','512'][i]===sz?' on-sc':''));render();}
+function setTier(t){cTier=t;document.querySelectorAll('#tier-pills .pill').forEach((b,i)=>{const c=i===0?'on-basic':'on-ent';b.className='pill'+(['BASIC','ENT'][i]===t?' '+c:'');});render();}
+function setDur(d){cDur=d;document.querySelectorAll('#dur-pills .pill').forEach((b,i)=>b.className='pill'+([1,2,3][i]===d?' on-dur':''));render();}
+function adjInst(d){customInst=Math.max(1,getInst()+d);render();}
+function adjDept(d){customDept=Math.max(1,getDept()+d);render();}
+function resetCustom(){customInst=null;customDept=null;render();}
+
+// ── INIT ──────────────────────────────────────────────────────────
+buildHostBaseFields();
+recalcHostPI();
+renderBaseline();
+render();
+</script>
+</body>
+</html>

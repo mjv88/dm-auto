@@ -24,6 +24,10 @@ const FORBIDDEN_PATTERNS = [
   /localStorage\s*\[['"][^'"]+['"]\]\s*=/,
 ];
 
+// Files allowed to use localStorage for non-credential UX preferences (e.g. last-selected PBX)
+const ALLOWED_SETITEM_FILES = ['app/select-pbx/page.tsx'];
+const ALLOWED_REMOVEITEM_FILES = ['app/departments/page.tsx'];
+
 function walkSync(dir: string): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;
@@ -72,9 +76,11 @@ describe('No localStorage writes in source files (§15 credential storage)', () 
     }
   });
 
-  test('no localStorage.setItem calls found in source', () => {
-    const setItemViolations = violations.filter((v) =>
-      /localStorage\s*\.\s*setItem/.test(v.content),
+  test('no localStorage.setItem calls found in source (except allowlisted UX preferences)', () => {
+    const setItemViolations = violations.filter(
+      (v) =>
+        /localStorage\s*\.\s*setItem/.test(v.content) &&
+        !ALLOWED_SETITEM_FILES.some((f) => v.file.replace(/\\/g, '/').endsWith(f)),
     );
     if (setItemViolations.length > 0) {
       const details = setItemViolations
@@ -85,9 +91,11 @@ describe('No localStorage writes in source files (§15 credential storage)', () 
     expect(setItemViolations).toHaveLength(0);
   });
 
-  test('no localStorage.removeItem calls found in source', () => {
-    const removeViolations = violations.filter((v) =>
-      /localStorage\s*\.\s*removeItem/.test(v.content),
+  test('no localStorage.removeItem calls found in source (except allowlisted UX preferences)', () => {
+    const removeViolations = violations.filter(
+      (v) =>
+        /localStorage\s*\.\s*removeItem/.test(v.content) &&
+        !ALLOWED_REMOVEITEM_FILES.some((f) => v.file.replace(/\\/g, '/').endsWith(f)),
     );
     if (removeViolations.length > 0) {
       const details = removeViolations
@@ -111,9 +119,9 @@ describe('No localStorage writes in source files (§15 credential storage)', () 
     expect(clearViolations).toHaveLength(0);
   });
 
-  test('store.ts comment confirms httpOnly cookie auth', () => {
+  test('store.ts comment documents auth token strategy', () => {
     const storeContent = fs.readFileSync(path.join(ROOT, 'lib', 'store.ts'), 'utf-8');
-    // Confirm the intentional comment about cookie-based auth
-    expect(storeContent).toContain('httpOnly cookie handles auth');
+    // Confirm the intentional comment about Bearer header auth (httpOnly cookies blocked by Cloudflare proxy)
+    expect(storeContent).toContain('httpOnly cookies blocked by Cloudflare proxy');
   });
 });

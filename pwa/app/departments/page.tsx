@@ -4,13 +4,14 @@ export const dynamic = 'force-dynamic';
 
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useRunnerStore, useAllowedDepts, useCurrentDept, useRunnerProfile } from '@/lib/store';
+import { useRunnerStore, useAllowedDepts, useCurrentDept, useRunnerProfile, useIvrAccess } from '@/lib/store';
 import { getDepartments, switchDepartment } from '@/lib/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 import RunnerHeader from '@/components/RunnerHeader';
 import DeptCard from '@/components/DeptCard';
 import SuccessToast from '@/components/SuccessToast';
+import IvrSection from '@/components/ivr/IvrSection';
 import type { Dept } from '@/types/auth';
 
 const SLOW_REQUEST_THRESHOLD_MS = 5_000;
@@ -39,6 +40,7 @@ export default function DepartmentsPage() {
 
   const setRunnerProfile = useRunnerStore((s) => s.setRunnerProfile);
   const setSelectedPbxFqdn = useRunnerStore((s) => s.setSelectedPbxFqdn);
+  const setIvrAccess = useRunnerStore((s) => s.setIvrAccess);
 
   // Check email verification status for email-auth users
   useEffect(() => {
@@ -108,9 +110,11 @@ export default function DepartmentsPage() {
             currentDeptId?: number;
             currentDeptName?: string;
             allowedDepts?: Array<{ id: number; name: string }>;
+            ivrAccess?: boolean;
           };
           const depts = (data.allowedDepts ?? []).map(d => ({ id: d.id, name: d.name, groupId: d.id }));
           setAllowedDepts(depts);
+          if (data.ivrAccess !== undefined) setIvrAccess(data.ivrAccess);
           if (data.currentDeptId && !currentDept) {
             const found = depts.find(d => d.id === data.currentDeptId);
             if (found) setCurrentDept(found);
@@ -337,6 +341,8 @@ export default function DepartmentsPage() {
               )}
             </>
           )}
+
+          <IvrSection />
         </div>
       </div>
 

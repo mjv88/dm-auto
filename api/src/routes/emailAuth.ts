@@ -273,6 +273,7 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
           email: user.email,
           emailVerified: user.emailVerified,
           role: user.role ?? 'runner',
+          pricingAccess: user.pricingAccess ?? false,
         },
       });
     },
@@ -503,6 +504,19 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
     }
     try {
       const session = validateSessionToken(token);
+
+      // Look up pricingAccess from DB (not in JWT)
+      let pricingAccess = false;
+      if (session.userId) {
+        const db = getDb();
+        const userRows = await db
+          .select({ pricingAccess: users.pricingAccess })
+          .from(users)
+          .where(eq(users.id, session.userId))
+          .limit(1);
+        pricingAccess = userRows[0]?.pricingAccess ?? false;
+      }
+
       // Return decoded session claims only — never expose the raw JWT
       return reply.send({
         session: {
@@ -515,6 +529,7 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
           pbxFqdn: session.pbxFqdn,
           extensionNumber: session.extensionNumber,
           entraEmail: session.entraEmail,
+          pricingAccess,
         },
       });
     } catch {

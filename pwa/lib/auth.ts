@@ -94,7 +94,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 export interface EmailAuthResult {
   sessionToken: string;
-  user: { id: string; email: string; emailVerified: boolean };
+  user: { id: string; email: string; emailVerified: boolean; pricingAccess?: boolean };
 }
 
 export async function loginWithEmail(email: string, password: string): Promise<EmailAuthResult> {
