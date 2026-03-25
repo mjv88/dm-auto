@@ -34,14 +34,19 @@ export default function IvrPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [ivrData, promptData] = await Promise.all([getIvrs(), getCustomPrompts()]);
+      const ivrData = await getIvrs();
       setIvrs(ivrData);
+    } catch (err) {
+      console.error('Failed to load IVRs:', err);
+    }
+    try {
+      const promptData = await getCustomPrompts();
       setPrompts(promptData);
     } catch (err) {
-      console.error('Failed to load IVR data:', err);
-    } finally {
-      setLoading(false);
+      console.error('Failed to load prompts:', err);
+      // Prompts failure is non-fatal — IVR list still shows
     }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
