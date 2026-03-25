@@ -64,6 +64,20 @@
       "when": 1774483200000,
       "tag": "0009_impersonation_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1774588800000,
+      "tag": "0010_ivr_self_service",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1774588800001,
+      "tag": "0011_pricing_access",
+      "breakpoints": true
     }
   ]
 }
