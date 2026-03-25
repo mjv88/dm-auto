@@ -11,6 +11,7 @@ export function BottomNav() {
   const role = useRunnerStore((s) => s.role);
   const reset = useRunnerStore((s) => s.reset);
 
+  const ivrAccess = useRunnerStore((s) => s.ivrAccess);
   const isAuthenticated = authStatus === 'authenticated';
 
   function handleLogout() {
@@ -23,6 +24,7 @@ export function BottomNav() {
   const tabs: Array<{ href: string; label: string; icon: React.FC<{ active: boolean }>; show: boolean; exact: boolean }> = isAuthenticated
     ? [
         { href: '/departments', label: 'Home', icon: HomeIcon, show: true, exact: true },
+        { href: '/ivr', label: 'IVR', icon: IvrIcon, show: ivrAccess === true, exact: true },
         { href: '/admin', label: 'Admin', icon: AdminIcon, show: isAdminOrAbove, exact: false },
         { href: '/setup', label: 'Setup', icon: SetupIcon, show: role === 'super_admin' || role === 'admin', exact: false },
       ]
@@ -112,6 +114,14 @@ function RegisterIcon({ active }: { active: boolean }) {
       <circle cx="8.5" cy="7" r="4" />
       <line x1="20" y1="8" x2="20" y2="14" />
       <line x1="23" y1="11" x2="17" y2="11" />
+    </svg>
+  );
+}
+
+function IvrIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
     </svg>
   );
 }

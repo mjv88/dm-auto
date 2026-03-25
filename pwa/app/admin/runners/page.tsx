@@ -19,6 +19,7 @@ interface Runner {
   outboundCallerId?: string | null;
   deptCallerIds?: Record<string, string> | null;
   deptRingGroups?: Record<string, number[]> | null;
+  ivrAccess?: boolean;
 }
 
 interface Department {
@@ -85,6 +86,7 @@ export default function RunnersPage() {
     const apiBody = {
       ...data,
       outboundCallerId: data.outboundCallerId || null,
+      ivrAccess: (data as any).ivrAccess,
     };
 
     if (modalRunner) {
@@ -117,6 +119,31 @@ export default function RunnersPage() {
         >
           {row.isActive ? 'Active' : 'Inactive'}
         </span>
+      ),
+    },
+    {
+      key: 'ivrAccess' as any,
+      header: 'IVR',
+      render: (row: Runner) => (
+        <button
+          onClick={async (e) => {
+            e.stopPropagation();
+            try {
+              await adminPut(`/admin/runners/${row.id}`, { ivrAccess: !row.ivrAccess });
+              load();
+            } catch (err) {
+              console.error('Failed to toggle IVR access:', err);
+            }
+          }}
+          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+            row.ivrAccess ? 'bg-teal-500' : 'bg-gray-300'
+          }`}
+          title={row.ivrAccess ? 'IVR enabled — click to disable' : 'IVR disabled — click to enable'}
+        >
+          <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transform transition-transform ${
+            row.ivrAccess ? 'translate-x-[18px]' : 'translate-x-[2px]'
+          }`} />
+        </button>
       ),
     },
   ];

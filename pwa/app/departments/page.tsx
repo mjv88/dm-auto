@@ -4,14 +4,13 @@ export const dynamic = 'force-dynamic';
 
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useRunnerStore, useAllowedDepts, useCurrentDept, useRunnerProfile, useIvrAccess } from '@/lib/store';
+import { useRunnerStore, useAllowedDepts, useCurrentDept, useRunnerProfile } from '@/lib/store';
 import { getDepartments, switchDepartment } from '@/lib/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 import RunnerHeader from '@/components/RunnerHeader';
 import DeptCard from '@/components/DeptCard';
 import SuccessToast from '@/components/SuccessToast';
-import IvrSection from '@/components/ivr/IvrSection';
 import type { Dept } from '@/types/auth';
 
 const SLOW_REQUEST_THRESHOLD_MS = 5_000;
@@ -342,7 +341,6 @@ export default function DepartmentsPage() {
             </>
           )}
 
-          <IvrSection />
         </div>
       </div>
 
