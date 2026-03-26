@@ -31,17 +31,13 @@ export default function AdminNav() {
   let links: { href: string; label: string; exact?: boolean }[];
 
   if (role === 'super_admin') {
-    // super_admin: all tabs
     links = [
       BASE_LINKS[0],
       ...SUPER_ADMIN_LINKS.slice(0, 1),
       ...BASE_LINKS.slice(1),
       MIGRATION_LINK,
-      PRICING_LINK,
       SUPER_ADMIN_LINKS[1],
     ];
-  } else if (role === 'admin' && pricingAccess) {
-    links = [...BASE_LINKS, MIGRATION_LINK, PRICING_LINK];
   } else if (role === 'admin') {
     links = [...BASE_LINKS, MIGRATION_LINK];
   } else {
