@@ -37,7 +37,7 @@ body{font-family:'Figtree',sans-serif;background:var(--bg);color:var(--text);min
 /* ── LAYOUT ── */
 .app{display:flex;flex-direction:column;min-height:100vh;}
 .topbar{background:var(--white);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;box-shadow:var(--shadow-s);}
-.topbar-inner{max-width:1200px;margin:0 auto;padding:0 24px;}
+.topbar-inner{max-width:100%;margin:0 auto;padding:0 16px;}
 .topbar-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 0 0;}
 .topbar-brand{display:flex;align-items:center;gap:12px;}
 .brand-dot{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:14px;letter-spacing:-1px;}
@@ -48,13 +48,13 @@ body{font-family:'Figtree',sans-serif;background:var(--bg);color:var(--text);min
 /* ── TABS ── */
 .tabs{display:flex;gap:2px;padding-top:12px;overflow-x:auto;scrollbar-width:none;}
 .tabs::-webkit-scrollbar{display:none;}
-.tab{padding:10px 18px;font-size:12px;font-weight:700;letter-spacing:.3px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .14s;background:none;border-top:none;border-left:none;border-right:none;font-family:'Figtree',sans-serif;}
+.tab{padding:10px 14px;font-size:11px;font-weight:700;letter-spacing:.3px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .14s;background:none;border-top:none;border-left:none;border-right:none;font-family:'Figtree',sans-serif;}
 .tab:hover{color:var(--text);}
 .tab.active{color:var(--accent);border-bottom-color:var(--accent);}
 .tab-num{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:4px;font-size:9px;font-weight:800;margin-right:6px;background:var(--border);color:var(--muted);}
 .tab.active .tab-num{background:var(--accent-l);color:var(--accent);}
 
-.content{max-width:1200px;margin:0 auto;padding:32px 24px 80px;width:100%;}
+.content{max-width:100%;margin:0 auto;padding:20px 16px 80px;width:100%;}
 .pane{display:none;animation:fadeIn .18s ease;}
 .pane.active{display:block;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
@@ -425,14 +425,14 @@ tr.tr-total td.big{font-size:17px;color:var(--red);}
       </div>
     </div>
     <div class="tabs" id="tab-bar">
-      <button class="tab active" onclick="showTab(0)"><span class="tab-num">1</span>Overview</button>
-      <button class="tab" onclick="showTab(1)"><span class="tab-num">2</span>Stakeholders &amp; RACI</button>
-      <button class="tab" onclick="showTab(2)"><span class="tab-num">3</span>Phases &amp; Tasks</button>
-      <button class="tab" onclick="showTab(3)"><span class="tab-num">4</span>Questionnaire</button>
-      <button class="tab" onclick="showTab(4)"><span class="tab-num">5</span>Validation Checklist</button>
-      <button class="tab" onclick="showTab(5)"><span class="tab-num">6</span>Entra &amp; Intune Guide</button>
-      <button class="tab" onclick="showTab(6)"><span class="tab-num">7</span>Gantt Chart</button>
-      <button class="tab" onclick="showTab(7)"><span class="tab-num">8</span>Pricing &amp; Costs</button>
+      <button class="tab active" onclick="showTab(7)"><span class="tab-num">1</span>Pricing &amp; Costs</button>
+      <button class="tab" onclick="showTab(0)"><span class="tab-num">2</span>Migration Plan</button>
+      <button class="tab" onclick="showTab(1)"><span class="tab-num">3</span>Stakeholders &amp; RACI</button>
+      <button class="tab" onclick="showTab(2)"><span class="tab-num">4</span>Phases &amp; Tasks</button>
+      <button class="tab" onclick="showTab(3)"><span class="tab-num">5</span>Questionnaire</button>
+      <button class="tab" onclick="showTab(4)"><span class="tab-num">6</span>Validation Checklist</button>
+      <button class="tab" onclick="showTab(5)"><span class="tab-num">7</span>Entra &amp; Intune Guide</button>
+      <button class="tab" onclick="showTab(6)"><span class="tab-num">8</span>Gantt Chart</button>
     </div>
   </div>
 </div>
@@ -443,7 +443,7 @@ tr.tr-total td.big{font-size:17px;color:var(--red);}
 <!-- ═══════════════════════════════════════════════
      TAB 1: OVERVIEW
 ════════════════════════════════════════════════ -->
-<div class="pane active" id="pane-0">
+<div class="pane" id="pane-0">
 
   <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
     <div>
@@ -788,7 +788,7 @@ tr.tr-total td.big{font-size:17px;color:var(--red);}
 <!-- ═══════════════════════════════════════════════
      TAB 8: PRICING & COSTS
 ════════════════════════════════════════════════ -->
-<div class="pane" id="pane-7">
+<div class="pane active" id="pane-7">
 
   <div style="margin-bottom:28px;">
     <div style="font-size:10px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:var(--accent);margin-bottom:6px;">Pricing Intelligence</div>
@@ -1491,9 +1491,12 @@ function init() {
 }
 
 // ── TAB NAVIGATION ──
-function showTab(idx) {
-  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===idx));
-  document.querySelectorAll('.pane').forEach((p,i) => p.classList.toggle('active', i===idx));
+function showTab(paneIdx) {
+  // Tab button order differs from pane DOM order (Pricing is first tab but pane-7)
+  const tabToPaneMap = [7, 0, 1, 2, 3, 4, 5, 6]; // tab button index → pane index
+  const activeTabBtn = tabToPaneMap.indexOf(paneIdx);
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===activeTabBtn));
+  document.querySelectorAll('.pane').forEach((p,i) => p.classList.toggle('active', i===paneIdx));
 }
 
 // ── KPI / OVERVIEW ──
