@@ -2498,9 +2498,142 @@ function initPricing() {
   renderPricing();
 }
 
+// ── DASHBOARD STATE PERSISTENCE ──────────────────────────────────────────
+const DASHBOARD_ID = 'migration-dashboard';
+const API_URL = window.location.origin.replace('runner.', 'runner-api.');
+
+function getAuthToken() {
+  // Try to get token from parent frame's store, or from sessionStorage
+  try {
+    const raw = sessionStorage.getItem('runner-store');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return parsed?.state?.sessionToken || null;
+    }
+  } catch {}
+  return null;
+}
+
+async function dashboardFetch(path, options = {}) {
+  const token = getAuthToken();
+  if (!token) return null;
+
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      ...options,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers || {}),
+      },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+// Collect all dashboard state into one object
+function collectState() {
+  const state = {
+    // Pricing state
+    pricing: { cSize, cTier, cDur, customInst, customDept },
+  };
+
+  // Collect all inputs
+  document.querySelectorAll('input[id], select[id], textarea[id]').forEach(el => {
+    if (el.type === 'checkbox') {
+      state[el.id] = el.checked;
+    } else {
+      state[el.id] = el.value;
+    }
+  });
+
+  return state;
+}
+
+// Apply loaded state to the dashboard
+function applyState(state) {
+  if (!state) return;
+
+  Object.entries(state).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.type === 'checkbox') {
+      el.checked = !!value;
+    } else if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') {
+      el.value = value;
+    }
+  });
+
+  // Restore pricing state
+  if (state.pricing) {
+    if (state.pricing.cSize) { cSize = state.pricing.cSize; setSize(cSize); }
+    if (state.pricing.cTier) { cTier = state.pricing.cTier; setTier(cTier); }
+    if (state.pricing.cDur) { cDur = state.pricing.cDur; setDur(cDur); }
+    if (state.pricing.customInst) customInst = state.pricing.customInst;
+    if (state.pricing.customDept) customDept = state.pricing.customDept;
+  }
+}
+
+// Save state with change tracking
+let _lastSavedState = null;
+let _saveTimer = null;
+
+function scheduleSave() {
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(async () => {
+    const newState = collectState();
+    const changes = [];
+
+    if (_lastSavedState) {
+      Object.keys(newState).forEach(key => {
+        if (JSON.stringify(newState[key]) !== JSON.stringify(_lastSavedState[key])) {
+          changes.push({ field: key, oldValue: _lastSavedState[key], newValue: newState[key] });
+        }
+      });
+    }
+
+    if (changes.length > 0 || !_lastSavedState) {
+      await dashboardFetch(`/admin/dashboard/state/${DASHBOARD_ID}`, {
+        method: 'PUT',
+        body: JSON.stringify({ state: newState, changes }),
+      });
+      _lastSavedState = newState;
+    }
+  }, 2000); // Debounce: save 2s after last change
+}
+
+// Load state on init
+async function loadDashboardState() {
+  const data = await dashboardFetch(`/admin/dashboard/state/${DASHBOARD_ID}`);
+  if (data?.state) {
+    applyState(data.state);
+    _lastSavedState = data.state;
+  }
+}
+
+// Attach change listeners to all inputs
+function attachSaveListeners() {
+  document.querySelectorAll('input, select, textarea').forEach(el => {
+    el.addEventListener('change', scheduleSave);
+    el.addEventListener('input', scheduleSave);
+  });
+
+  // Also observe checkbox clicks
+  document.querySelectorAll('input[type="checkbox"]').forEach(el => {
+    el.addEventListener('click', scheduleSave);
+  });
+}
+
 // ── RUN ──
 init();
 initPricing();
+loadDashboardState().then(() => {
+  attachSaveListeners();
+});
 </script>
 </body>
 </html>

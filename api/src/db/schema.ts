@@ -232,6 +232,18 @@ export const managerTenants = pgTable(
 );
 
 // ============================================================
+// dashboard_state
+// Persisted state for dashboards (e.g. migration-dashboard).
+// Single-row-per-dashboard pattern (keyed by id).
+// ============================================================
+export const dashboardState = pgTable('dashboard_state', {
+  id:        text('id').primaryKey(),              // e.g. 'migration-dashboard'
+  state:     jsonb('state').notNull(),              // full dashboard JSON state
+  updatedBy: text('updated_by'),                    // email of last editor
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ============================================================
 // Relations
 // ============================================================
 export const tenantsRelations = relations(tenants, ({ many }) => ({

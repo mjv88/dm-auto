@@ -78,6 +78,13 @@
       "when": 1774588800001,
       "tag": "0011_pricing_access",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1774675200000,
+      "tag": "0012_dashboard_state",
+      "breakpoints": true
     }
   ]
 }

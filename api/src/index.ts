@@ -15,6 +15,7 @@ import { adminStatsRoutes } from './routes/admin/stats.js';
 import { adminAuditRoutes } from './routes/admin/audit.js';
 import { adminUserRoutes } from './routes/admin/users.js';
 import { adminSystemRoutes } from './routes/admin/system.js';
+import { dashboardRoutes } from './routes/admin/dashboard.js';
 import { emailAuthRoutes } from './routes/emailAuth.js';
 import { setupRoutes } from './routes/setup.js';
 import { companyRoutes } from './routes/company.js';
@@ -58,6 +59,7 @@ async function buildServer() {
   await fastify.register(adminAuditRoutes);
   await fastify.register(adminUserRoutes);
   await fastify.register(adminSystemRoutes);
+  await fastify.register(dashboardRoutes);
   await fastify.register(setupRoutes);
   await fastify.register(companyRoutes);
   await fastify.register(ivrRoutes);
