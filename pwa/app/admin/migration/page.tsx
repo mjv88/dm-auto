@@ -2,7 +2,7 @@
 
 export default function MigrationPage() {
   return (
-    <div className="w-full h-[calc(100vh-120px)]">
+    <div className="-mx-4 -mt-6 w-[calc(100%+2rem)] h-[calc(100vh-110px)]">
       <iframe
         src="/migration-dashboard.html"
         className="w-full h-full border-0"

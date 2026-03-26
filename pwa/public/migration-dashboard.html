@@ -475,11 +475,11 @@ tr.tr-total td.big{font-size:17px;color:var(--red);}
       <div class="form-grid">
         <div class="field">
           <label>Project Name</label>
-          <div class="fw"><input class="fi" id="proj-name" value="3CX MT Migration 2026" onchange="updateProjectName()" placeholder="Project Name"></div>
+          <div class="fw"><input class="fi" id="proj-name" value="DM 3CX Multi-Tenant Migration 2026" onchange="updateProjectName()" placeholder="Project Name"></div>
         </div>
         <div class="field">
           <label>Customer / Organisation</label>
-          <div class="fw"><input class="fi" id="proj-customer" value="[Customer Name]" placeholder="Customer Name"></div>
+          <div class="fw"><input class="fi" id="proj-customer" value="DM — Deutsche Markt" placeholder="Customer Name"></div>
         </div>
         <div class="field">
           <label>Reseller / Partner</label>
@@ -499,15 +499,15 @@ tr.tr-total td.big{font-size:17px;color:var(--red);}
         </div>
         <div class="field">
           <label>Total PBX Instances</label>
-          <div class="fw"><input class="fi" type="number" id="proj-pbx-count" value="93" min="1" onchange="updateKPIs()"></div>
+          <div class="fw"><input class="fi" type="number" id="proj-pbx-count" value="2240" min="1" onchange="updateKPIs()"></div>
         </div>
         <div class="field">
           <label>Batch Size (PBX / Sprint)</label>
-          <div class="fw"><input class="fi" type="number" id="proj-batch" value="10" min="1" onchange="updateKPIs()"></div>
+          <div class="fw"><input class="fi" type="number" id="proj-batch" value="500" min="1" onchange="updateKPIs()"></div>
         </div>
         <div class="field">
           <label>Avg Extensions / PBX</label>
-          <div class="fw"><input class="fi" type="number" id="proj-avg-ext" value="90" min="1" onchange="updateKPIs()"></div>
+          <div class="fw"><input class="fi" type="number" id="proj-avg-ext" value="30" min="1" onchange="updateKPIs()"></div>
         </div>
         <div class="field">
           <label>Slot Size (Extensions / Slot)</label>
@@ -1477,6 +1477,51 @@ GET /xapi/v1/Groups/{group-id}/Members
 // ═══════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════
+// ── KNOWN PROJECT DATA (auto-fill) ──────────────────────────────────────
+const KNOWN_DEFAULTS = {
+  // General
+  q1: 'DM — Deutsche Markt',
+  q7: 'Saturday nights, 22:00–06:00 CET',
+  q8: 'Medium — max 30min downtime',
+  q9: '2240',
+  q10: '2,240 franchise locations across Germany (DE) and Poland (PL). ~30 extensions per location. Total ~67,200 users. Each location currently has its own dedicated 4SC PBX instance on Azure.',
+  q11: 'GDPR compliance required. Data residency: EU (Germany). DPA required. No call recording in scope.',
+  // PBX Infrastructure
+  q12: '20.0.x (v20)',
+  q13: 'Cloud-hosted (on3cx.de)',
+  q14: '67200',
+  q15: '67200',
+  q16: 'Enterprise',
+  q17: '4',
+  q23: '*.on3cx.de (2,240 individual FQDNs)',
+  // Numbering
+  q27: '100–129 (3-digit, 30 extensions per PBX)',
+  q28: '3 digits (100–999)',
+  q29: 'Yes — numbers can change after migration',
+  // Department & Queue
+  q36: '1',
+  q37: 'Each location is a single department in the MT system. Department naming: "{LocationCode} — {City}"',
+  q42: 'Standard hours only',
+  q43: 'Voicemail',
+  // IVR
+  q46: 'Yes — simple (1 level)',
+  q54: 'Custom IVR greeting recordings',
+};
+
+function prefillQuestionnaire() {
+  Object.entries(KNOWN_DEFAULTS).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    // Only prefill if the field is empty (don't overwrite user/saved data)
+    if (el.tagName === 'SELECT') {
+      const opt = Array.from(el.options).find(o => o.value === value || o.text === value);
+      if (opt && el.selectedIndex <= 0) el.value = opt.value;
+    } else if (!el.value) {
+      el.value = value;
+    }
+  });
+}
+
 function init() {
   buildStakeholderConfig();
   buildRaciTable();
@@ -1484,6 +1529,7 @@ function init() {
   buildExitCriteria();
   buildChecklist();
   buildQuestionnaire();
+  prefillQuestionnaire();
   buildGuide();
   buildGantt();
   buildSlotScheme();
@@ -1501,9 +1547,9 @@ function showTab(paneIdx) {
 
 // ── KPI / OVERVIEW ──
 function updateKPIs() {
-  const pbx = parseInt(document.getElementById('proj-pbx-count')?.value) || 93;
-  const batch = parseInt(document.getElementById('proj-batch')?.value) || 10;
-  const avgExt = parseInt(document.getElementById('proj-avg-ext')?.value) || 90;
+  const pbx = parseInt(document.getElementById('proj-pbx-count')?.value) || 2240;
+  const batch = parseInt(document.getElementById('proj-batch')?.value) || 500;
+  const avgExt = parseInt(document.getElementById('proj-avg-ext')?.value) || 30;
   const totalExt = pbx * avgExt;
   const batches = Math.ceil(pbx / batch);
   const migWeeks = batches * 2; // 2 weeks per sprint
