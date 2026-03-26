@@ -19,6 +19,7 @@ const SUPER_ADMIN_LINKS: { href: string; label: string; exact?: boolean }[] = [
 ];
 
 const PRICING_LINK = { href: '/admin/pricing', label: 'Pricing' };
+const MIGRATION_LINK = { href: '/admin/migration', label: 'Migration' };
 
 export default function AdminNav() {
   const pathname = usePathname();
@@ -30,17 +31,19 @@ export default function AdminNav() {
   let links: { href: string; label: string; exact?: boolean }[];
 
   if (role === 'super_admin') {
-    // super_admin: all tabs, Pricing between Audit Log and System
+    // super_admin: all tabs
     links = [
       BASE_LINKS[0],
       ...SUPER_ADMIN_LINKS.slice(0, 1),
       ...BASE_LINKS.slice(1),
+      MIGRATION_LINK,
       PRICING_LINK,
       SUPER_ADMIN_LINKS[1],
     ];
   } else if (role === 'admin' && pricingAccess) {
-    // admin with pricingAccess: base tabs + Pricing
-    links = [...BASE_LINKS, PRICING_LINK];
+    links = [...BASE_LINKS, MIGRATION_LINK, PRICING_LINK];
+  } else if (role === 'admin') {
+    links = [...BASE_LINKS, MIGRATION_LINK];
   } else {
     links = BASE_LINKS;
   }

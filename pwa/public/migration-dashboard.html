@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3CX Migration Plan</title>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #f2f4f8;
+  --white:    #ffffff;
+  --surface:  #f8f9fc;
+  --border:   #e0e6ef;
+  --border2:  #c8d3e3;
+  --text:     #0d1520;
+  --muted:    #7d8fa8;
+  --dim:      #3d5068;
+  --accent:   #1a56db;
+  --accent-l: #eef3fe;
+  --green:    #057a55;
+  --green-l:  #e3f5ee;
+  --amber:    #b45309;
+  --amber-l:  #fef3e2;
+  --red:      #c81e1e;
+  --red-l:    #fdf2f2;
+  --purple:   #6b21a8;
+  --purple-l: #f5f0ff;
+  --teal:     #0e7490;
+  --teal-l:   #ecfeff;
+  --shadow-s: 0 1px 3px rgba(13,21,32,.06),0 2px 8px rgba(13,21,32,.04);
+  --shadow-m: 0 2px 8px rgba(13,21,32,.08),0 6px 20px rgba(13,21,32,.05);
+  --r: 10px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Figtree',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5;}
+
+/* ── LAYOUT ── */
+.app{display:flex;flex-direction:column;min-height:100vh;}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;box-shadow:var(--shadow-s);}
+.topbar-inner{max-width:1200px;margin:0 auto;padding:0 24px;}
+.topbar-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 0 0;}
+.topbar-brand{display:flex;align-items:center;gap:12px;}
+.brand-dot{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:14px;letter-spacing:-1px;}
+.brand-name{font-size:14px;font-weight:800;color:var(--text);letter-spacing:-.3px;}
+.brand-sub{font-size:11px;color:var(--muted);font-weight:500;margin-top:-1px;}
+.topbar-meta{display:flex;align-items:center;gap:10px;}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:2px;padding-top:12px;overflow-x:auto;scrollbar-width:none;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{padding:10px 18px;font-size:12px;font-weight:700;letter-spacing:.3px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .14s;background:none;border-top:none;border-left:none;border-right:none;font-family:'Figtree',sans-serif;}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab-num{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:4px;font-size:9px;font-weight:800;margin-right:6px;background:var(--border);color:var(--muted);}
+.tab.active .tab-num{background:var(--accent-l);color:var(--accent);}
+
+.content{max-width:1200px;margin:0 auto;padding:32px 24px 80px;width:100%;}
+.pane{display:none;animation:fadeIn .18s ease;}
+.pane.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── TYPOGRAPHY ── */
+.sec{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:12px;}
+.sec::after{content:'';flex:1;height:1px;background:var(--border);}
+.sec-icon{font-size:14px;}
+
+/* ── CARD ── */
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow-s);overflow:hidden;margin-bottom:20px;}
+.card-hdr{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface);}
+.card-title{font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--dim);text-transform:uppercase;}
+.card-body{padding:20px;}
+
+/* ── BADGES ── */
+.badge{font-size:9px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:1.5px;text-transform:uppercase;}
+.badge-red   {background:var(--red-l);  color:var(--red);   border:1px solid #fca5a5;}
+.badge-green {background:var(--green-l);color:var(--green); border:1px solid #84d9b7;}
+.badge-blue  {background:var(--accent-l);color:var(--accent);border:1px solid #a4cafe;}
+.badge-amber {background:var(--amber-l);color:var(--amber); border:1px solid #fbbf24;}
+.badge-purple{background:var(--purple-l);color:var(--purple);border:1px solid #c4b5fd;}
+.badge-teal  {background:var(--teal-l); color:var(--teal);  border:1px solid #67e8f9;}
+.badge-gray  {background:var(--surface);color:var(--muted); border:1px solid var(--border2);}
+
+/* ── KPI STRIP ── */
+.kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:24px;box-shadow:var(--shadow-s);}
+.kpi{background:var(--white);padding:14px 16px;}
+.kpi-k{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+.kpi-v{font-size:20px;font-weight:800;color:var(--text);line-height:1.1;}
+.kpi-v.blue{color:var(--accent);}
+.kpi-v.green{color:var(--green);}
+.kpi-v.amber{color:var(--amber);}
+.kpi-v.teal{color:var(--teal);}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+th{padding:9px 14px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);background:var(--surface);white-space:nowrap;}
+td{padding:10px 14px;font-size:12px;font-weight:500;color:var(--dim);border-bottom:1px solid var(--bg);}
+td:first-child{color:var(--text);font-weight:600;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#fafbfd;}
+
+/* ── EDITABLE FIELD ── */
+.fw{display:flex;align-items:center;border:1px solid var(--border2);border-radius:6px;overflow:hidden;background:var(--white);}
+.fp{padding:7px 10px;background:var(--surface);font-size:11px;font-weight:600;color:var(--muted);border-right:1px solid var(--border2);white-space:nowrap;}
+.fi{padding:7px 11px;border:none;outline:none;font-family:'Figtree',sans-serif;font-size:13px;font-weight:600;color:var(--text);background:var(--white);flex:1;}
+.fi:focus{background:var(--accent-l);}
+select.fi{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237d8fa8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;background-color:var(--white);}
+
+/* ── FORM GRID ── */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:20px;}
+.field{display:flex;flex-direction:column;gap:6px;}
+.field label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
+
+/* ── RACI ── */
+.raci-table{width:100%;border-collapse:collapse;}
+.raci-table th{padding:10px 12px;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface);text-align:center;}
+.raci-table th:first-child{text-align:left;}
+.raci-table td{padding:8px 12px;border-bottom:1px solid var(--bg);text-align:center;font-size:12px;}
+.raci-table td:first-child{text-align:left;color:var(--text);font-weight:600;font-size:12px;}
+.raci-table tr:hover td{background:#fafbfd;}
+.raci-cell{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;}
+.raci-btn{width:26px;height:26px;border-radius:5px;border:1px solid var(--border2);background:var(--surface);color:var(--muted);font-size:10px;font-weight:800;cursor:pointer;transition:all .12s;font-family:'Figtree',sans-serif;display:flex;align-items:center;justify-content:center;}
+.raci-btn.active-R{background:#dbeafe;color:var(--accent);border-color:#93c5fd;}
+.raci-btn.active-A{background:var(--amber-l);color:var(--amber);border-color:#fbbf24;}
+.raci-btn.active-C{background:var(--green-l);color:var(--green);border-color:#84d9b7;}
+.raci-btn.active-I{background:var(--surface);color:var(--muted);border-color:var(--border2);}
+.raci-btn:hover{border-color:var(--accent-l);}
+.raci-legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;padding:12px 16px;background:var(--surface);border-radius:var(--r);border:1px solid var(--border);}
+.raci-leg-item{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--dim);}
+.raci-leg-dot{width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;}
+
+/* ── PHASE CARDS ── */
+.phase-grid{display:grid;gap:16px;}
+.phase-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow-s);overflow:hidden;}
+.phase-hdr{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--border);}
+.phase-num{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#fff;flex-shrink:0;}
+.phase-info{flex:1;}
+.phase-name{font-size:13px;font-weight:800;color:var(--text);}
+.phase-dur{font-size:11px;color:var(--muted);margin-top:1px;}
+.phase-body{padding:0;}
+.task-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:0;border-bottom:1px solid var(--bg);padding:10px 20px;align-items:center;}
+.task-row:last-child{border-bottom:none;}
+.task-row:hover{background:var(--surface);}
+.task-name{font-size:12px;font-weight:600;color:var(--text);}
+.task-meta{font-size:11px;color:var(--muted);}
+.task-hdr{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;padding:8px 20px;background:var(--surface);border-bottom:1px solid var(--border);}
+.task-hdr span{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
+
+/* ── CHECKLIST ── */
+.checklist-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--bg);}
+.checklist-item:last-child{border-bottom:none;}
+.check-box{width:20px;height:20px;border:2px solid var(--border2);border-radius:5px;cursor:pointer;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .14s;background:var(--white);}
+.check-box.checked{background:var(--green);border-color:var(--green);}
+.check-box.checked::after{content:'✓';color:#fff;font-size:11px;font-weight:800;}
+.check-label{flex:1;}
+.check-title{font-size:13px;font-weight:600;color:var(--text);}
+.check-desc{font-size:11px;color:var(--muted);margin-top:2px;}
+.check-meta{font-size:10px;color:var(--muted);font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+
+/* ── QUESTIONNAIRE ── */
+.q-section{margin-bottom:28px;}
+.q-section-title{font-size:13px;font-weight:800;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.q-item{margin-bottom:14px;}
+.q-label{font-size:11px;font-weight:700;color:var(--dim);margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+.q-label .required{color:var(--red);font-size:10px;}
+.q-input{width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:6px;font-family:'Figtree',sans-serif;font-size:13px;font-weight:500;color:var(--text);background:var(--white);outline:none;transition:border-color .14s;}
+.q-input:focus{border-color:var(--accent);background:var(--accent-l);}
+textarea.q-input{resize:vertical;min-height:80px;}
+select.q-input{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237d8fa8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;}
+.q-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;}
+
+/* ── GUIDE STEPS ── */
+.guide-section{margin-bottom:32px;}
+.guide-part{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:16px;padding:8px 14px;background:var(--accent-l);border-radius:6px;display:inline-block;}
+.step-card{display:flex;gap:16px;padding:16px 20px;border-bottom:1px solid var(--bg);}
+.step-card:last-child{border-bottom:none;}
+.step-num{width:32px;height:32px;border-radius:8px;background:var(--accent);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.step-body{flex:1;}
+.step-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.step-desc{font-size:12px;color:var(--dim);line-height:1.6;}
+.step-code{background:#1a1f2e;color:#e2e8f0;padding:10px 14px;border-radius:6px;font-family:monospace;font-size:11px;margin-top:8px;line-height:1.7;overflow-x:auto;}
+.step-note{background:var(--amber-l);border:1px solid #fbbf24;border-radius:6px;padding:8px 12px;font-size:11px;color:var(--amber);margin-top:8px;font-weight:600;}
+.step-tip{background:var(--teal-l);border:1px solid #67e8f9;border-radius:6px;padding:8px 12px;font-size:11px;color:var(--teal);margin-top:8px;font-weight:600;}
+.option-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-top:12px;}
+.option-title{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;}
+.option-a .option-title{color:var(--accent);}
+.option-b .option-title{color:var(--green);}
+
+/* ── GANTT ── */
+.gantt-wrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--border);background:var(--white);box-shadow:var(--shadow-s);}
+.gantt-table{min-width:900px;border-collapse:collapse;}
+.gantt-table th{padding:10px 12px;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);background:var(--surface);border-bottom:1px solid var(--border);border-right:1px solid var(--border);text-align:center;}
+.gantt-table th:first-child,.gantt-table th:nth-child(2){text-align:left;}
+.gantt-table td{padding:8px 12px;border-bottom:1px solid var(--bg);border-right:1px solid var(--bg);font-size:11px;}
+.gantt-table td:first-child{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;}
+.gantt-bar-cell{position:relative;padding:4px 8px;}
+.gantt-bar{height:18px;border-radius:4px;display:flex;align-items:center;padding:0 6px;font-size:9px;font-weight:700;color:#fff;letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* ── STAKEHOLDER CONFIG ── */
+.sh-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;margin-bottom:12px;box-shadow:var(--shadow-s);display:flex;align-items:center;gap:16px;}
+.sh-swatch{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;color:#fff;flex-shrink:0;}
+.sh-fields{flex:1;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;}
+.sh-role-badge{padding:4px 12px;border-radius:20px;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;}
+
+/* ── PILLS ── */
+.pills-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+.pill-btn{padding:7px 16px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border2);background:var(--white);color:var(--muted);font-family:'Figtree',sans-serif;transition:all .14s;}
+.pill-btn:hover{background:var(--bg);}
+.pill-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+/* ── PROGRESS BAR ── */
+.progress-wrap{background:var(--bg);border-radius:4px;height:8px;overflow:hidden;margin-top:6px;}
+.progress-bar{height:100%;border-radius:4px;transition:width .4s ease;}
+
+/* ── BUTTONS ── */
+.btn{padding:9px 18px;border-radius:7px;font-family:'Figtree',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border:1px solid;transition:all .14s;display:inline-flex;align-items:center;gap:6px;}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn-primary:hover{background:#1447c0;}
+.btn-ghost{background:var(--white);color:var(--dim);border-color:var(--border2);}
+.btn-ghost:hover{background:var(--bg);}
+.btn-green{background:var(--green);color:#fff;border-color:var(--green);}
+.btn-green:hover{background:#046040;}
+
+/* ── MISC ── */
+.note-box{font-size:11px;padding:10px 14px;border-radius:7px;margin-top:8px;line-height:1.6;}
+.note-blue{background:var(--accent-l);color:var(--accent);border:1px solid #a4cafe;}
+.note-amber{background:var(--amber-l);color:var(--amber);border:1px solid #fbbf24;}
+.note-green{background:var(--green-l);color:var(--green);border:1px solid #84d9b7;}
+.note-teal{background:var(--teal-l);color:var(--teal);border:1px solid #67e8f9;}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px;}
+.info-item{background:var(--surface);border-radius:8px;padding:12px 14px;border:1px solid var(--border);}
+.info-key{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+.info-val{font-size:14px;font-weight:700;color:var(--text);}
+.info-val.editable{cursor:pointer;border-bottom:1px dashed var(--border2);display:inline-block;}
+.save-btn{padding:5px 12px;border-radius:5px;background:var(--green);color:#fff;border:none;font-family:'Figtree',sans-serif;font-size:11px;font-weight:700;cursor:pointer;margin-left:8px;transition:all .14s;}
+.save-btn:hover{background:#046040;}
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;}
+
+@media(max-width:768px){
+  .task-row,.task-hdr{grid-template-columns:2fr 1fr;}
+  .task-row>*:nth-child(3),.task-row>*:nth-child(4),.task-hdr>*:nth-child(3),.task-hdr>*:nth-child(4){display:none;}
+  .kpi-strip{grid-template-columns:repeat(3,1fr);}
+  .form-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ── TOP BAR ── -->
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="topbar-hdr">
+      <div class="topbar-brand">
+        <div class="brand-dot">3X</div>
+        <div>
+          <div class="brand-name" id="portal-title">3CX Migration Plan</div>
+          <div class="brand-sub" id="portal-sub">Multi-Tenant Migration · Managed by <span id="team-name-display">Migration Assistant Team</span></div>
+        </div>
+      </div>
+      <div class="topbar-meta">
+        <span class="badge badge-blue">v1.0 · March 2026</span>
+        <span id="overall-status" class="badge badge-amber">In Planning</span>
+      </div>
+    </div>
+    <div class="tabs" id="tab-bar">
+      <button class="tab active" onclick="showTab(0)"><span class="tab-num">1</span>Overview</button>
+      <button class="tab" onclick="showTab(1)"><span class="tab-num">2</span>Stakeholders &amp; RACI</button>
+      <button class="tab" onclick="showTab(2)"><span class="tab-num">3</span>Phases &amp; Tasks</button>
+      <button class="tab" onclick="showTab(3)"><span class="tab-num">4</span>Questionnaire</button>
+      <button class="tab" onclick="showTab(4)"><span class="tab-num">5</span>Validation Checklist</button>
+      <button class="tab" onclick="showTab(5)"><span class="tab-num">6</span>Entra &amp; Intune Guide</button>
+      <button class="tab" onclick="showTab(6)"><span class="tab-num">7</span>Gantt Chart</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONTENT ── -->
+<div class="content">
+
+<!-- ═══════════════════════════════════════════════
+     TAB 1: OVERVIEW
+════════════════════════════════════════════════ -->
+<div class="pane active" id="pane-0">
+
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
+    <div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:var(--accent);margin-bottom:6px;">3CX Multi-Tenant Migration</div>
+      <h1 style="font-size:28px;font-weight:900;color:var(--text);letter-spacing:-.5px;line-height:1.1;">Migration <span style="color:var(--accent);">Scope</span></h1>
+      <p style="color:var(--muted);font-size:13px;margin-top:5px;">Project overview, scope definition, and key parameters</p>
+    </div>
+    <button class="btn btn-primary" onclick="showTab(3)">📋 Open Questionnaire</button>
+  </div>
+
+  <!-- KPI Strip -->
+  <div class="kpi-strip">
+    <div class="kpi"><div class="kpi-k">PBX Instances</div><div class="kpi-v blue" id="kpi-pbx">93</div><div class="kpi-sub">Dedicated → Multi-Tenant</div></div>
+    <div class="kpi"><div class="kpi-k">Total Extensions</div><div class="kpi-v" id="kpi-ext">~8,400</div><div class="kpi-sub">Estimated total</div></div>
+    <div class="kpi"><div class="kpi-k">Migration Window</div><div class="kpi-v green" id="kpi-window">20 wks</div><div class="kpi-sub">Planned duration</div></div>
+    <div class="kpi"><div class="kpi-k">Batch Size</div><div class="kpi-v" id="kpi-batch">10</div><div class="kpi-sub">PBX / sprint</div></div>
+    <div class="kpi"><div class="kpi-k">Pilot PBX</div><div class="kpi-v teal">1</div><div class="kpi-sub">sales.on3cx.de</div></div>
+    <div class="kpi"><div class="kpi-k">Phase Status</div><div class="kpi-v amber">Phase 1</div><div class="kpi-sub">Discovery</div></div>
+  </div>
+
+  <!-- Project Details -->
+  <div class="sec"><span class="sec-icon">📁</span> Project Information</div>
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-title">Editable Project Fields</span>
+      <span style="font-size:11px;color:var(--muted);">Click any value to edit</span>
+    </div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="field">
+          <label>Project Name</label>
+          <div class="fw"><input class="fi" id="proj-name" value="3CX MT Migration 2026" onchange="updateProjectName()" placeholder="Project Name"></div>
+        </div>
+        <div class="field">
+          <label>Customer / Organisation</label>
+          <div class="fw"><input class="fi" id="proj-customer" value="[Customer Name]" placeholder="Customer Name"></div>
+        </div>
+        <div class="field">
+          <label>Reseller / Partner</label>
+          <div class="fw"><input class="fi" id="proj-reseller" value="[Reseller Name]" placeholder="Reseller Name" onchange="updateStakeholderNames()"></div>
+        </div>
+        <div class="field">
+          <label>MT Target Instance</label>
+          <div class="fw"><span class="fp">Host</span><input class="fi" id="proj-mt" value="sales.on3cx.de" placeholder="mt.example.com"></div>
+        </div>
+        <div class="field">
+          <label>Planned Start Date</label>
+          <div class="fw"><input class="fi" type="date" id="proj-start" value="2026-04-01"></div>
+        </div>
+        <div class="field">
+          <label>Planned End Date</label>
+          <div class="fw"><input class="fi" type="date" id="proj-end" value="2026-08-28"></div>
+        </div>
+        <div class="field">
+          <label>Total PBX Instances</label>
+          <div class="fw"><input class="fi" type="number" id="proj-pbx-count" value="93" min="1" onchange="updateKPIs()"></div>
+        </div>
+        <div class="field">
+          <label>Batch Size (PBX / Sprint)</label>
+          <div class="fw"><input class="fi" type="number" id="proj-batch" value="10" min="1" onchange="updateKPIs()"></div>
+        </div>
+        <div class="field">
+          <label>Avg Extensions / PBX</label>
+          <div class="fw"><input class="fi" type="number" id="proj-avg-ext" value="90" min="1" onchange="updateKPIs()"></div>
+        </div>
+        <div class="field">
+          <label>Slot Size (Extensions / Slot)</label>
+          <div class="fw">
+            <select class="fi" id="proj-slot-size" onchange="updateKPIs()">
+              <option value="100">100 (Standard)</option>
+              <option value="50">50</option>
+              <option value="200">200</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-ghost" onclick="recalcDuration()" style="margin-top:4px;">⟳ Recalculate Duration</button>
+      <div id="duration-note" class="note-box note-blue" style="margin-top:12px;display:none;"></div>
+    </div>
+  </div>
+
+  <!-- Scope Summary -->
+  <div class="sec"><span class="sec-icon">🎯</span> Scope &amp; Architecture</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+    <div class="card" style="margin-bottom:0;">
+      <div class="card-hdr"><span class="card-title">Migration Approach</span></div>
+      <div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface);border-radius:7px;border:1px solid var(--border);">
+            <span style="font-size:20px;">🔄</span>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--text);">Dedicated → Multi-Tenant</div>
+              <div style="font-size:11px;color:var(--muted);">XAPI-based configuration export &amp; import</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface);border-radius:7px;border:1px solid var(--border);">
+            <span style="font-size:20px;">🏢</span>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--text);">Departments Model</div>
+              <div style="font-size:11px;color:var(--muted);">Each customer = 1 Department in MT instance</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface);border-radius:7px;border:1px solid var(--border);">
+            <span style="font-size:20px;">📱</span>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--text);">TCX Runner PWA</div>
+              <div style="font-size:11px;color:var(--muted);">Self-service department reassignment for users</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface);border-radius:7px;border:1px solid var(--border);">
+            <span style="font-size:20px;">🔢</span>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--text);">Extension Slot Mapping</div>
+              <div style="font-size:11px;color:var(--muted);">100-ext blocks to avoid numbering conflicts</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:0;">
+      <div class="card-hdr"><span class="card-title">Extension Slot Scheme</span><span class="badge badge-teal">Auto-calculated</span></div>
+      <div class="card-body" id="slot-scheme">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Based on <strong id="slot-size-display">100</strong>-extension slot blocks</div>
+        <div id="slot-table-body"></div>
+        <div class="note-box note-teal" style="margin-top:12px;">Slots prevent extension conflicts when merging dedicated PBX instances into a single Multi-Tenant environment.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pilot Info -->
+  <div class="sec"><span class="sec-icon">🧪</span> Pilot Configuration</div>
+  <div class="card">
+    <div class="card-hdr"><span class="card-title">Pilot PBX</span><span class="badge badge-amber">Pending Validation</span></div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="field">
+          <label>Pilot PBX Host</label>
+          <div class="fw"><input class="fi" value="sales.on3cx.de" placeholder="pilot.example.com"></div>
+        </div>
+        <div class="field">
+          <label>Pilot Criteria</label>
+          <div class="fw">
+            <select class="fi">
+              <option>Simple (≤ 30 ext, no trunks)</option>
+              <option>Complex (IVR, Ring Groups, Trunks)</option>
+              <option>Trunk Migration Test</option>
+              <option>Regional Representative</option>
+              <option>Custom / Special Case</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Pilot Extensions</label>
+          <div class="fw"><input class="fi" type="number" value="28" placeholder="count"></div>
+        </div>
+        <div class="field">
+          <label>Pilot Department Slot</label>
+          <div class="fw"><span class="fp">Slot</span><input class="fi" type="number" value="1" min="1"></div>
+        </div>
+      </div>
+      <div class="note-box note-amber" style="margin-top:8px;">
+        ⚠ <strong>Critical Blocker:</strong> Confirm PATCH behavior on <code>sales.on3cx.de</code> — verify whether Groups PATCH replaces or appends before starting autonomous build pipeline.
+      </div>
+    </div>
+  </div>
+
+</div><!-- /pane-0 -->
+
+
+<!-- ═══════════════════════════════════════════════
+     TAB 2: STAKEHOLDERS & RACI
+════════════════════════════════════════════════ -->
+<div class="pane" id="pane-1">
+
+  <div style="margin-bottom:28px;">
+    <div style="font-size:10px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:var(--accent);margin-bottom:6px;">Roles &amp; Responsibilities</div>
+    <h1 style="font-size:28px;font-weight:900;color:var(--text);letter-spacing:-.5px;">Stakeholders <span style="color:var(--accent);">&amp; RACI</span></h1>
+    <p style="color:var(--muted);font-size:13px;margin-top:5px;">Define stakeholder groups and assign responsibility per activity</p>
+  </div>
+
+  <!-- Stakeholder Configuration -->
+  <div class="sec"><span class="sec-icon">👥</span> Stakeholder Groups</div>
+  <div id="stakeholder-config"></div>
+
+  <!-- RACI Legend -->
+  <div class="sec" style="margin-top:24px;"><span class="sec-icon">📊</span> RACI Matrix</div>
+  <div class="raci-legend">
+    <div class="raci-leg-item"><div class="raci-leg-dot" style="background:#dbeafe;color:var(--accent);">R</div><strong>Responsible</strong> — Does the work</div>
+    <div class="raci-leg-item"><div class="raci-leg-dot" style="background:var(--amber-l);color:var(--amber);">A</div><strong>Accountable</strong> — Owns the outcome</div>
+    <div class="raci-leg-item"><div class="raci-leg-dot" style="background:var(--green-l);color:var(--green);">C</div><strong>Consulted</strong> — Input &amp; review</div>
+    <div class="raci-leg-item"><div class="raci-leg-dot" style="background:var(--surface);color:var(--muted);">I</div><strong>Informed</strong> — Kept in the loop</div>
+    <div style="margin-left:auto;font-size:11px;color:var(--muted);">Click cells to toggle assignment</div>
+  </div>
+
+  <div class="card">
+    <div class="tbl-wrap">
+      <table class="raci-table" id="raci-table"></table>
+    </div>
+  </div>
+
+</div><!-- /pane-1 -->
+
+
+<!-- ═══════════════════════════════════════════════
+     TAB 3: PHASES & TASKS
+════════════════════════════════════════════════ -->
+<div class="pane" id="pane-2">
+
+  <div style="margin-bottom:28px;">
+    <div style="font-size:10px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:var(--accent);margin-bottom:6px;">Project Execution</div>
+    <h1 style="font-size:28px;font-weight:900;color:var(--text);letter-spacing:-.5px;">Phases <span style="color:var(--accent);">&amp; Tasks</span></h1>
+    <p style="color:var(--muted);font-size:13px;margin-top:5px;">Owners and deliverables derived from RACI assignments</p>
+  </div>
+
+  <div class="phase-grid" id="phase-grid"></div>
+
+  <!-- Exit Criteria -->
+  <div class="sec" style="margin-top:28px;"><span class="sec-icon">✅</span> Phase 1 Exit Criteria</div>
+  <div class="card">
+    <div class="card-hdr"><span class="card-title">Discovery &amp; Design — Exit Gate</span><span id="exit-progress-badge" class="badge badge-amber">0 / 10</span></div>
+    <div class="card-body" id="exit-criteria-list"></div>
+  </div>
+
+</div><!-- /pane-2 -->
+
+
+<!-- ═══════════════════════════════════════════════
+     TAB 4: QUESTIONNAIRE
+════════════════════════════════════════════════ -->
+<div class="pane" id="pane-3">
+
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
+    <div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:var(--accent);margin-bottom:6px;">Data Collection</div>
+      <h1 style="font-size:28px;font-weight:900;color:var(--text);letter-spacing:-.5px;">Requirements <span style="color:var(--accent);">Questionnaire</span></h1>
+      <p style="color:var(--muted);font-size:13px;margin-top:5px;">Complete all sections before migration planning begins</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-ghost" onclick="clearQuestionnaire()">🗑 Clear All</button>
+      <button class="btn btn-green" onclick="exportQuestionnaire()">⬇ Export Answers</button>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="card" style="margin-bottom:24px;">
+    <div class="card-body" style="padding:16px 20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:12px;font-weight:700;color:var(--dim);">Questionnaire Completion</span>
+        <span id="q-progress-text" style="font-size:12px;font-weight:800;color:var(--accent);">0%</span>
+      </div>
+      <div class="progress-wrap"><div class="progress-bar" id="q-progress-bar" style="width:0%;background:var(--accent);"></div></div>
+      <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;" id="q-section-pills"></div>
+    </div>
+  </div>
+
+  <div id="questionnaire-content"></div>
+
+</div><!-- /pane-3 -->
+
+
+<!-- ═══════════════════════════════════════════════
+     TAB 5: VALIDATION CHECKLIST
+════════════════════════════════════════════════ -->
+<div class="pane" id="pane-4">
+
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
+    <div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:var(--accent);margin-bottom:6px;">Quality Assurance</div>
+      <h1 style="font-size:28px;font-weight:900;color:var(--text);letter-spacing:-.5px;">Validation <span style="color:var(--accent);">Checklist</span></h1>
+      <p style="color:var(--muted);font-size:13px;margin-top:5px;">Pre-migration, pilot, and go-live validation tests</p>
+    </div>
+    <button class="btn btn-green" onclick="exportChecklist()">⬇ Export Checklist PDF</button>
+  </div>
+
+  <!-- Overall Progress -->
+  <div class="kpi-strip" id="checklist-kpis">
+    <div class="kpi"><div class="kpi-k">Total Items</div><div class="kpi-v" id="cl-total">0</div></div>
+    <div class="kpi"><div class="kpi-k">Completed</div><div class="kpi-v green" id="cl-done">0</div></div>
+    <div class="kpi"><div class="kpi-k">Remaining</div><div class="kpi-v amber" id="cl-remain">0</div></div>
+    <div class="kpi"><div class="kpi-k">Progress</div><div class="kpi-v blue" id="cl-pct">0%</div></div>
+  </div>
+
+  <div id="checklist-content"></div>
+
+</div><!-- /pane-4 -->
+
+
+<!-- ═══════════════════════════════════════════════
+     TAB 6: ENTRA & INTUNE GUIDE
+════════════════════════════════════════════════ -->
+<div class="pane" id="pane-5">
+
+  <div style="margin-bottom:28px;">
+    <div style="font-size:10px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:var(--accent);margin-bottom:6px;">Admin Setup Guide</div>
+    <h1 style="font-size:28px;font-weight:900;color:var(--text);letter-spacing:-.5px;">Entra ID <span style="color:var(--accent);">&amp; Intune</span></h1>
+    <p style="color:var(--muted);font-size:13px;margin-top:5px;">TCX Runner PWA — Provisioning &amp; Authentication Setup</p>
+  </div>
+
+  <div class="note-box note-blue" style="margin-bottom:24px;">
+    📘 This guide covers Microsoft Entra ID app registration and Intune MDM deployment for the TCX Runner Progressive Web App. Target audience: Customer IT Administrators and Reseller Technical Staff.
+  </div>
+
+  <div id="guide-content"></div>
+
+</div><!-- /pane-5 -->
+
+
+<!-- ═══════════════════════════════════════════════
+     TAB 7: GANTT CHART
+════════════════════════════════════════════════ -->
+<div class="pane" id="pane-6">
+
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
+    <div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:var(--accent);margin-bottom:6px;">Timeline View</div>
+      <h1 style="font-size:28px;font-weight:900;color:var(--text);letter-spacing:-.5px;">Gantt <span style="color:var(--accent);">Chart</span></h1>
+      <p style="color:var(--muted);font-size:13px;margin-top:5px;">Auto-generated from project configuration — update Overview fields to refresh</p>
+    </div>
+    <button class="btn btn-green" onclick="window.print()">🖨 Print / Export</button>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-title">Project Timeline</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="gantt-date-range" class="badge badge-blue"></span>
+        <span id="gantt-duration" class="badge badge-green"></span>
+      </div>
+    </div>
+    <div class="gantt-wrap">
+      <table class="gantt-table" id="gantt-table"></table>
+    </div>
+  </div>
+
+  <div class="note-box note-teal" style="margin-top:16px;">
+    💡 <strong>Tip:</strong> Update the start date, PBX count, and batch size in the <strong>Overview</strong> tab to auto-recalculate all phase durations and regenerate the Gantt chart.
+  </div>
+
+</div><!-- /pane-6 -->
+
+</div><!-- /content -->
+</div><!-- /app -->
+
+<script>
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+const state = {
+  stakeholders: [
+    { id: 'mat', name: 'Migration Assistant Team', abbr: 'MAT', color: '#1a56db', role: 'Technical Support' },
+    { id: 'res', name: 'Reseller',                 abbr: 'RES', color: '#057a55', role: 'Primary Coordinator' },
+    { id: 'cit', name: 'Customer IT',              abbr: 'CIT', color: '#6b21a8', role: 'Internal Stakeholder' }
+  ],
+  raci: {
+    // activity_id: { sh_id: ['R'|'A'|'C'|'I'], ... }
+    'discovery':   { mat:['R','C'], res:['A','R'], cit:['C'] },
+    'req-gather':  { mat:['C'],     res:['R','A'], cit:['R'] },
+    'arch-design': { mat:['R','A'], res:['C'],     cit:['I'] },
+    'slot-mapping':{ mat:['R','A'], res:['C'],     cit:['I'] },
+    'dept-design': { mat:['R'],     res:['A'],     cit:['C'] },
+    'ivr-mapping': { mat:['R'],     res:['A'],     cit:['C'] },
+    'trunk-plan':  { mat:['R'],     res:['A','C'], cit:['C'] },
+    'entra-setup': { mat:['C'],     res:['C'],     cit:['R','A'] },
+    'runner-dep':  { mat:['R','A'], res:['C'],     cit:['I'] },
+    'mt-provision':{ mat:['R','A'], res:['C'],     cit:['I'] },
+    'pilot-mig':   { mat:['R'],     res:['A'],     cit:['C','I'] },
+    'pilot-valid': { mat:['C'],     res:['A','R'], cit:['R'] },
+    'ext-mig':     { mat:['R','A'], res:['C'],     cit:['I'] },
+    'dept-config': { mat:['R','A'], res:['C'],     cit:['I'] },
+    'ivr-config':  { mat:['R','A'], res:['C'],     cit:['C'] },
+    'trunk-cut':   { mat:['R'],     res:['A'],     cit:['C'] },
+    'golive':      { mat:['C'],     res:['A','R'], cit:['R','C'] },
+    'postmig-doc': { mat:['R'],     res:['A'],     cit:['I'] }
+  },
+  checklist: {}
+};
+
+const raciActivities = [
+  { id:'discovery',   phase:1, name:'Initial Discovery & PBX Audit',       desc:'Inventory all dedicated PBX instances, user counts, trunks, IVRs' },
+  { id:'req-gather',  phase:1, name:'Requirements Gathering',               desc:'Collect business requirements and migration constraints per customer' },
+  { id:'arch-design', phase:1, name:'MT Architecture Design',               desc:'Design multi-tenant topology, department model, and capacity planning' },
+  { id:'slot-mapping',phase:1, name:'Extension Slot Mapping Design',        desc:'Design 100-ext slot blocks to prevent numbering conflicts in MT' },
+  { id:'dept-design', phase:1, name:'Department Structure Design',          desc:'Map each dedicated PBX to a MT Department with name conventions' },
+  { id:'ivr-mapping', phase:1, name:'IVR / Ring Group Mapping',             desc:'Document all IVR trees, ring groups, and call flows for re-creation' },
+  { id:'trunk-plan',  phase:1, name:'Trunk Migration Planning',             desc:'Plan SIP trunk re-pointing strategy and cutover windows' },
+  { id:'entra-setup', phase:2, name:'Entra ID / Intune Setup',              desc:'Configure app registration, permissions, and MDM policies for TCX Runner' },
+  { id:'runner-dep',  phase:2, name:'TCX Runner PWA Deployment',            desc:'Deploy and test TCX Runner Progressive Web App via Intune' },
+  { id:'mt-provision',phase:2, name:'MT Instance Provisioning',             desc:'Configure base MT instance: global settings, codec, voicemail, SMTP' },
+  { id:'pilot-mig',   phase:3, name:'Pilot PBX Migration',                  desc:'Migrate first PBX instance as controlled pilot using XAPI automation' },
+  { id:'pilot-valid', phase:3, name:'Pilot Validation & Testing',           desc:'Execute all 12 pilot validation tests and document results' },
+  { id:'ext-mig',     phase:4, name:'Extension Number Migration',           desc:'Batch migrate extensions per slot mapping, update directory entries' },
+  { id:'dept-config', phase:4, name:'Department Configuration',             desc:'Create and configure Departments, assign users, apply policies' },
+  { id:'ivr-config',  phase:4, name:'IVR / Ring Group Configuration',       desc:'Recreate all call flows, ring groups, and IVR trees in MT' },
+  { id:'trunk-cut',   phase:4, name:'Trunk Cutover',                        desc:'Re-point SIP trunks, validate inbound/outbound calling' },
+  { id:'golive',      phase:5, name:'Go-Live & Hypercare',                  desc:'Supervised go-live, 2-week hypercare with daily check-ins' },
+  { id:'postmig-doc', phase:5, name:'Post-Migration Documentation',         desc:'Final as-built documentation, handover pack, lessons learned' }
+];
+
+const phases = [
+  { num:1, name:'Discovery, Planning & Env Prep', color:'#1a56db', weeks:1,  tasks:[
+    { name:'Kickoff Meeting',                   deliverable:'Project Charter',           duration:'Day 1',   owner:'mat' },
+    { name:'PBX Inventory & Automated Scan',    deliverable:'Extraction Report',         duration:'1 day',   owner:'mat' },
+    { name:'Requirements Questionnaire',        deliverable:'Completed Questionnaire',   duration:'3 days',  owner:'cit' },
+    { name:'Extension Slot Mapping Design',     deliverable:'Remapping Proposal (Excel)',duration:'1 day',   owner:'mat' },
+    { name:'MT System Grouping Design',         deliverable:'Grouping Matrix',           duration:'1 day',   owner:'mat' },
+    { name:'Provision MT Instances + Licenses',  deliverable:'MT Systems Online',         duration:'2 days',  owner:'res' },
+    { name:'Entra App Registration + Runners Group', deliverable:'Client ID + Secret',    duration:'1 day',   owner:'cit' },
+    { name:'Configure Migration Tool + Targets', deliverable:'Tool Connected',            duration:'1 day',   owner:'mat' },
+    { name:'Deploy Runner App + Tenant Config',  deliverable:'Runner App Online',          duration:'1 day',   owner:'mat' },
+    { name:'Intune: Runner PWA + Provisioning APK', deliverable:'Apps Assigned',           duration:'1 day',   owner:'cit' },
+    { name:'SIP Trunk Preparation',              deliverable:'Trunk Credentials',          duration:'2 days',  owner:'res' },
+    { name:'Environment Readiness Review',       deliverable:'Readiness Checklist',        duration:'30 min',  owner:'mat' }
+  ]},
+  { num:2, name:'Pilot Migration & Validation', color:'#b45309', weeks:1,  tasks:[
+    { name:'Pre-Migration Backup (Pilot PBXes)', deliverable:'Native 3CX Backups',       duration:'30 min',  owner:'mat' },
+    { name:'Extract All Entities from Pilot',    deliverable:'Extraction Data Verified',  duration:'1 hour',  owner:'mat' },
+    { name:'Transform: Remapping + Namespace',   deliverable:'Transformation Log',        duration:'30 min',  owner:'mat' },
+    { name:'Load into Target MT System',         deliverable:'Load Report',               duration:'2 hours', owner:'mat' },
+    { name:'Verify Entity Counts (Auto)',        deliverable:'Verification Report',       duration:'15 min',  owner:'mat' },
+    { name:'Upload Custom Prompt Files',         deliverable:'Upload Report',             duration:'30 min',  owner:'mat' },
+    { name:'Configure Trunks on MT (Pilot)',     deliverable:'Trunks Connected',          duration:'2 hours', owner:'res' },
+    { name:'Pilot Validation Testing (12 tests)', deliverable:'Test Results',              duration:'4 hours', owner:'res' },
+    { name:'Review Pilot Results',               deliverable:'Test Summary',              duration:'1 hour',  owner:'mat' },
+    { name:'Resolve Issues (if any)',            deliverable:'Issue Log',                 duration:'1-2 days',owner:'mat' },
+    { name:'Pilot Sign-Off',                    deliverable:'Signed Acceptance',          duration:'—',       owner:'cit' },
+    { name:'Finalize Batch Schedule',            deliverable:'Final Batch Calendar',       duration:'1 day',   owner:'mat' }
+  ]},
+  { num:3, name:'Production Migration (Batches)', color:'#6b21a8', weeks:2, tasks:[
+    { name:'Batch 1: Locations 1–500',           deliverable:'Batch Report + Remapping',  duration:'Sat night',owner:'mat'},
+    { name:'Batch 1 Spot-Check Validation',      deliverable:'Validation OK',             duration:'Monday',   owner:'cit'},
+    { name:'Batch 2: Locations 501–1000',        deliverable:'Batch Report + Remapping',  duration:'Midweek',  owner:'mat'},
+    { name:'Batch 3: Locations 1001–1800',       deliverable:'Batch Report + Remapping',  duration:'Sat night',owner:'mat'},
+    { name:'Batch 3 Spot-Check Validation',      deliverable:'Validation OK',             duration:'Monday',   owner:'cit'},
+    { name:'Batch 4: Locations 1801–2250',       deliverable:'Batch Report + Remapping',  duration:'Midweek',  owner:'mat'},
+    { name:'End-User Communication (per batch)', deliverable:'Email Notifications',        duration:'3 days before', owner:'cit'}
+  ]},
+  { num:4, name:'Validation & Handover',  color:'#0e7490', weeks:1,  tasks:[
+    { name:'Full Entity Count Reconciliation',   deliverable:'Reconciliation Report',     duration:'1 day',   owner:'mat' },
+    { name:'Random Sample Validation (10%)',     deliverable:'Sample Test Results',       duration:'2 days',  owner:'cit' },
+    { name:'Runner App Verification (All Tenants)', deliverable:'Runner Checklist',        duration:'1 day',   owner:'mat' },
+    { name:'Provisioning App Verification',      deliverable:'Provisioning Test Results', duration:'1 day',   owner:'cit' },
+    { name:'Generate Handover Package',          deliverable:'PDF + Excel + ZIP',         duration:'1 day',   owner:'mat' },
+    { name:'Handover Delivery Meeting',          deliverable:'Package Walkthrough',        duration:'1 hour',  owner:'mat' },
+    { name:'Go-Live Sign-Off',                   deliverable:'Signed Acceptance',          duration:'—',       owner:'cit' }
+  ]},
+  { num:5, name:'Hypercare & Decommission', color:'#057a55', weeks:1,  tasks:[
+    { name:'Priority Support Channel Active',    deliverable:'Support Channel Open',      duration:'1-2 weeks',owner:'mat' },
+    { name:'Daily Issue Review (Week 1)',        deliverable:'Issue Log',                 duration:'15 min/day',owner:'mat' },
+    { name:'End-User Feedback Collection',       deliverable:'Feedback Summary',           duration:'Ongoing',  owner:'cit' },
+    { name:'Resolve Remaining Issues',           deliverable:'Issues Closed',              duration:'As needed',owner:'mat' },
+    { name:'Hypercare Close-Out Report',         deliverable:'Summary + Resolution Log',  duration:'1 day',    owner:'mat' },
+    { name:'Source PBX Decommissioning',         deliverable:'VMs Terminated',             duration:'After 14d',owner:'res' }
+  ]}
+];
+
+const exitCriteria = [
+  { id:'ec1',  title:'PBX Inventory Complete',          desc:'All 93 dedicated PBX instances documented with user counts, trunks, and IVR topology', category:'Discovery' },
+  { id:'ec2',  title:'Extension Slot Map Approved',      desc:'Slot assignment plan reviewed and signed off by Reseller and MT team', category:'Design' },
+  { id:'ec3',  title:'Department Schema Finalised',      desc:'Each PBX mapped to a unique MT Department name with agreed naming convention', category:'Design' },
+  { id:'ec4',  title:'IVR Trees Documented',             desc:'All IVR configurations, ring groups, and queue settings documented in map document', category:'Discovery' },
+  { id:'ec5',  title:'Trunk Migration Plan Approved',    desc:'SIP trunk cutover strategy and maintenance windows agreed with all carriers', category:'Planning' },
+  { id:'ec6',  title:'MT Architecture Document Signed',  desc:'Capacity model, codec plan, and global settings documented and approved', category:'Design' },
+  { id:'ec7',  title:'Entra ID App Registration Ready',  desc:'App registered, API permissions granted, client secret created and stored securely', category:'Infrastructure' },
+  { id:'ec8',  title:'XAPI Automation Scripts Tested',   desc:'Migration scripts validated against test data, PATCH behaviour confirmed on pilot PBX', category:'Infrastructure' },
+  { id:'ec9',  title:'Questionnaire Fully Completed',    desc:'All 5 questionnaire sections completed and reviewed by Reseller', category:'Planning' },
+  { id:'ec10', title:'Pilot PBX Selected & Agreed',      desc:'Pilot PBX criteria agreed (Simple: ≤30 ext, no trunks) and customer notified', category:'Planning' }
+];
+
+const pilotTests = [
+  { id:'pt1',  title:'Inbound Call Routing',              desc:'All DID numbers route correctly to the right extension/queue after trunk re-point', category:'Telephony' },
+  { id:'pt2',  title:'Outbound Call Routing',             desc:'Outbound calls display correct caller ID and route via correct trunk', category:'Telephony' },
+  { id:'pt3',  title:'Extension-to-Extension Calling',    desc:'All extensions can call each other within the Department without issues', category:'Telephony' },
+  { id:'pt4',  title:'Voicemail Delivery',                desc:'Voicemail recorded and delivered to correct mailbox via email and app', category:'Features' },
+  { id:'pt5',  title:'Ring Group Behaviour',              desc:'All ring groups hunt correctly with configured timeout and overflow', category:'Features' },
+  { id:'pt6',  title:'IVR Menu Navigation',               desc:'DTMF navigation routes callers to correct destination at each IVR level', category:'Features' },
+  { id:'pt7',  title:'3CX App Login (Web & Mobile)',       desc:'All migrated users can log in with new credentials on web and mobile apps', category:'Access' },
+  { id:'pt8',  title:'TCX Runner PWA Access',             desc:'Designated users can access TCX Runner and self-reassign their department', category:'Access' },
+  { id:'pt9',  title:'Extension Numbers Preserved',       desc:'All original extension numbers are reachable at their new slot-mapped equivalent', category:'Numbering' },
+  { id:'pt10', title:'Directory / BLF Accuracy',          desc:'Directory entries are correct, BLF keys show accurate presence status', category:'Features' },
+  { id:'pt11', title:'Call Recording (if applicable)',    desc:'Call recording functions correctly per customer policy', category:'Compliance' },
+  { id:'pt12', title:'Failover / Backup Path',            desc:'Failover trunk and backup routing paths tested and functional', category:'Resilience' }
+];
+
+// ═══════════════════════════════════════════════
+// QUESTIONNAIRE DATA
+// ═══════════════════════════════════════════════
+const questionSections = [
+  {
+    id: 'general', title: 'General Project Information', icon: '🏢',
+    questions: [
+      { id:'q1',  label:'Customer Company Name', type:'text', placeholder:'e.g. Müller GmbH', required:true },
+      { id:'q2',  label:'Primary Contact Name',  type:'text', placeholder:'Full name', required:true },
+      { id:'q3',  label:'Primary Contact Email', type:'email', placeholder:'email@company.de', required:true },
+      { id:'q4',  label:'Primary Contact Phone', type:'tel',   placeholder:'+49 ...' },
+      { id:'q5',  label:'Technical Contact (IT Admin)', type:'text', placeholder:'Full name' },
+      { id:'q6',  label:'Technical Contact Email',      type:'email', placeholder:'it@company.de' },
+      { id:'q7',  label:'Preferred Migration Window (date/time)', type:'text', placeholder:'e.g. Saturday nights, after 22:00' },
+      { id:'q8',  label:'Business Criticality', type:'select', options:['Low — can tolerate 2h downtime','Medium — max 30min downtime','High — zero-downtime required','Mission Critical — 24/7 service'], required:true },
+      { id:'q9',  label:'Number of Office Locations', type:'number', placeholder:'e.g. 3' },
+      { id:'q10', label:'Locations / Sites Description', type:'textarea', placeholder:'List all locations with approximate user counts per site' },
+      { id:'q11', label:'Any compliance/regulatory requirements?', type:'textarea', placeholder:'e.g. GDPR call recording requirements, data residency, etc.' }
+    ]
+  },
+  {
+    id: 'pbx', title: 'PBX Infrastructure', icon: '📡',
+    questions: [
+      { id:'q12', label:'Current 3CX Version', type:'text', placeholder:'e.g. 20.0.1.x', required:true },
+      { id:'q13', label:'Hosting Type', type:'select', options:['Cloud-hosted (on3cx.de)','Self-hosted on-premise','Self-hosted VPS/Cloud','Hybrid'], required:true },
+      { id:'q14', label:'Total Extensions (licenced)', type:'number', placeholder:'e.g. 50', required:true },
+      { id:'q15', label:'Active Users (daily)', type:'number', placeholder:'e.g. 42' },
+      { id:'q16', label:'3CX Licence Tier', type:'select', options:['SMB','Professional','Enterprise','Unknown'], required:true },
+      { id:'q17', label:'Current Simultaneous Call Count (SC)', type:'number', placeholder:'e.g. 8' },
+      { id:'q18', label:'Number of SIP Trunks', type:'number', placeholder:'e.g. 2' },
+      { id:'q19', label:'SIP Trunk Provider(s)', type:'text', placeholder:'e.g. Easybell, sipgate, Deutsche Telekom' },
+      { id:'q20', label:'Number of DIDs / DDIs', type:'number', placeholder:'e.g. 15' },
+      { id:'q21', label:'Main DDI / Company Number', type:'tel', placeholder:'+49 ...' },
+      { id:'q22', label:'Fax numbers in use?', type:'select', options:['No','Yes — via T.38 SIP','Yes — via FXS ATA','Yes — Virtual Fax (3CX)'] },
+      { id:'q23', label:'3CX FQDN / Current Host', type:'text', placeholder:'e.g. company.on3cx.de or pbx.company.de' },
+      { id:'q24', label:'Existing network/firewall notes', type:'textarea', placeholder:'Any NAT, firewall rules, VPN tunnels relevant to 3CX traffic' },
+      { id:'q25', label:'Physical/IP phones in use?', type:'select', options:['No — software only','Yes — Yealink','Yes — Snom','Yes — Poly','Yes — Mixed'] },
+      { id:'q26', label:'Phone model(s) and count', type:'text', placeholder:'e.g. Yealink T42U × 20, T54W × 5' }
+    ]
+  },
+  {
+    id: 'numbering', title: 'Extension Numbering Plan', icon: '🔢',
+    questions: [
+      { id:'q27', label:'Current extension number range', type:'text', placeholder:'e.g. 100–199', required:true },
+      { id:'q28', label:'Extension format/length', type:'select', options:['3 digits (100–999)','4 digits (1000–9999)','Mixed / Custom'], required:true },
+      { id:'q29', label:'Is the current number range flexible?', type:'select', options:['Yes — numbers can change after migration','Partially — some can change','No — numbers must stay identical','Unsure'] },
+      { id:'q30', label:'Preferred slot range in MT (if known)', type:'text', placeholder:'e.g. Slot 5 → 500–599, or leave blank for auto-assignment' },
+      { id:'q31', label:'Special numbers to preserve', type:'textarea', placeholder:'e.g. Receptionist must remain ext 100, CEO must remain 200' },
+      { id:'q32', label:'Extension naming convention', type:'text', placeholder:'e.g. firstname.lastname or firstname + first letter of last name' },
+      { id:'q33', label:'Hot desking / shared phones?', type:'select', options:['No','Yes — full hot desking','Yes — limited shared extensions'] },
+      { id:'q34', label:'Any external TAPI / CTI integrations?', type:'select', options:['No','Yes — DATEV','Yes — Salesforce CTI','Yes — Other CRM','Yes — Custom TAPI'] },
+      { id:'q35', label:'CTI / TAPI integration details', type:'textarea', placeholder:'Describe the integration, software version, and whether it uses TAPI or direct SIP/API' }
+    ]
+  },
+  {
+    id: 'department', title: 'Department & Queue Structure', icon: '🏗',
+    questions: [
+      { id:'q36', label:'Number of internal departments/teams', type:'number', placeholder:'e.g. 4', required:true },
+      { id:'q37', label:'Department/team names', type:'textarea', placeholder:'List all teams: Sales, Support, Finance, Management, etc.', required:true },
+      { id:'q38', label:'Number of Call Queues', type:'number', placeholder:'e.g. 3' },
+      { id:'q39', label:'Queue names and strategies', type:'textarea', placeholder:'e.g. Support Queue — Round Robin, max wait 3 min, overflow to voicemail' },
+      { id:'q40', label:'Number of Ring Groups', type:'number', placeholder:'e.g. 2' },
+      { id:'q41', label:'Ring group names and members', type:'textarea', placeholder:'e.g. Sales Team (ext 101, 102, 103) — simultaneous ring' },
+      { id:'q42', label:'Business hours configured?', type:'select', options:['Standard hours only','Custom business hours per queue','Holiday schedule configured','Multiple schedules per entity'] },
+      { id:'q43', label:'Out-of-hours behaviour', type:'select', options:['Voicemail','Transfer to mobile','Play message only','Transfer to overflow queue','Custom IVR'] },
+      { id:'q44', label:'Shared mailboxes / group voicemail?', type:'select', options:['No','Yes — please describe'] },
+      { id:'q45', label:'Shared mailbox details', type:'textarea', placeholder:'e.g. Sales voicemail shared by ext 101, 102, 103 — accessible via *99' }
+    ]
+  },
+  {
+    id: 'ivr', title: 'IVR, Trunks & Special Config', icon: '🌐',
+    questions: [
+      { id:'q46', label:'Is an IVR / Auto-Attendant in use?', type:'select', options:['No — direct to reception/extension','Yes — simple (1 level)','Yes — multi-level IVR','Yes — complex CFD scripted IVR'], required:true },
+      { id:'q47', label:'IVR tree description', type:'textarea', placeholder:'Describe the IVR menu structure: Press 1 for Sales → ext 100, Press 2 for Support → Queue, etc.' },
+      { id:'q48', label:'Call Flow Designer (CFD) scripts in use?', type:'select', options:['No','Yes — simple logic','Yes — complex / API-integrated scripts'] },
+      { id:'q49', label:'CFD script descriptions', type:'textarea', placeholder:'Describe any custom CFD scripts, external API calls, or special logic' },
+      { id:'q50', label:'Number of SIP trunks (details)', type:'textarea', placeholder:'Provider, type (SIP/PRI), DID range, used for inbound/outbound or both, current IP/auth details location' },
+      { id:'q51', label:'SIP trunk authentication method', type:'select', options:['IP-based (no credentials)','Username + password (digest auth)','Both','Unknown'] },
+      { id:'q52', label:'Trunk maintenance window preference', type:'textarea', placeholder:'When can trunks be re-pointed? e.g. Saturday 02:00–04:00 CET only' },
+      { id:'q53', label:'Emergency calling (112/110) routing', type:'textarea', placeholder:'How is emergency calling routed? Via which trunk? Any location-based routing?' },
+      { id:'q54', label:'Music on hold / custom prompts?', type:'select', options:['Default 3CX MoH only','Custom MoH audio file(s)','Custom IVR greeting recordings','All custom audio'] },
+      { id:'q55', label:'Custom audio files location', type:'text', placeholder:'Where are custom recordings stored? Or upload via ticket?' },
+      { id:'q56', label:'Any special integrations or plugins?', type:'textarea', placeholder:'e.g. PreDirectory / MetaDirectory, CRM integration, call recording platform, reporting tool, API webhooks' }
+    ]
+  }
+];
+
+// ═══════════════════════════════════════════════
+// ENTRA / INTUNE GUIDE DATA
+// ═══════════════════════════════════════════════
+const guideContent = [
+  {
+    part: 'Part 1 — Entra ID App Registration',
+    steps: [
+      {
+        num: '1.1', title: 'Create App Registration',
+        desc: 'Navigate to the Azure Portal and open Microsoft Entra ID. Go to App registrations → New registration.',
+        code: `1. Go to: portal.azure.com → Entra ID → App registrations
+2. Click "New registration"
+3. Name: "TCX Runner PWA"
+4. Supported account types: "Accounts in this directory only"
+5. Redirect URI: Single-page application (SPA) → https://[your-domain]/runner
+6. Click "Register"`,
+        tip: '💡 Note the Application (client) ID and Directory (tenant) ID — you will need these for the TCX Runner configuration.'
+      },
+      {
+        num: '1.2', title: 'Configure API Permissions',
+        desc: 'Grant the required Microsoft Graph permissions for the TCX Runner to authenticate users and read basic profile information.',
+        code: `API Permissions → Add a permission → Microsoft Graph → Delegated:
+  ✓ openid
+  ✓ profile
+  ✓ email
+  ✓ User.Read
+  
+After adding, click: "Grant admin consent for [Your Organisation]"`,
+        note: '⚠ Admin consent must be granted by a Global Administrator or Privileged Role Administrator.'
+      },
+      {
+        num: '1.3', title: 'Create Client Secret',
+        desc: 'Create a client secret for the TCX Runner backend to validate authentication tokens.',
+        code: `Certificates & secrets → New client secret
+  Description: "TCX Runner Production"
+  Expires: 24 months (recommended)
+  
+⚠ Copy the secret Value immediately — it will not be shown again.
+Store securely in your password manager or Azure Key Vault.`
+      },
+      {
+        num: '1.4', title: 'Configure Token Settings',
+        desc: 'Configure token settings to ensure the PWA receives the required claims for user identification.',
+        code: `Token configuration → Add optional claim → ID Token:
+  ✓ email
+  ✓ preferred_username
+  ✓ upn
+  
+Authentication:
+  ✓ Enable: "Access tokens (used for implicit flows)"
+  ✓ Enable: "ID tokens (used for implicit and hybrid flows)"`
+      },
+      {
+        num: '1.5', title: 'Assign Users or Groups',
+        desc: 'Restrict access to TCX Runner to specific users or security groups (recommended for production).',
+        code: `Enterprise applications → TCX Runner PWA → Properties:
+  "Assignment required?" → Yes (recommended for production)
+  
+Users and groups → Add user/group:
+  → Add the security group containing TCX Runner users
+  → Or add individual users for pilot testing`
+      },
+      {
+        num: '1.6', title: 'Configure Branding (Optional)',
+        desc: 'Add your company logo and publisher information to improve the sign-in experience for users.',
+        code: `Branding & properties:
+  Name: TCX Runner
+  Logo: Upload company logo (PNG, max 215×215px)
+  Home page URL: https://[your-domain]/runner
+  Publisher domain: Verify your domain if not already done`
+      },
+      {
+        num: '1.7', title: 'Test Authentication',
+        desc: 'Use the Microsoft Authentication Library (MSAL) test page or a test user account to verify the app registration works correctly before deploying via Intune.',
+        tip: '💡 Use a non-admin test account to verify the user experience. Admin accounts may have different conditional access policies applied.'
+      }
+    ]
+  },
+  {
+    part: 'Part 2 — Intune MDM Deployment',
+    steps: [
+      {
+        num: '2.1', title: 'Create App Configuration Policy',
+        desc: 'Create a managed app configuration policy in Intune to pre-configure the TCX Runner PWA for enrolled devices.',
+        code: `Intune Admin Center → Apps → App configuration policies → Add → Managed devices
+  Name: "TCX Runner Config"
+  Platform: Android Enterprise / iOS / Windows 10+
+  
+Configuration settings (Custom):
+  Key: tcx_runner_tenant_id     Value: [Your Entra Tenant ID]
+  Key: tcx_runner_client_id     Value: [Your App Client ID]  
+  Key: tcx_runner_redirect_uri  Value: https://[your-domain]/runner
+  Key: tcx_runner_pbx_host      Value: [MT PBX FQDN]`,
+        note: '⚠ Adjust the platform and settings to match your device management scope (iOS, Android, or Windows).'
+      },
+      {
+        num: '2.2', title: 'Deploy PWA via Company Portal / Managed Browser',
+        desc: 'For iOS and Android, deploy the TCX Runner as a managed web app through Intune. This avoids the need for App Store distribution.',
+        code: `Apps → Add → Web link
+  Name: TCX Runner
+  Description: "Self-service extension management"
+  App URL: https://[your-domain]/runner
+  Icon: Upload TCX Runner icon (512×512 PNG)
+  
+Assign to: Your TCX Runner users group
+Assignment type: Required (auto-installs on enrolled devices)`,
+        options: [
+          {
+            type: 'a', title: 'Option A — Managed Microsoft Edge',
+            content: 'Deploy via Microsoft Edge managed browser. Configure via Intune App Protection Policy to open the PWA URL in a managed context. Recommended for BYOD scenarios with conditional access.'
+          },
+          {
+            type: 'b', title: 'Option B — Direct PWA Install',
+            content: 'For corporate-owned devices, push the PWA URL as a Home Screen shortcut via an Intune device configuration profile. Users get a native app-like experience without the managed browser dependency.'
+          }
+        ]
+      },
+      {
+        num: '2.3', title: 'Test Device Enrollment',
+        desc: 'Enroll a test device and verify the TCX Runner PWA is delivered correctly, the Entra SSO works, and users can access their department management functions.',
+        tip: '💡 Test on both iOS and Android if your customer has mixed device environments. Behaviour can differ, especially around PWA installation prompts and SSO token handling.',
+        code: `Test checklist:
+  ✓ Device enrolled in Intune
+  ✓ TCX Runner appears in Company Portal / Home Screen
+  ✓ Opening the app triggers Entra ID sign-in
+  ✓ SSO works without re-entering credentials
+  ✓ User can view their current Department assignment
+  ✓ User can self-reassign their extension's Department
+  ✓ Change is reflected in 3CX within 60 seconds`
+      }
+    ]
+  },
+  {
+    part: 'Part 3 — TCX Runner Integration with 3CX MT',
+    steps: [
+      {
+        num: '3.1', title: 'Configure 3CX XAPI Credentials',
+        desc: 'The TCX Runner backend needs a 3CX XAPI service account with appropriate permissions to read and update extension group assignments.',
+        code: `3CX Management Console → Users → Add User:
+  First Name: TCX
+  Last Name: Runner Service
+  Email: tcx-runner@internal.local (non-routable)
+  Extension: 9999 (unused, admin-only)
+  
+API Access:
+  ✓ Allow API access
+  Role: At minimum: "Users" read + "Groups" read/write
+  
+XAPI Endpoint: https://[MT-FQDN]/xapi/v1
+XAPI Auth: POST /xapi/v1/auth/GetAccessToken`,
+        note: '⚠ Use a dedicated service account — do not use a personal admin account. Store credentials in TCX-Hub environment variables, never in source code.'
+      },
+      {
+        num: '3.2', title: 'Validate PATCH Behaviour',
+        desc: 'Before automating, manually verify whether PATCH on /xapi/v1/Groups replaces or appends the group member list. This is critical for safe automation.',
+        code: `# Test: Check current group members
+GET /xapi/v1/Groups?$filter=DisplayName eq 'Department-Pilot'
+
+# Test: PATCH with single user — does it replace or append?
+PATCH /xapi/v1/Groups/{group-id}/Members
+Body: { "value": [{ "id": "extension-id" }] }
+
+# After PATCH: verify full member list
+GET /xapi/v1/Groups/{group-id}/Members
+# Expected: only the PATCHed member OR all previous members + new one?`,
+        note: '⚠ This is the critical blocker documented in the project plan. Do not build the automation pipeline until PATCH behaviour is confirmed on sales.on3cx.de.'
+      },
+      {
+        num: '3.3', title: 'Deploy TCX Runner Backend',
+        desc: 'Deploy the TCX Runner API (Next.js/Fastify) on your infrastructure. Configure environment variables and connect to the MT XAPI endpoint.',
+        code: `Environment variables required:
+  XAPI_BASE_URL=https://[MT-FQDN]/xapi/v1
+  XAPI_USERNAME=[service-account-email]
+  XAPI_PASSWORD=[service-account-password]
+  ENTRA_TENANT_ID=[Your Entra Tenant ID]
+  ENTRA_CLIENT_ID=[Your App Client ID]
+  ENTRA_CLIENT_SECRET=[Your Client Secret]
+  NEXTAUTH_URL=https://[your-domain]/runner
+  NEXTAUTH_SECRET=[random-32-char-secret]`
+      }
+    ]
+  }
+];
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+function init() {
+  buildStakeholderConfig();
+  buildRaciTable();
+  buildPhases();
+  buildExitCriteria();
+  buildChecklist();
+  buildQuestionnaire();
+  buildGuide();
+  buildGantt();
+  buildSlotScheme();
+  updateKPIs();
+}
+
+// ── TAB NAVIGATION ──
+function showTab(idx) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===idx));
+  document.querySelectorAll('.pane').forEach((p,i) => p.classList.toggle('active', i===idx));
+}
+
+// ── KPI / OVERVIEW ──
+function updateKPIs() {
+  const pbx = parseInt(document.getElementById('proj-pbx-count')?.value) || 93;
+  const batch = parseInt(document.getElementById('proj-batch')?.value) || 10;
+  const avgExt = parseInt(document.getElementById('proj-avg-ext')?.value) || 90;
+  const totalExt = pbx * avgExt;
+  const batches = Math.ceil(pbx / batch);
+  const migWeeks = batches * 2; // 2 weeks per sprint
+  const totalWeeks = 4 + 2 + 2 + migWeeks + 4;
+
+  const kpiPbx = document.getElementById('kpi-pbx');
+  const kpiExt = document.getElementById('kpi-ext');
+  const kpiWindow = document.getElementById('kpi-window');
+  const kpiBatch = document.getElementById('kpi-batch');
+  if(kpiPbx) kpiPbx.textContent = pbx;
+  if(kpiExt) kpiExt.textContent = '~' + totalExt.toLocaleString();
+  if(kpiWindow) kpiWindow.textContent = totalWeeks + ' wks';
+  if(kpiBatch) kpiBatch.textContent = batch;
+
+  buildSlotScheme();
+  buildGantt();
+}
+
+function recalcDuration() {
+  const pbx = parseInt(document.getElementById('proj-pbx-count')?.value) || 93;
+  const batch = parseInt(document.getElementById('proj-batch')?.value) || 10;
+  const batches = Math.ceil(pbx / batch);
+  const migWeeks = batches * 2;
+  const totalWeeks = 4 + 2 + 2 + migWeeks + 4;
+  const note = document.getElementById('duration-note');
+  if(note) {
+    note.style.display = 'block';
+    note.innerHTML = `📅 <strong>Calculated Duration: ${totalWeeks} weeks</strong> &nbsp;·&nbsp; ${pbx} PBX ÷ ${batch} per sprint = ${batches} sprints × 2 weeks + 12 weeks overhead = <strong>${totalWeeks} weeks total</strong>`;
+  }
+  updateKPIs();
+}
+
+function updateProjectName() {
+  const name = document.getElementById('proj-name')?.value;
+  document.getElementById('portal-title').textContent = name || '3CX Migration Plan';
+}
+
+function updateStakeholderNames() {
+  const resName = document.getElementById('proj-reseller')?.value || 'Reseller';
+  state.stakeholders[1].name = resName;
+  state.stakeholders[1].abbr = resName.substring(0,3).toUpperCase();
+  buildStakeholderConfig();
+  buildRaciTable();
+}
+
+function buildSlotScheme() {
+  const slotSize = parseInt(document.getElementById('proj-slot-size')?.value) || 100;
+  const pbx = parseInt(document.getElementById('proj-pbx-count')?.value) || 93;
+  const display = document.getElementById('slot-size-display');
+  if(display) display.textContent = slotSize;
+  const body = document.getElementById('slot-table-body');
+  if(!body) return;
+  const show = Math.min(pbx, 8);
+  let html = `<table style="width:100%;border-collapse:collapse;">
+    <thead><tr>
+      <th style="padding:6px 10px;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);background:var(--surface);border-bottom:1px solid var(--border);text-align:left;">Slot</th>
+      <th style="padding:6px 10px;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);background:var(--surface);border-bottom:1px solid var(--border);text-align:left;">PBX Instance</th>
+      <th style="padding:6px 10px;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);background:var(--surface);border-bottom:1px solid var(--border);text-align:right;">Ext Range</th>
+    </tr></thead><tbody>`;
+  for(let i = 1; i <= show; i++) {
+    const start = (i-1) * slotSize + (slotSize < 100 ? 1 : 100);
+    const end = i * slotSize + (slotSize < 100 ? 0 : 99);
+    html += `<tr>
+      <td style="padding:6px 10px;font-size:11px;font-weight:700;color:var(--accent);border-bottom:1px solid var(--bg);">Slot ${i}</td>
+      <td style="padding:6px 10px;font-size:11px;color:var(--dim);border-bottom:1px solid var(--bg);">Customer PBX ${i}</td>
+      <td style="padding:6px 10px;font-size:11px;font-weight:600;color:var(--text);border-bottom:1px solid var(--bg);text-align:right;">${start}–${end}</td>
+    </tr>`;
+  }
+  if(pbx > 8) {
+    html += `<tr><td colspan="3" style="padding:8px 10px;font-size:11px;color:var(--muted);text-align:center;">... ${pbx - 8} more slots (Slot 9 → ${9*slotSize+99})</td></tr>`;
+  }
+  html += '</tbody></table>';
+  body.innerHTML = html;
+}
+
+// ── STAKEHOLDERS ──
+function buildStakeholderConfig() {
+  const container = document.getElementById('stakeholder-config');
+  if(!container) return;
+  container.innerHTML = state.stakeholders.map((sh, i) => `
+    <div class="sh-card">
+      <div class="sh-swatch" style="background:${sh.color}">${sh.abbr.charAt(0)}</div>
+      <div class="sh-fields">
+        <div class="field" style="min-width:200px;">
+          <label>Group Name</label>
+          <div class="fw"><input class="fi" value="${sh.name}" onchange="state.stakeholders[${i}].name=this.value;state.stakeholders[${i}].abbr=this.value.substring(0,3).toUpperCase();buildRaciTable();document.getElementById('team-name-display').textContent=state.stakeholders[0].name;" placeholder="Group name"></div>
+        </div>
+        <div class="field" style="min-width:140px;">
+          <label>Abbreviation</label>
+          <div class="fw"><input class="fi" value="${sh.abbr}" maxlength="4" style="width:80px;" onchange="state.stakeholders[${i}].abbr=this.value.toUpperCase().substring(0,4);buildRaciTable();"></div>
+        </div>
+        <div class="field" style="min-width:180px;">
+          <label>Role Description</label>
+          <div class="fw"><input class="fi" value="${sh.role}" onchange="state.stakeholders[${i}].role=this.value;" placeholder="e.g. Primary Coordinator"></div>
+        </div>
+        <div>
+          <div class="field"><label>&nbsp;</label>
+          <span class="sh-role-badge" style="background:${sh.color}22;color:${sh.color};border:1px solid ${sh.color}44;">${sh.role}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── RACI TABLE ──
+function buildRaciTable() {
+  const table = document.getElementById('raci-table');
+  if(!table) return;
+  const shs = state.stakeholders;
+  const roles = ['R','A','C','I'];
+  let html = `<thead><tr>
+    <th style="min-width:220px;">Activity</th>
+    <th style="text-align:center;width:50px;">Phase</th>
+    ${shs.map(sh => `<th style="text-align:center;">${sh.abbr}</th>`).join('')}
+  </tr></thead><tbody>`;
+
+  let lastPhase = 0;
+  raciActivities.forEach(act => {
+    if(act.phase !== lastPhase) {
+      const ph = phases.find(p => p.num === act.phase);
+      html += `<tr><td colspan="${2 + shs.length}" style="padding:8px 14px;background:${ph.color}11;border-bottom:1px solid ${ph.color}33;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:${ph.color};">Phase ${ph.num} — ${ph.name}</td></tr>`;
+      lastPhase = act.phase;
+    }
+    const raciRow = state.raci[act.id] || {};
+    html += `<tr>
+      <td>
+        <div style="font-size:12px;font-weight:600;color:var(--text);">${act.name}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:1px;">${act.desc}</div>
+      </td>
+      <td style="text-align:center;"><span class="badge" style="background:${phases.find(p=>p.num===act.phase).color}22;color:${phases.find(p=>p.num===act.phase).color};border:1px solid ${phases.find(p=>p.num===act.phase).color}44;">P${act.phase}</span></td>
+      ${shs.map(sh => {
+        const assigned = (raciRow[sh.id] || []);
+        return `<td><div class="raci-cell">${roles.map(r => {
+          const active = assigned.includes(r);
+          return `<button class="raci-btn ${active ? 'active-'+r : ''}" onclick="toggleRaci('${act.id}','${sh.id}','${r}')" title="${sh.name}: ${r}">${r}</button>`;
+        }).join('')}</div></td>`;
+      }).join('')}
+    </tr>`;
+  });
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
+function toggleRaci(actId, shId, role) {
+  if(!state.raci[actId]) state.raci[actId] = {};
+  if(!state.raci[actId][shId]) state.raci[actId][shId] = [];
+  const arr = state.raci[actId][shId];
+  const idx = arr.indexOf(role);
+  if(idx >= 0) arr.splice(idx, 1);
+  else arr.push(role);
+  buildRaciTable();
+}
+
+// ── PHASES ──
+function buildPhases() {
+  const grid = document.getElementById('phase-grid');
+  if(!grid) return;
+  grid.innerHTML = phases.map(ph => {
+    const ownerMap = { mat: state.stakeholders[0], res: state.stakeholders[1], cit: state.stakeholders[2] };
+    return `<div class="phase-card">
+      <div class="phase-hdr">
+        <div class="phase-num" style="background:${ph.color}">P${ph.num}</div>
+        <div class="phase-info">
+          <div class="phase-name">Phase ${ph.num}: ${ph.name}</div>
+          <div class="phase-dur">~${ph.weeks} week${ph.weeks>1?'s':''}</div>
+        </div>
+        <span class="badge" style="background:${ph.color}22;color:${ph.color};border:1px solid ${ph.color}44;">${ph.tasks.length} tasks</span>
+      </div>
+      <div class="task-hdr">
+        <span>Task</span><span>Deliverable</span><span>Duration</span><span>Owner</span>
+      </div>
+      <div class="phase-body">${ph.tasks.map(t => {
+        const owner = ownerMap[t.owner] || state.stakeholders[0];
+        return `<div class="task-row">
+          <div>
+            <div class="task-name">${t.name}</div>
+          </div>
+          <div class="task-meta">${t.deliverable}</div>
+          <div><span class="badge badge-gray">${t.duration}</span></div>
+          <div><span class="badge" style="background:${owner.color}22;color:${owner.color};border:1px solid ${owner.color}44;">${owner.abbr}</span></div>
+        </div>`;
+      }).join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── EXIT CRITERIA ──
+function buildExitCriteria() {
+  const list = document.getElementById('exit-criteria-list');
+  if(!list) return;
+  list.innerHTML = exitCriteria.map(ec => {
+    const checked = state.checklist['exit_'+ec.id];
+    return `<div class="checklist-item">
+      <div class="check-box ${checked?'checked':''}" onclick="toggleCheck('exit_${ec.id}', this, 'exit-criteria-list', updateExitBadge)"></div>
+      <div class="check-label">
+        <div class="check-title">${ec.title}</div>
+        <div class="check-desc">${ec.desc}</div>
+      </div>
+      <span class="badge badge-${ec.category==='Discovery'?'blue':ec.category==='Design'?'purple':ec.category==='Infrastructure'?'teal':'amber'}">${ec.category}</span>
+    </div>`;
+  }).join('');
+  updateExitBadge();
+}
+
+function updateExitBadge() {
+  const done = exitCriteria.filter(ec => state.checklist['exit_'+ec.id]).length;
+  const badge = document.getElementById('exit-progress-badge');
+  if(badge) {
+    badge.textContent = `${done} / ${exitCriteria.length}`;
+    badge.className = `badge ${done === exitCriteria.length ? 'badge-green' : done > 0 ? 'badge-amber' : 'badge-red'}`;
+  }
+}
+
+// ── FULL CHECKLIST ──
+function buildChecklist() {
+  const container = document.getElementById('checklist-content');
+  if(!container) return;
+
+  const allTests = [...exitCriteria.map(e => ({...e, group:'Phase 1 Exit Criteria'})), ...pilotTests.map(p => ({...p, group:'Pilot Validation Tests'}))];
+
+  const groups = {};
+  allTests.forEach(item => {
+    if(!groups[item.group]) groups[item.group] = [];
+    groups[item.group].push(item);
+  });
+
+  let html = '';
+  Object.entries(groups).forEach(([group, items]) => {
+    html += `<div class="sec"><span class="sec-icon">📋</span>${group}</div>
+    <div class="card"><div class="card-body">${items.map(item => {
+      const key = 'cl_'+item.id;
+      const checked = state.checklist[key];
+      return `<div class="checklist-item">
+        <div class="check-box ${checked?'checked':''}" onclick="toggleCheck('${key}', this, 'checklist-content', updateChecklistKPIs)"></div>
+        <div class="check-label">
+          <div class="check-title">${item.title}</div>
+          <div class="check-desc">${item.desc}</div>
+        </div>
+        <span class="badge badge-${item.category==='Telephony'?'blue':item.category==='Access'?'purple':item.category==='Features'?'teal':item.category==='Numbering'?'amber':item.category==='Compliance'?'red':'gray'}">${item.category}</span>
+      </div>`;
+    }).join('')}</div></div>`;
+  });
+  container.innerHTML = html;
+  updateChecklistKPIs();
+}
+
+function updateChecklistKPIs() {
+  const allKeys = [...exitCriteria.map(e=>'cl_'+e.id), ...pilotTests.map(p=>'cl_'+p.id)];
+  const total = allKeys.length;
+  const done = allKeys.filter(k => state.checklist[k]).length;
+  const remain = total - done;
+  const pct = Math.round(done/total*100);
+  const el = id => document.getElementById(id);
+  if(el('cl-total')) el('cl-total').textContent = total;
+  if(el('cl-done')) el('cl-done').textContent = done;
+  if(el('cl-remain')) el('cl-remain').textContent = remain;
+  if(el('cl-pct')) el('cl-pct').textContent = pct + '%';
+}
+
+function toggleCheck(key, el, containerId, callback) {
+  state.checklist[key] = !state.checklist[key];
+  el.classList.toggle('checked', state.checklist[key]);
+  if(callback) callback();
+}
+
+// ── QUESTIONNAIRE ──
+function buildQuestionnaire() {
+  const container = document.getElementById('questionnaire-content');
+  if(!container) return;
+  container.innerHTML = questionSections.map(sec => `
+    <div class="q-section">
+      <div class="sec"><span class="sec-icon">${sec.icon}</span>${sec.title}</div>
+      <div class="card">
+        <div class="card-body">
+          <div class="q-grid">${sec.questions.map(q => `
+            <div class="q-item ${q.type==='textarea'?'style="grid-column:1/-1;"':''}">
+              <div class="q-label">${q.label}${q.required?'<span class="required">*</span>':''}</div>
+              ${q.type==='select'
+                ? `<select class="q-input" id="${q.id}" onchange="updateQProgress()"><option value="">— Select —</option>${(q.options||[]).map(o=>`<option>${o}</option>`).join('')}</select>`
+                : q.type==='textarea'
+                ? `<textarea class="q-input" id="${q.id}" placeholder="${q.placeholder||''}" rows="3" onchange="updateQProgress()"></textarea>`
+                : `<input class="q-input" type="${q.type||'text'}" id="${q.id}" placeholder="${q.placeholder||''}" ${q.required?'required':''} oninput="updateQProgress()">`
+              }
+            </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`).join('');
+  buildQSectionPills();
+}
+
+function buildQSectionPills() {
+  const pills = document.getElementById('q-section-pills');
+  if(!pills) return;
+  pills.innerHTML = questionSections.map((sec,i) => `
+    <span style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:12px;background:var(--surface);border:1px solid var(--border);color:var(--muted);">${sec.icon} ${sec.title}</span>
+  `).join('');
+}
+
+function updateQProgress() {
+  const allQ = questionSections.flatMap(s => s.questions);
+  const required = allQ.filter(q => q.required);
+  const filled = allQ.filter(q => {
+    const el = document.getElementById(q.id);
+    return el && el.value && el.value.trim() !== '' && el.value !== '— Select —';
+  });
+  const pct = Math.round(filled.length / allQ.length * 100);
+  const bar = document.getElementById('q-progress-bar');
+  const text = document.getElementById('q-progress-text');
+  if(bar) bar.style.width = pct + '%';
+  if(text) text.textContent = pct + '%';
+}
+
+function clearQuestionnaire() {
+  if(!confirm('Clear all questionnaire answers?')) return;
+  questionSections.flatMap(s => s.questions).forEach(q => {
+    const el = document.getElementById(q.id);
+    if(el) el.value = '';
+  });
+  updateQProgress();
+}
+
+function exportQuestionnaire() {
+  let text = '3CX MIGRATION REQUIREMENTS QUESTIONNAIRE\n';
+  text += '=' .repeat(50) + '\n\n';
+  questionSections.forEach(sec => {
+    text += `\n${sec.title}\n${'-'.repeat(40)}\n`;
+    sec.questions.forEach(q => {
+      const el = document.getElementById(q.id);
+      const val = el ? el.value : '';
+      text += `\n${q.label}:\n${val || '(not answered)'}\n`;
+    });
+  });
+  const blob = new Blob([text], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '3cx-migration-questionnaire.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportChecklist() {
+  const allTests = [...exitCriteria.map(e=>({...e,group:'Phase 1 Exit Criteria'})), ...pilotTests.map(p=>({...p,group:'Pilot Validation Tests'}))];
+  let text = '3CX MIGRATION VALIDATION CHECKLIST\n' + '='.repeat(40) + '\n';
+  const groups = {};
+  allTests.forEach(item => { if(!groups[item.group]) groups[item.group]=[]; groups[item.group].push(item); });
+  Object.entries(groups).forEach(([group, items]) => {
+    text += `\n${group}\n${'-'.repeat(30)}\n`;
+    items.forEach(item => {
+      const key = 'cl_'+item.id;
+      text += `${state.checklist[key]?'[✓]':'[ ]'} ${item.title}\n     ${item.desc}\n\n`;
+    });
+  });
+  const blob = new Blob([text], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '3cx-validation-checklist.txt';
+  a.click();
+}
+
+// ── GUIDE ──
+function buildGuide() {
+  const container = document.getElementById('guide-content');
+  if(!container) return;
+  container.innerHTML = guideContent.map(part => `
+    <div class="guide-section">
+      <div class="guide-part">${part.part}</div>
+      <div class="card">
+        ${part.steps.map((step, i) => `
+          <div class="step-card">
+            <div class="step-num">${step.num}</div>
+            <div class="step-body">
+              <div class="step-title">${step.title}</div>
+              <div class="step-desc">${step.desc}</div>
+              ${step.code ? `<div class="step-code">${escHtml(step.code)}</div>` : ''}
+              ${step.note ? `<div class="step-note">${step.note}</div>` : ''}
+              ${step.tip ? `<div class="step-tip">${step.tip}</div>` : ''}
+              ${(step.options||[]).map(opt => `
+                <div class="option-block option-${opt.type}">
+                  <div class="option-title">${opt.title}</div>
+                  <div style="font-size:12px;color:var(--dim);">${opt.content}</div>
+                </div>`).join('')}
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── GANTT ──
+function buildGantt() {
+  const table = document.getElementById('gantt-table');
+  if(!table) return;
+
+  const pbx = parseInt(document.getElementById('proj-pbx-count')?.value) || 93;
+  const batch = parseInt(document.getElementById('proj-batch')?.value) || 10;
+  const startStr = document.getElementById('proj-start')?.value || '2026-04-01';
+  const start = new Date(startStr);
+
+  const batches = Math.ceil(pbx / batch);
+  const batchWeeks = batches * 2;
+
+  const phaseData = [
+    { name:'Discovery & Design',    weeks:4,           color:'#1a56db', owner:'RES + MAT' },
+    { name:'Infrastructure Setup',  weeks:2,           color:'#0e7490', owner:'MAT + CIT' },
+    { name:'Pilot Migration',       weeks:2,           color:'#b45309', owner:'MAT' },
+    { name:`Batch Migration (${batches} sprints)`, weeks:batchWeeks, color:'#6b21a8', owner:'MAT' },
+    { name:'Hypercare & Closeout',  weeks:4,           color:'#057a55', owner:'RES + MAT' }
+  ];
+
+  const totalWeeks = phaseData.reduce((s,p) => s+p.weeks, 0);
+  const endDate = new Date(start);
+  endDate.setDate(endDate.getDate() + totalWeeks * 7);
+
+  document.getElementById('gantt-date-range').textContent = `${fmtDate(start)} → ${fmtDate(endDate)}`;
+  document.getElementById('gantt-duration').textContent = `${totalWeeks} weeks`;
+
+  // Build week headers (show month labels)
+  const maxCols = Math.min(totalWeeks, 24); // cap display at 24 cols
+  let weekHeaders = '';
+  for(let w = 0; w < maxCols; w++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + w * 7);
+    const label = w === 0 || d.getDate() <= 7 ? d.toLocaleDateString('en-GB',{month:'short'}) : '';
+    weekHeaders += `<th style="width:${100/maxCols}%;font-size:9px;min-width:28px;text-align:center;">${label}</th>`;
+  }
+
+  let html = `<thead><tr>
+    <th style="min-width:200px;text-align:left;">Phase</th>
+    <th style="width:60px;text-align:center;">Weeks</th>
+    <th style="width:70px;text-align:center;">Owner</th>
+    ${weekHeaders}
+  </tr></thead><tbody>`;
+
+  let cursor = 0;
+  phaseData.forEach((ph, i) => {
+    const startCol = Math.round(cursor / totalWeeks * maxCols);
+    const spanCols = Math.min(Math.round(ph.weeks / totalWeeks * maxCols), maxCols - startCol);
+
+    let cells = '';
+    for(let c = 0; c < maxCols; c++) {
+      if(c === startCol) {
+        cells += `<td colspan="${spanCols}" class="gantt-bar-cell" style="padding:4px 0;">
+          <div class="gantt-bar" style="background:${ph.color};min-width:${spanCols*20}px;">P${i+1} ${ph.name.split(' ')[0]}</div>
+        </td>`;
+      } else if(c > startCol && c < startCol + spanCols) {
+        // already covered by colspan
+      } else {
+        cells += `<td style="background:var(--bg);"></td>`;
+      }
+    }
+
+    html += `<tr>
+      <td><strong>Phase ${i+1}:</strong> ${ph.name}</td>
+      <td style="text-align:center;"><span class="badge badge-gray">${ph.weeks}w</span></td>
+      <td style="text-align:center;font-size:10px;color:var(--muted);font-weight:600;">${ph.owner}</td>
+      ${cells}
+    </tr>`;
+    cursor += ph.weeks;
+  });
+
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
+function fmtDate(d) {
+  return d.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'});
+}
+
+// ── RUN ──
+init();
+</script>
+</body>
+</html>
