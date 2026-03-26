@@ -51,7 +51,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       )}
       <header className="bg-white border-b px-4 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+        <div className="max-w-[1160px] mx-auto flex items-center justify-between">
           <h1 className="text-lg font-semibold text-gray-900">Admin Console</h1>
           <div className="flex items-center gap-4">
             <CompanySwitcher />
@@ -62,7 +62,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </header>
       <AdminNav />
-      <div className="max-w-5xl mx-auto px-4 py-6 pb-20">{children}</div>
+      <div className="max-w-[1160px] mx-auto px-4 py-6 pb-20">{children}</div>
     </div>
   );
 }

@@ -46,7 +46,7 @@ export default function AdminNav() {
 
   return (
     <nav className="bg-white border-b">
-      <div className="max-w-5xl mx-auto flex overflow-x-auto">
+      <div className="max-w-[1160px] mx-auto flex overflow-x-auto">
         {links.map(({ href, label, exact }) => {
           const active = exact ? pathname === href : pathname.startsWith(href);
           return (
