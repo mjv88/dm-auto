@@ -329,6 +329,34 @@ export async function adminUserRoutes(fastify: FastifyInstance): Promise<void> {
       return reply.code(404).send({ error: 'NOT_FOUND' });
     }
 
+    // Look up target's runner record (if they have one) to populate session context
+    const runnerRows = await db
+      .select({
+        id: runners.id,
+        extensionNumber: runners.extensionNumber,
+        entraEmail: runners.entraEmail,
+        pbxCredentialId: runners.pbxCredentialId,
+      })
+      .from(runners)
+      .where(and(
+        eq(runners.entraEmail, target.email),
+        eq(runners.isActive, true),
+      ))
+      .limit(1);
+
+    const runner = runnerRows[0] ?? null;
+
+    // If runner exists, resolve PBX FQDN
+    let pbxFqdn: string | null = null;
+    if (runner) {
+      const pbxRows = await db
+        .select({ pbxFqdn: pbxCredentials.pbxFqdn })
+        .from(pbxCredentials)
+        .where(eq(pbxCredentials.id, runner.pbxCredentialId))
+        .limit(1);
+      pbxFqdn = pbxRows[0]?.pbxFqdn ?? null;
+    }
+
     // Issue a session token as the target user, tagging with impersonator's userId
     const sessionToken = createSessionToken({
       type: 'session',
@@ -336,11 +364,11 @@ export async function adminUserRoutes(fastify: FastifyInstance): Promise<void> {
       email: target.email,
       role: target.role as 'super_admin' | 'admin' | 'manager' | 'runner',
       tenantId: target.tenantId,
-      runnerId: null,
+      runnerId: runner?.id ?? null,
       emailVerified: target.emailVerified,
-      pbxFqdn: null,
-      extensionNumber: null,
-      entraEmail: null,
+      pbxFqdn,
+      extensionNumber: runner?.extensionNumber ?? null,
+      entraEmail: runner?.entraEmail ?? target.email,
       tid: null,
       oid: null,
       impersonatedBy: session.userId,
