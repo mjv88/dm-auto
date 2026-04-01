@@ -347,7 +347,12 @@ export class XAPIClient {
   }
 
   async getPrompts(): Promise<unknown> {
-    return this.get(`/Prompts`);
+    // Try /CustomPrompts first (works on most 3CX v20), fallback to /Prompts
+    try {
+      return await this.get(`/CustomPrompts`);
+    } catch {
+      return this.get(`/Prompts`);
+    }
   }
 
   async makeCallRecordPrompt(extensionNumber: string, filename: string): Promise<void> {
