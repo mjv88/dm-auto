@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useRunnerStore, useRunnerProfile } from '@/lib/store';
-import { getIvrs, getIvrDetail, triggerRecording, getCustomPrompts, deleteCustomPrompt } from '@/lib/ivrApi';
+import { getIvrs, getIvrDetail, triggerRecording, getCustomPrompts, deleteCustomPrompt, assignPrompt } from '@/lib/ivrApi';
 import type { CustomPrompt } from '@/lib/ivrApi';
 import type { IvrSummary, IvrDetail } from '@/types/ivr';
 import RunnerHeader from '@/components/RunnerHeader';
@@ -124,6 +124,18 @@ export default function IvrPage() {
     }
   }
 
+  async function handleAssignPrompt(ivrId: number, promptType: 'main' | 'offHours' | 'holidays' | 'break', filename: string) {
+    if (!filename) return;
+    try {
+      await assignPrompt(ivrId, promptType, filename);
+      // Refresh IVR detail
+      const d = await getIvrDetail(ivrId);
+      setDetail(d);
+    } catch (err) {
+      alert((err as Error).message);
+    }
+  }
+
   async function handleDeletePrompt(filename: string) {
     if (!confirm(`Delete recording "${filename}"?`)) return;
     try {
@@ -202,26 +214,33 @@ export default function IvrPage() {
                       <p className="text-sm text-gray-400 py-6 text-center">Loading IVR details...</p>
                     ) : detail ? (
                       <div className="divide-y divide-gray-100">
-                        {/* Current prompts */}
+                        {/* Current prompts — dropdown to change */}
                         <div className="px-4 py-3">
-                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Current Prompts</p>
-                          <div className="space-y-1.5">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">Main Greeting</span>
-                              <span className="text-gray-800 font-medium">{detail.promptFilename || '—'}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">After Hours</span>
-                              <span className="text-gray-800 font-medium">{detail.outOfOfficeRoute.prompt || '—'}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">Holidays</span>
-                              <span className="text-gray-800 font-medium">{detail.holidaysRoute.prompt || '—'}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">Break</span>
-                              <span className="text-gray-800 font-medium">{detail.breakRoute.prompt || '—'}</span>
-                            </div>
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Prompts</p>
+                          <div className="space-y-2">
+                            {([
+                              { label: 'Main Greeting', type: 'main' as const, current: detail.promptFilename },
+                              { label: 'After Hours', type: 'offHours' as const, current: detail.outOfOfficeRoute.prompt },
+                              { label: 'Holidays', type: 'holidays' as const, current: detail.holidaysRoute.prompt },
+                              { label: 'Break', type: 'break' as const, current: detail.breakRoute.prompt },
+                            ]).map(({ label, type, current }) => (
+                              <div key={type} className="flex items-center justify-between gap-3">
+                                <span className="text-sm text-gray-500 w-28 shrink-0">{label}</span>
+                                <select
+                                  value={current || ''}
+                                  onChange={(e) => handleAssignPrompt(ivr.id, type, e.target.value)}
+                                  className="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-800 font-medium truncate focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none"
+                                >
+                                  <option value="">— No prompt —</option>
+                                  {current && !prompts.some(p => p.filename === current) && (
+                                    <option value={current}>{current} (system)</option>
+                                  )}
+                                  {prompts.map(p => (
+                                    <option key={p.filename} value={p.filename}>{p.filename}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            ))}
                           </div>
                         </div>
 
