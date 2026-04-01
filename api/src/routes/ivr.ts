@@ -164,8 +164,8 @@ export async function ivrRoutes(fastify: FastifyInstance): Promise<void> {
         const raw = await client.getPrompts();
         const prompts = parseCustomPrompts(raw);
         return reply.send({ prompts });
-      } catch {
-        return reply.code(503).send({ error: 'PBX_UNAVAILABLE' });
+      } catch (err) {
+        return reply.code(503).send({ error: 'PBX_UNAVAILABLE', detail: (err as Error).message });
       }
     },
   );
@@ -230,8 +230,8 @@ export async function ivrRoutes(fastify: FastifyInstance): Promise<void> {
       try {
         const raw = await client.getReceptionist(parseInt(id, 10));
         detail = parseReceptionistDetail(raw as Record<string, any>);
-      } catch {
-        return reply.code(503).send({ error: 'PBX_UNAVAILABLE' });
+      } catch (err) {
+        return reply.code(503).send({ error: 'PBX_UNAVAILABLE', detail: (err as Error).message });
       }
 
       if (!ivrInScope(detail.groups, runner.allowedDeptIds)) {
