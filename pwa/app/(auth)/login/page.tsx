@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { acquireTokenSilent, loginWithEmail } from '@/lib/auth';
 import { useRunnerStore } from '@/lib/store';
 
@@ -66,19 +67,8 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm rounded-2xl bg-white shadow-lg p-8 flex flex-col items-center gap-6">
-        {/* Microsoft logo */}
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="48"
-          height="48"
-          viewBox="0 0 23 23"
-          aria-label="Microsoft logo"
-        >
-          <rect x="1"  y="1"  width="10" height="10" fill="#F25022" />
-          <rect x="12" y="1"  width="10" height="10" fill="#7FBA00" />
-          <rect x="1"  y="12" width="10" height="10" fill="#00A4EF" />
-          <rect x="12" y="12" width="10" height="10" fill="#FFB900" />
-        </svg>
+        {/* Runner Hub logo */}
+        <Image src="/icons/logo.png" alt="Runner Hub" width={72} height={72} priority />
 
         <div className="text-center">
           <h1 className="text-xl font-semibold text-gray-900">Runner Hub</h1>
