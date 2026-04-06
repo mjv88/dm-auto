@@ -24,6 +24,8 @@ interface RecentAuditEntry {
   fromDeptName: string | null;
   toDeptName: string | null;
   status: string;
+  action?: string;
+  metadata?: Record<string, unknown> | null;
 }
 
 interface RecentAuditResponse {
@@ -133,48 +135,72 @@ export default function AdminDashboard() {
       {/* Recent Switches */}
       <div className="bg-white rounded-xl shadow overflow-hidden">
         <h3 className="text-sm font-semibold text-gray-700 px-4 py-3 border-b bg-gray-50">
-          Recent Switches
+          Recent Activity
         </h3>
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-gray-50/50">
               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Time</th>
               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Email</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">From &rarr; To</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Action</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Detail</th>
               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th>
             </tr>
           </thead>
           <tbody>
-            {recentSwitches.map((entry) => (
-              <tr key={entry.id} className="border-b last:border-b-0">
-                <td className="px-4 py-2 text-xs text-gray-500 whitespace-nowrap">
-                  {new Date(entry.createdAt).toLocaleString()}
-                </td>
-                <td className="px-4 py-2 text-xs text-gray-700 truncate max-w-[200px]">
-                  {entry.entraEmail}
-                </td>
-                <td className="px-4 py-2 text-xs text-gray-600">
-                  {entry.fromDeptName || '—'} &rarr; {entry.toDeptName || '—'}
-                </td>
-                <td className="px-4 py-2">
-                  <span
-                    className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-                      entry.status === 'success'
-                        ? 'bg-green-100 text-green-700'
-                        : entry.status === 'denied'
-                        ? 'bg-yellow-100 text-yellow-700'
-                        : 'bg-red-100 text-red-700'
-                    }`}
-                  >
-                    {entry.status}
-                  </span>
-                </td>
-              </tr>
-            ))}
+            {recentSwitches.map((entry) => {
+              const actionLabels: Record<string, string> = {
+                switch: 'Switch',
+                ivr_prompt_recorded: 'IVR Record',
+                ivr_prompt_uploaded: 'IVR Upload',
+                ivr_prompt_assigned: 'IVR Assign',
+                ivr_prompt_deleted: 'IVR Delete',
+              };
+              const action = entry.action ?? 'switch';
+              const isIvr = action.startsWith('ivr_');
+              const label = actionLabels[action] ?? action;
+              const m = entry.metadata as Record<string, unknown> | null;
+              const detail = isIvr && m
+                ? `${(m.ivrName as string) ?? ''}${(m.filename as string) ?? (m.newFilename as string) ? ` — ${(m.filename as string) ?? (m.newFilename as string) ?? ''}` : ''}`
+                : `${entry.fromDeptName || '—'} → ${entry.toDeptName || '—'}`;
+              return (
+                <tr key={entry.id} className="border-b last:border-b-0">
+                  <td className="px-4 py-2 text-xs text-gray-500 whitespace-nowrap">
+                    {new Date(entry.createdAt).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-2 text-xs text-gray-700 truncate max-w-[200px]">
+                    {entry.entraEmail}
+                  </td>
+                  <td className="px-4 py-2">
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+                      isIvr ? 'bg-teal-50 text-teal-700' : 'bg-blue-50 text-blue-700'
+                    }`}>
+                      {label}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 text-xs text-gray-600">
+                    {detail}
+                  </td>
+                  <td className="px-4 py-2">
+                    <span
+                      className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+                        entry.status === 'success'
+                          ? 'bg-green-100 text-green-700'
+                          : entry.status === 'denied'
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : 'bg-red-100 text-red-700'
+                      }`}
+                    >
+                      {entry.status}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
             {recentSwitches.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-4 text-center text-gray-400 text-sm">
-                  No recent switches
+                <td colSpan={5} className="px-4 py-4 text-center text-gray-400 text-sm">
+                  No recent activity
                 </td>
               </tr>
             )}

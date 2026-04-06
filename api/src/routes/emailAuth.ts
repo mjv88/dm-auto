@@ -267,7 +267,7 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
 
       reply.setCookie('runner_session', sessionToken, SESSION_COOKIE_OPTS);
       if (runnerId) {
-        void db.update(runners).set({ lastLoginAt: sql`now()` }).where(eq(runners.id, runnerId));
+        db.update(runners).set({ lastLoginAt: sql`now()` }).where(eq(runners.id, runnerId)).execute().catch(() => {});
       }
       return reply.send({
         sessionToken,

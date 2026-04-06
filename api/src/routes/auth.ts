@@ -223,7 +223,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       });
       reply.setCookie('runner_session', sessionToken, SESSION_COOKIE_OPTS);
       request.log.info({ email, method: 'entra_sso', ip: request.ip }, 'Runner auth successful');
-      void db.update(runners).set({ lastLoginAt: sql`now()` }).where(eq(runners.id, match.id));
+      db.update(runners).set({ lastLoginAt: sql`now()` }).where(eq(runners.id, match.id)).execute().catch(() => {});
       return reply.send({
         mode: 'direct',
         runner: {
@@ -270,7 +270,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
     reply.setCookie('runner_session', sessionToken, SESSION_COOKIE_OPTS);
     request.log.info({ email, method: 'entra_sso', ip: request.ip }, 'Runner auth successful');
-    void db.update(runners).set({ lastLoginAt: sql`now()` }).where(eq(runners.id, single.id));
+    db.update(runners).set({ lastLoginAt: sql`now()` }).where(eq(runners.id, single.id)).execute().catch(() => {});
     return reply.send({
       mode: 'direct',
       runner: {
