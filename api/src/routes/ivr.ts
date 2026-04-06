@@ -344,7 +344,7 @@ export async function ivrRoutes(fastify: FastifyInstance): Promise<void> {
       }
 
       // Build filename and trigger recording
-      const sanitizedFilename = `ivr${detail.number}-${parsed.data.filename}.wav`;
+      const sanitizedFilename = `${parsed.data.filename}.wav`;
 
       try {
         await client.makeCallRecordPrompt(runner.extensionNumber, sanitizedFilename);
@@ -447,7 +447,7 @@ export async function ivrRoutes(fastify: FastifyInstance): Promise<void> {
       const baseName = body.filename
         .replace(/\.wav$/i, '')
         .replace(/[^a-zA-Z0-9_-]/g, '_');
-      const uploadFilename = `ivr${detail.number}-${baseName}.wav`;
+      const uploadFilename = `${baseName}.wav`;
 
       try {
         await uploadCustomPrompt(session.pbxFqdn!, uploadFilename, buffer);
