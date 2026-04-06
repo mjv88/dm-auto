@@ -110,11 +110,10 @@ export const useRunnerStore = create<RunnerStore>((set) => ({
   setIvrAccess: (ivrAccess) => set({ ivrAccess }),
   setPricingAccess: (pricingAccess) => set({ pricingAccess }),
   startImpersonation: (email) => {
-    // TODO: remove sessionStorage once the API supports POST /admin/impersonate/stop
-    // that restores the original cookie server-side
     if (typeof window !== 'undefined') {
       const currentToken = useRunnerStore.getState().sessionToken;
       if (currentToken) sessionStorage.setItem('originalToken', currentToken);
+      sessionStorage.setItem('impersonatingEmail', email);
     }
     set({
       impersonatingEmail: email,
@@ -124,6 +123,7 @@ export const useRunnerStore = create<RunnerStore>((set) => ({
     if (typeof window !== 'undefined') {
       const original = sessionStorage.getItem('originalToken');
       sessionStorage.removeItem('originalToken');
+      sessionStorage.removeItem('impersonatingEmail');
       if (original) {
         // Restore the admin's original session token
         set({ sessionToken: original });
@@ -138,8 +138,8 @@ export const useRunnerStore = create<RunnerStore>((set) => ({
   reset: () => {
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('sessionToken');
-      // TODO: remove once impersonation uses server-side cookie restore
       sessionStorage.removeItem('originalToken');
+      sessionStorage.removeItem('impersonatingEmail');
     }
     set({
       authStatus: 'idle' as AuthStatus,
@@ -177,10 +177,12 @@ export async function restoreSession(): Promise<void> {
     try {
       const payload = JSON.parse(atob(stored.split('.')[1]));
       const role = payload.role ?? 'runner';
+      const impersonatingEmail = sessionStorage.getItem('impersonatingEmail') ?? null;
       useRunnerStore.setState({
         sessionToken: stored,
         role,
         authStatus: 'authenticated',
+        impersonatingEmail,
       });
       return;
     } catch {

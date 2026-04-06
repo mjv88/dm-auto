@@ -153,9 +153,17 @@ export class RunnerAPIClient {
    * Silent re-auth: refreshes the session token using a fresh MSAL id_token.
    * Does NOT navigate — used internally by getDepartments / switchDepartment
    * when a 401 is received.
+   * Skipped during impersonation (no MSAL session for the impersonated user).
    */
   private async _silentReAuth(): Promise<void> {
     const store = getState();
+
+    // Impersonated sessions cannot re-auth via MSAL — the admin's Entra
+    // identity differs from the impersonated runner's.
+    if (store.impersonatingEmail) {
+      throw new AppError('TOKEN_EXPIRED');
+    }
+
     const { idToken } = await acquireTokenSilent();
     const pbxFqdn =
       store.runnerProfile?.pbxFqdn ?? store.selectedPbxFqdn ?? undefined;

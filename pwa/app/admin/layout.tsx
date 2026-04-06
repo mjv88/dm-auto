@@ -6,14 +6,12 @@ import Link from 'next/link';
 import { useRunnerStore } from '@/lib/store';
 import AdminNav from '@/components/admin/AdminNav';
 import CompanySwitcher from '@/components/admin/CompanySwitcher';
+import ImpersonationBanner from '@/components/ImpersonationBanner';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const authStatus = useRunnerStore((s) => s.authStatus);
   const role = useRunnerStore((s) => s.role);
-  const impersonatingEmail = useRunnerStore((s) => s.impersonatingEmail);
-  const stopImpersonation = useRunnerStore((s) => s.stopImpersonation);
-
   useEffect(() => {
     if (authStatus === 'authenticated' && role === 'runner') {
       router.replace('/departments');
@@ -39,17 +37,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {impersonatingEmail && (
-        <div className="bg-orange-500 text-white text-center py-2 px-4 text-sm font-medium">
-          Impersonating: {impersonatingEmail}
-          <button
-            onClick={() => { stopImpersonation(); window.location.href = '/admin/users'; }}
-            className="ml-4 underline font-bold"
-          >
-            Exit
-          </button>
-        </div>
-      )}
+      <ImpersonationBanner />
       <header className="bg-white border-b px-4 py-4">
         <div className="max-w-[1160px] mx-auto flex items-center justify-between">
           <h1 className="text-lg font-semibold text-gray-900">Admin Console</h1>

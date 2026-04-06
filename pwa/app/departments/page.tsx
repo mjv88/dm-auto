@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useRunnerStore, useAllowedDepts, useCurrentDept, useRunnerProfile } from '@/lib/store';
+import ImpersonationBanner from '@/components/ImpersonationBanner';
 import { getDepartments, switchDepartment } from '@/lib/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
@@ -231,6 +232,7 @@ export default function DepartmentsPage() {
 
   return (
     <>
+      <ImpersonationBanner />
       <div
         ref={contentRef}
         className="flex flex-col min-h-screen bg-brand-bg overflow-y-auto pb-16"

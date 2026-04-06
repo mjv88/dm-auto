@@ -198,7 +198,7 @@ export default function UsersPage() {
       );
       startImpersonation(result.user.email);
       useRunnerStore.getState().setSessionToken(result.sessionToken);
-      window.location.href = '/';
+      window.location.href = '/departments';
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Impersonation failed');
     }
