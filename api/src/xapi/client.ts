@@ -337,9 +337,22 @@ export class XAPIClient {
   }
 
   async getReceptionist(id: number): Promise<unknown> {
-    return this.get(
-      `/Receptionists(${id})?$expand=Forwards,Groups($select=GroupId,Name;$filter=not startsWith(Name,'___FAVORITES___'))`,
-    );
+    try {
+      return await this.get(
+        `/Receptionists(${id})?$expand=Forwards,Groups($select=GroupId,Name;$filter=not startsWith(Name,'___FAVORITES___'))`,
+      );
+    } catch {
+      // Fallback: some 3CX versions return 404 on single-entity Receptionists(id).
+      // Fetch full list with detail expansions and filter locally.
+      const list = (await this.get(
+        `/Receptionists?$expand=Forwards,Groups($select=GroupId,Name;$filter=not startsWith(Name,'___FAVORITES___'))`,
+      )) as { value: Array<Record<string, unknown>> };
+      const match = list.value.find((r) => r.Id === id);
+      if (!match) {
+        throw new PBXUnavailableError(`Receptionist ${id} not found on ${this.pbxFqdn}`);
+      }
+      return match;
+    }
   }
 
   async patchReceptionist(id: number, body: Record<string, unknown>): Promise<void> {
