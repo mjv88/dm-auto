@@ -26,6 +26,8 @@ interface AuditEntry {
   deviceId?: string;
   durationMs?: number;
   impersonatedBy?: string | null;
+  action?: string;
+  metadata?: Record<string, unknown> | null;
 }
 
 interface PaginatedAudit {
@@ -138,6 +140,28 @@ export default function AuditPage() {
       },
     },
     {
+      key: 'action' as any,
+      header: 'Action',
+      render: (row: AuditEntry) => {
+        const labels: Record<string, string> = {
+          switch: 'Switch',
+          ivr_prompt_recorded: 'IVR Record',
+          ivr_prompt_uploaded: 'IVR Upload',
+          ivr_prompt_assigned: 'IVR Assign',
+          ivr_prompt_deleted: 'IVR Delete',
+        };
+        const label = labels[row.action ?? 'switch'] ?? row.action ?? 'switch';
+        const isIvr = row.action?.startsWith('ivr_');
+        return (
+          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+            isIvr ? 'bg-teal-50 text-teal-700' : 'bg-blue-50 text-blue-700'
+          }`}>
+            {label}
+          </span>
+        );
+      },
+    },
+    {
       key: 'extensionNumber',
       header: 'Ext.',
       render: (row) => (
@@ -156,12 +180,20 @@ export default function AuditPage() {
     },
     {
       key: 'fromDeptName',
-      header: 'From → To',
-      render: (row) => (
-        <span className="text-xs">
-          {row.fromDeptName || '—'} → {row.toDeptName || '—'}
-        </span>
-      ),
+      header: 'Detail',
+      render: (row: AuditEntry) => {
+        if (row.action?.startsWith('ivr_') && row.metadata) {
+          const m = row.metadata as Record<string, unknown>;
+          const name = (m.ivrName as string) ?? '';
+          const file = (m.filename as string) ?? (m.newFilename as string) ?? '';
+          return <span className="text-xs">{name}{file ? ` — ${file}` : ''}</span>;
+        }
+        return (
+          <span className="text-xs">
+            {row.fromDeptName || '—'} → {row.toDeptName || '—'}
+          </span>
+        );
+      },
     },
     {
       key: 'status',

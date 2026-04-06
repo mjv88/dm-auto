@@ -20,6 +20,7 @@ interface Runner {
   deptCallerIds?: Record<string, string> | null;
   deptRingGroups?: Record<string, number[]> | null;
   ivrAccess?: boolean;
+  lastLoginAt?: string | null;
 }
 
 interface Department {
@@ -145,6 +146,26 @@ export default function RunnersPage() {
           }`} />
         </button>
       ),
+    },
+    {
+      key: 'lastLoginAt' as any,
+      header: 'Last Login',
+      render: (row: Runner) => {
+        if (!row.lastLoginAt) return <span className="text-gray-400 text-xs">Never</span>;
+        const d = new Date(row.lastLoginAt);
+        const now = Date.now();
+        const diffMs = now - d.getTime();
+        const diffMin = Math.floor(diffMs / 60_000);
+        const diffHrs = Math.floor(diffMs / 3_600_000);
+        const diffDays = Math.floor(diffMs / 86_400_000);
+        let ago: string;
+        if (diffMin < 1) ago = 'just now';
+        else if (diffMin < 60) ago = `${diffMin}m ago`;
+        else if (diffHrs < 24) ago = `${diffHrs}h ago`;
+        else if (diffDays < 30) ago = `${diffDays}d ago`;
+        else ago = d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
+        return <span className="text-xs text-gray-600" title={d.toLocaleString('de-DE')}>{ago}</span>;
+      },
     },
   ];
 

@@ -20,7 +20,7 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { tenants, runners, pbxCredentials, users } from '../db/schema.js';
 import { validateMicrosoftToken } from '../middleware/authenticate.js';
@@ -223,6 +223,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       });
       reply.setCookie('runner_session', sessionToken, SESSION_COOKIE_OPTS);
       request.log.info({ email, method: 'entra_sso', ip: request.ip }, 'Runner auth successful');
+      void db.update(runners).set({ lastLoginAt: sql`now()` }).where(eq(runners.id, match.id));
       return reply.send({
         mode: 'direct',
         runner: {
@@ -269,6 +270,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
     reply.setCookie('runner_session', sessionToken, SESSION_COOKIE_OPTS);
     request.log.info({ email, method: 'entra_sso', ip: request.ip }, 'Runner auth successful');
+    void db.update(runners).set({ lastLoginAt: sql`now()` }).where(eq(runners.id, single.id));
     return reply.send({
       mode: 'direct',
       runner: {

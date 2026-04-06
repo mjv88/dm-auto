@@ -74,6 +74,7 @@ export async function adminRunnerRoutes(fastify: FastifyInstance): Promise<void>
         deptCallerIds:    runners.deptCallerIds,
         deptRingGroups: runners.deptRingGroups,
         ivrAccess: runners.ivrAccess,
+        lastLoginAt: runners.lastLoginAt,
       })
       .from(runners)
       .innerJoin(pbxCredentials, eq(runners.pbxCredentialId, pbxCredentials.id))

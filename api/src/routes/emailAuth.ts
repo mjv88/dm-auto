@@ -14,7 +14,7 @@
 import crypto from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import bcrypt from 'bcrypt';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { users, tenants, runners, pbxCredentials } from '../db/schema.js';
 import { config } from '../config.js';
@@ -266,6 +266,9 @@ export async function emailAuthRoutes(fastify: FastifyInstance): Promise<void> {
       });
 
       reply.setCookie('runner_session', sessionToken, SESSION_COOKIE_OPTS);
+      if (runnerId) {
+        void db.update(runners).set({ lastLoginAt: sql`now()` }).where(eq(runners.id, runnerId));
+      }
       return reply.send({
         sessionToken,
         user: {
